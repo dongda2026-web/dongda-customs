@@ -1,0 +1,15 @@
+{
+  "name": "dongda-customs",
+  "version": "1.0.0",
+  "description": "东大报关单证工作台 - 立天东大贸易",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  }
+}

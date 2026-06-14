@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: dongda-customs
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-4-6
+      - key: RECOG_CHANNELS
+        value: "2"
+      - key: AUTO_ARCHIVE_UPLOADS
+        value: "1"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dongda-customs-db
+          property: connectionString
+
+databases:
+  - name: dongda-customs-db
+    plan: free

@@ -1,0 +1,52 @@
+{
+  "name": "东大报关单证工作台",
+  "short_name": "东大单证",
+  "description": "合同识别、报关清关单证生成、税费测算与合规核验工作台。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#F3F6F5",
+  "theme_color": "#0D5247",
+  "categories": ["business", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "新建单证",
+      "short_name": "新建",
+      "description": "打开工作台新建一票报关单证",
+      "url": "/?action=new",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "历史档案",
+      "short_name": "档案",
+      "description": "查看已保存票据",
+      "url": "/?action=archive",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

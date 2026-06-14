@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0D5247">
+<meta name="application-name" content="东大报关单证工作台">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="东大单证">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>东大报关单证工作台</title>
+<style>
+:root{
+  --green:#0D5247;--green-2:#0A4239;--teal:#147D6A;--teal-soft:#E3F0EC;
+  --orange:#E8772E;--ink:#1A2B27;--steel:#6B7C76;--bg:#F3F6F5;--card:#FFFFFF;
+  --line:#E2E8E5;--seal:#C03B2D;--ok:#1E8E5A;--warn:#C98A1B;--bad:#C0392B;
+  --sans:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+  --song:"Songti SC","SimSun","Noto Serif SC",serif;
+  --mono:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;min-width:0}
+html,body{max-width:100%;overflow-x:hidden}
+body{font-family:var(--sans);background-color:var(--bg);background-image:linear-gradient(rgba(243,246,245,.70),rgba(243,246,245,.70)),url("brand/dongda-logo-header.jpg?v=20260613-6");background-repeat:no-repeat;background-position:calc(100% - 54px) calc(100% - 42px);background-size:min(42vw,420px) auto;background-attachment:fixed;color:var(--ink);font-size:14px;font-weight:500;-webkit-font-smoothing:antialiased}
+
+.app{display:flex;min-height:100vh}
+.side{width:218px;background:linear-gradient(180deg,var(--green),var(--green-2));color:#fff;padding:18px 12px;position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;border-radius:0 22px 22px 0;z-index:60}
+.side .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;letter-spacing:.8px;padding:4px 10px 18px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:14px}
+.side .logo .mark{width:34px;height:34px;border:2px solid var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:rgba(232,119,46,.18);flex:none}
+.side .logo small{display:block;font-weight:500;font-size:10px;opacity:.6;letter-spacing:.4px}
+.nav-cap{font-size:10px;font-weight:800;letter-spacing:1.5px;opacity:.5;padding:10px 12px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:11px;cursor:pointer;font-weight:700;font-size:13.5px;color:rgba(255,255,255,.82);margin-bottom:3px;transition:.15s;user-select:none}
+.nav-item .ic{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex:none}
+.ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.qa-btn .ic svg{width:17px;height:17px;stroke:var(--teal)}
+.up-icon svg{width:26px;height:26px;stroke:var(--teal)}
+.empty .big svg{width:30px;height:30px;stroke:var(--steel)}
+.nav-item:hover{background:rgba(255,255,255,.08)}
+.nav-item.active{background:#fff;color:var(--green);box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.side .sp{flex:1}
+.side .user{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.08);border-radius:12px;font-size:12px}
+.side .user .av{width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+.side .user b{display:block;font-size:13px}
+.side .user span{opacity:.6}
+
+.main{flex:1;margin-left:218px;padding:22px 26px 110px;max-width:1180px;overflow-x:hidden;width:100%;position:relative}
+.pagehead{display:flex;align-items:center;gap:14px;margin-bottom:18px;flex-wrap:wrap}
+.pagehead h2{font-size:21px;font-weight:800;letter-spacing:.3px}
+.pagehead p{font-size:12.5px;color:var(--steel);font-weight:500;margin-top:3px}
+.pagehead .sp{flex:1}
+.bill-no{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--card);border:1.5px solid var(--line);padding:8px 14px;border-radius:9px;letter-spacing:.6px}
+.bill-no b{color:var(--orange)}
+
+.mtop{display:none}
+.mnav{display:none}
+.panel{display:none}
+.panel.active{display:block;animation:fade .25s}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 2px rgba(13,82,71,.04),0 6px 18px rgba(13,82,71,.05)}
+.card-h{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.card-h .tag{width:4px;height:17px;background:var(--teal);border-radius:2px}
+.card-h h3{font-size:15px;font-weight:800;letter-spacing:.4px}
+.card-h .ru{font-size:11px;color:var(--steel);font-weight:500;margin-left:4px}
+.card-b{padding:18px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(13,82,71,.05)}
+.kpi .l{font-size:12px;font-weight:700;color:var(--steel);letter-spacing:.4px}
+.kpi .v{font-size:26px;font-weight:800;font-family:var(--mono);margin:7px 0 4px;letter-spacing:-.5px}
+.kpi .d{font-size:11.5px;font-weight:700;color:var(--steel)}
+.kpi .d.up{color:var(--ok)}.kpi .d.warn{color:var(--warn)}
+.kpi.hero{background:linear-gradient(135deg,var(--green),var(--teal));color:#fff;border:none}
+.kpi.hero .l{color:rgba(255,255,255,.75)}
+.kpi.hero .d{color:#FFD9A8}
+.dash2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}
+.bars{display:flex;align-items:flex-end;gap:9px;height:130px;padding:6px 2px 0}
+.bars .b{flex:1;height:100%;background:var(--teal-soft);border-radius:7px 7px 3px 3px;position:relative;min-width:14px}
+.bars .b i{position:absolute;bottom:0;left:0;right:0;background:var(--teal);border-radius:7px 7px 3px 3px;transition:.4s}
+.bars .b.hot i{background:var(--orange)}
+.bars-x{display:flex;gap:9px;font-size:10.5px;font-weight:700;color:var(--steel);padding-top:7px}
+.bars-x span{flex:1;text-align:center}
+.qa{display:grid;gap:10px}
+.qa-btn{display:flex;align-items:center;gap:12px;padding:14px;border-radius:13px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-weight:800;font-size:14px;font-family:var(--sans);text-align:left;transition:.15s;color:var(--ink)}
+.qa-btn .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:var(--teal-soft);flex:none}
+.qa-btn small{display:block;font-weight:500;font-size:11.5px;color:var(--steel);margin-top:2px}
+.qa-btn:hover{border-color:var(--teal);transform:translateY(-1px);box-shadow:0 6px 14px rgba(13,82,71,.1)}
+
+.grid{display:grid;gap:13px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--steel);margin-bottom:6px;letter-spacing:.3px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;font-family:var(--sans);background:#FBFDFC;color:var(--ink)}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(20,125,106,.14)}
+
+table.items{width:100%;border-collapse:collapse;font-size:13px}
+table.items th{background:#F6FAF8;color:var(--steel);font-weight:800;text-align:left;padding:10px;border-bottom:2px solid var(--line);font-size:12px;letter-spacing:.4px;white-space:nowrap}
+table.items td{padding:8px 10px;border-bottom:1px solid #EDF2F0;vertical-align:middle;font-weight:600}
+table.items input,table.items select{width:100%;padding:7px 9px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-weight:600;background:#FBFDFC}
+table.items .num{font-family:var(--mono);font-weight:700;text-align:right;white-space:nowrap}
+.add-row{margin:11px 0 0;background:none;border:1.5px dashed var(--line);color:var(--steel);width:100%;padding:10px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans)}
+.add-row:hover{border-color:var(--teal);color:var(--teal)}
+
+.tax{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.tax-box{border:1.5px solid var(--line);border-radius:13px;padding:15px;background:#FBFDFC}
+.tax-box h4{font-size:14px;font-weight:800;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.flagdot{width:9px;height:9px;border-radius:50%}
+.tax-line{display:flex;justify-content:space-between;font-size:13px;font-weight:600;padding:3px 0;color:var(--steel)}
+.tax-line b{color:var(--ink);font-family:var(--mono);font-weight:700}
+.tax-line.total{border-top:1.5px dashed var(--line);margin-top:7px;padding-top:9px}
+.tax-line.total span{font-weight:800;color:var(--ink)}
+.tax-line.total b{color:var(--orange);font-size:17px;font-weight:800}
+
+.btn{display:inline-flex;align-items:center;gap:7px;padding:12px 22px;border-radius:11px;border:none;font-size:14px;font-weight:800;letter-spacing:.4px;cursor:pointer;font-family:var(--sans);transition:.15s}
+.btn-main{background:var(--orange);color:#fff;box-shadow:0 4px 12px rgba(232,119,46,.32)}
+.btn-main:hover{background:#D6691F;transform:translateY(-1px)}
+.btn-ink{background:var(--green);color:#fff;box-shadow:0 4px 12px rgba(13,82,71,.28)}
+.btn-ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.bar{display:flex;gap:10px;flex-wrap:wrap}
+
+.upbox{display:block;border:2px dashed #BFD4CD;border-radius:15px;padding:34px 16px;text-align:center;cursor:pointer;background:#F8FBFA;transition:.15s}
+.upbox:hover{border-color:var(--teal);background:var(--teal-soft)}
+.up-icon{font-size:28px;margin-bottom:7px;line-height:1}
+.up-t{font-weight:800;font-size:16px;margin-bottom:5px;letter-spacing:.3px}
+.up-d{font-size:12px;font-weight:500;color:var(--steel)}
+.recog-steps{font-size:13px;color:var(--steel);line-height:2;margin-bottom:10px;font-family:var(--mono)}
+.recog-steps .done{color:var(--ok);font-weight:700}
+.recog-steps .err{color:var(--bad);font-weight:700}
+.pbar{height:7px;background:#E8EFEC;border-radius:4px;overflow:hidden}
+.pfill{height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--orange));transition:width .5s}
+.conf{font-family:var(--mono);font-size:12px;font-weight:800;padding:3px 9px;border-radius:11px;white-space:nowrap}
+.c-hi{background:#E2F3EA;color:var(--ok)}
+.c-lo{background:#FBF1DC;color:var(--warn)}
+tr.lowconf td{background:#FFFBEF}
+tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
+
+.tpl-verify{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--ok);background:#E2F3EA;border:1px solid #BFE3CE;border-radius:9px;padding:9px 13px;margin-bottom:13px}
+.tpls{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tpl{display:flex;gap:11px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;background:#FBFDFC;transition:.15s;user-select:none}
+.tpl:hover{border-color:var(--teal)}
+.tpl.on{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 1px var(--teal)}
+.tpl.must{cursor:default}
+.tpl .ck{width:21px;height:21px;border:2px solid #BFD4CD;border-radius:6px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;background:#fff;margin-top:1px}
+.tpl.on .ck{background:var(--teal);border-color:var(--teal)}
+.tpl .tt{font-weight:800;font-size:13.5px;line-height:1.35}
+.tpl .td{font-size:11.5px;font-weight:500;color:var(--steel);margin-top:3px;line-height:1.5}
+.tpl .ver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--ok);background:#E2F3EA;border-radius:8px;padding:2px 8px;margin-top:6px;margin-right:4px}
+.tpl .ver.req{color:var(--orange);background:#FBEBDD}
+.tpl-cnt{font-size:13px;font-weight:800;color:var(--green)}
+.rate-basis{font-size:11px;font-weight:600;color:var(--steel);margin-top:9px;line-height:1.6;border-top:1px dashed var(--line);padding-top:8px}
+
+.doc-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:9px 16px;border-radius:24px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--steel);user-select:none;transition:.15s}
+.chip small{display:block;font-size:10px;font-weight:500;opacity:.7}
+.chip.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 4px 12px rgba(13,82,71,.28)}
+.doc-wrap{background:#E5ECE9;border:1px solid var(--line);border-radius:16px;padding:18px;overflow-x:auto}
+.doc{background-color:#fff;background-image:linear-gradient(rgba(255,255,255,.70),rgba(255,255,255,.70)),url("brand/dongda-logo-header.jpg?v=20260613-6");background-repeat:no-repeat;background-position:center 54%;background-size:52%;max-width:760px;margin:0 auto;padding:34px 40px;font-family:var(--song);box-shadow:0 3px 18px rgba(13,40,35,.16);position:relative;min-height:560px;font-size:13px;line-height:1.7;color:#111}
+.doc-brand{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:2px solid #163C57;padding-bottom:10px;margin-bottom:16px;font-family:var(--sans)}
+.doc-brand img{width:132px;height:auto;display:block;object-fit:contain;flex:none}
+.doc-brand .brand-copy{text-align:right;line-height:1.45;color:#163C57;font-weight:700;max-width:430px}
+.doc-brand .brand-copy b{display:block;font-size:14px;letter-spacing:.5px}
+.doc-brand .brand-copy span{display:block;font-size:10.5px;color:#8F2A25;font-family:var(--mono);letter-spacing:.2px}
+.doc-brand .brand-copy small{display:block;font-size:10.5px;color:#3C555F;font-weight:700}
+.doc h1{text-align:center;font-size:19px;letter-spacing:3px;margin-bottom:2px}
+.doc .sub{text-align:center;font-size:12px;color:#444;margin-bottom:16px;letter-spacing:1px}
+.doc .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;font-family:var(--mono);flex-wrap:wrap;gap:6px}
+.doc table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.doc table th,.doc table td{border:1px solid #555;padding:6px 8px}
+.doc table th{background:#F4F2EC;font-weight:600}
+.doc .num{font-family:var(--mono);text-align:right}
+.doc .row2{display:flex;justify-content:space-between;gap:20px;font-size:12px;flex-wrap:wrap}
+.doc .seal-area{display:flex;justify-content:flex-end;align-items:flex-start;margin:16px 0 20px;break-inside:avoid;page-break-inside:avoid}
+.doc .seal-box{width:210px;min-height:118px;position:relative;text-align:center;font-family:var(--sans);font-size:11px;color:#333}
+.doc .seal-line{border-top:1px solid #777;padding-top:7px;margin-top:38px;font-weight:700}
+.doc .seal-meta{font-size:10px;color:#666;margin-top:3px;line-height:1.35}
+.doc .seal{position:absolute;right:26px;top:0;width:118px;height:122px;pointer-events:none;opacity:.9;transform:rotate(-6deg)}
+.doc .seal img{width:100%;height:100%;object-fit:contain;display:block}
+.doc .foot{position:absolute;left:40px;bottom:14px;font-size:9px;color:#999;font-family:var(--mono)}
+
+.archive-item{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid #EDF2F0;background:#fff}
+.archive-item:last-child{border-bottom:none}
+.route{font-family:var(--mono);font-size:12px;font-weight:800;background:var(--teal-soft);color:var(--green);padding:5px 10px;border-radius:7px;white-space:nowrap}
+.route.imp{background:#FBEBDD;color:#A8581B}
+.a-main{flex:1;min-width:0}
+.a-main .t{font-weight:800;font-size:14px;margin-bottom:3px}
+.a-main .d{font-size:12px;font-weight:500;color:var(--steel);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:12px;font-weight:800;padding:5px 12px;border-radius:14px;white-space:nowrap;border:none;cursor:pointer;font-family:var(--sans)}
+.s-done{background:#E2F3EA;color:var(--ok)}
+.s-way{background:#FBF1DC;color:var(--warn)}
+.s-doc{background:#E9EEF2;color:var(--steel)}
+.mini{padding:8px 14px;font-size:12px;font-weight:700;border-radius:9px;border:1.5px solid var(--line);background:#fff;cursor:pointer;white-space:nowrap;font-family:var(--sans)}
+.mini:hover{border-color:var(--orange);color:var(--orange)}
+.mini.del:hover{border-color:var(--bad);color:var(--bad)}
+.empty{text-align:center;color:var(--steel);padding:46px 16px;font-size:13px;font-weight:600}
+.empty .big{font-size:28px;margin-bottom:9px;opacity:.45;line-height:1}
+
+.footbar{position:fixed;bottom:0;left:218px;right:0;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 16px;display:flex;gap:10px;justify-content:center;z-index:50;box-shadow:0 -4px 16px rgba(13,82,71,.07)}
+.footbar .btn{flex:1;max-width:240px;justify-content:center}
+.note{background:#FFF6E6;border:1px solid #EFD9A8;border-radius:11px;padding:11px 15px;font-size:12px;font-weight:600;color:#8A6310;margin-bottom:16px}
+.toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;font-weight:800;font-size:13px;padding:12px 22px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:200;display:none}
+
+.doc .cnh{color:#9aa;font-size:9.5px;font-weight:400;letter-spacing:0}
+#printArea .cnh{display:none}
+#printArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{display:block;position:absolute;left:0;top:0;width:100%}
+  #printArea .doc{box-shadow:none;max-width:100%;min-height:auto;page-break-after:always}
+  .doc-brand{break-inside:avoid}
+  .side,.mtop,.mnav,.footbar,.toast{display:none!important}
+}
+
+/* ===== 平板（601–1024px）：侧栏加宽显示完整文字 ===== */
+@media (max-width:1024px) and (min-width:601px){
+  .side{width:182px;padding:16px 10px}
+  .side .logo{font-size:14px;gap:8px}
+  .side .logo small{font-size:9px}
+  .nav-item{font-size:12.5px;padding:10px 10px;gap:8px}
+  .side .user{font-size:11px;padding:8px 10px}
+  .main{margin-left:182px;padding:18px 16px 110px}
+  .footbar{left:182px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .dash2{grid-template-columns:1fr}
+  .doc{padding:28px 26px}
+}
+/* ===== 手机（≤600px）===== */
+@media (max-width:600px){
+  .side{display:none}
+  .main{margin-left:0;padding:12px 12px 110px}
+  .mtop{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,var(--green),var(--green-2));color:#fff;padding:13px 16px;position:sticky;top:0;z-index:60;font-weight:800;font-size:15px;letter-spacing:.6px}
+  .mtop .mark{width:30px;height:30px;border:2px solid var(--orange);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;background:rgba(232,119,46,.18);flex:none}
+  .mtop small{font-weight:500;font-size:10px;opacity:.6;margin-left:2px}
+  .mnav{display:flex;gap:7px;overflow-x:auto;padding:10px 26px 10px 12px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:54px;z-index:55;-webkit-overflow-scrolling:touch;scroll-padding-right:26px}
+  .mnav::-webkit-scrollbar{display:none}
+  .mnav .mi{white-space:nowrap;padding:8px 12px;border-radius:18px;font-size:12px;line-height:1.4;font-weight:800;color:var(--steel);background:#F0F4F2;cursor:pointer;flex:none}
+  .mnav .mi.active{background:var(--green);color:#fff;box-shadow:0 3px 10px rgba(13,82,71,.3)}
+  .kpis{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi .v{font-size:22px}
+  .dash2,.g3,.g2,.tax,.tpls{grid-template-columns:1fr}
+  .footbar{left:0}
+  .doc{padding:22px 16px;min-height:auto}
+  .doc .seal-area{margin:12px 0 16px}
+  .doc .seal-box{width:180px;min-height:104px}
+  .doc .seal{width:94px;height:98px;right:20px}
+  .doc-wrap{padding:8px}
+  .archive-item{flex-wrap:wrap}
+  .pagehead h2{font-size:18px}
+  .bill-no{display:none}
+  .btn{padding:11px 14px;font-size:13px}
+  .footbar{padding:10px 8px;gap:7px}
+  .card-b{padding:13px}
+  .doc h1{font-size:15px;letter-spacing:1px}
+  .doc table{font-size:10.5px}
+  .doc table th,.doc table td{padding:4px 5px}
+  .chip{padding:8px 12px;font-size:12px}
+  .kpi{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div id="printArea"></div>
+
+<div class="mtop"><span class="mark">东大</span>报关单证工作台<small>立天·东大贸易</small></div>
+<div class="mnav">
+  <div class="mi active" data-p="pd" onclick="go('pd')">概览</div>
+  <div class="mi" data-p="p0" onclick="go('p0')">合同识别</div>
+  <div class="mi" data-p="p1" onclick="go('p1')">核对录入</div>
+  <div class="mi" data-p="p2" onclick="go('p2')">单证预览</div>
+  <div class="mi" data-p="p3" onclick="go('p3')">历史档案</div>
+  <div class="mi" data-p="p4" onclick="go('p4')">模版库</div>
+  <div class="mi" data-p="p5" onclick="go('p5')">基础资料</div>
+</div>
+
+<div class="app">
+<aside class="side">
+  <div class="logo"><span class="mark">东大</span><div>报关单证工作台<small>立天·东大贸易 LITIAN DONGDA</small></div></div>
+  <div class="nav-cap">工作流程</div>
+  <div class="nav-item active" data-p="pd" onclick="go('pd')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="9.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="1.5"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="1.5"/><rect x="3" y="15.5" width="7.5" height="5.5" rx="1.5"/></svg></span>概览 Dashboard</div>
+  <div class="nav-item" data-p="p0" onclick="go('p0')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><line x1="7" y1="12" x2="17" y2="12"/></svg></span>合同识别</div>
+  <div class="nav-item" data-p="p1" onclick="go('p1')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5Z"/></svg></span>核对录入</div>
+  <div class="nav-item" data-p="p2" onclick="go('p2')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V8Z"/><path d="M14 3v5h4.5"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>单证预览</div>
+  <div class="nav-cap">管理</div>
+  <div class="nav-item" data-p="p3" onclick="go('p3')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5"/><line x1="10" y1="13" x2="14" y2="13"/></svg></span>历史档案</div>
+  <div class="nav-item" data-p="p4" onclick="go('p4')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="3.6" height="16" rx="0.8"/><rect x="10" y="4" width="3.6" height="16" rx="0.8"/><path d="M16.2 5.2l3.4 1-4 14.6-3.4-1Z"/></svg></span>海关模版库</div>
+  <div class="nav-item" data-p="p5" onclick="go('p5')"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.2 12c0-.4 0-.8-.1-1.2l2-1.5-1.9-3.3-2.3 1a7 7 0 0 0-2.1-1.2L14.4 3H9.6l-.4 2.8a7 7 0 0 0-2.1 1.2l-2.3-1L2.9 9.3l2 1.5a7.4 7.4 0 0 0 0 2.4l-2 1.5 1.9 3.3 2.3-1a7 7 0 0 0 2.1 1.2l.4 2.8h4.8l.4-2.8a7 7 0 0 0 2.1-1.2l2.3 1 1.9-3.3-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg></span>基础资料</div>
+  <div class="sp"></div>
+  <div class="user"><div class="av">大</div><div><b>大 · 管理员</b><span>东大 Astana / 新疆</span></div></div>
+</aside>
+
+<main class="main">
+
+<!-- ============ 概览 ============ -->
+<div class="panel active" id="pd">
+  <div class="pagehead"><div><h2>工作台概览</h2><p id="dashSub"></p></div><div class="sp"></div><div class="bill-no" id="dashNo"></div></div>
+  <div class="kpis">
+    <div class="kpi hero"><div class="l">本月票数</div><div class="v" id="k1">0</div><div class="d" id="k1d"></div></div>
+    <div class="kpi"><div class="l">在途</div><div class="v" id="k2">0</div><div class="d up" id="k2d"></div></div>
+    <div class="kpi"><div class="l">单证准备中</div><div class="v" id="k3">0</div><div class="d warn" id="k3d"></div></div>
+    <div class="kpi"><div class="l">本月货值</div><div class="v" id="k4" style="font-size:19px">—</div><div class="d up" id="k4d"></div></div>
+  </div>
+  <div class="dash2">
+    <div class="card">
+      <div class="card-h"><span class="tag"></span><h3>近6个月出票量</h3></div>
+      <div class="card-b">
+        <div class="bars" id="dashBars"></div>
+        <div class="bars-x" id="dashBarsX"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="tag"></span><h3>快捷操作</h3></div>
+      <div class="card-b qa">
+        <button class="qa-btn" onclick="go('p0')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><line x1="7" y1="12" x2="17" y2="12"/></svg></span><span>上传合同识别<small>拍照/PDF · AI自动提取 + 审单预警</small></span></button>
+        <button class="qa-btn" onclick="newTicket();go('p1')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5Z"/></svg></span><span>新建空白票<small>不走识别，手工录入</small></span></button>
+        <button class="qa-btn" onclick="go('p3')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15H4.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/></svg></span><span>复制翻单<small>老客户翻单，改数量直接出单证</small></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 合同识别 ============ -->
+<div class="panel" id="p0">
+  <div class="pagehead"><div><h2>合同识别</h2><p>上传原始合同，Claude AI 自动提取并审单</p></div></div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>上传原始合同</h3><span class="ru">PDF / 拍照图片 · 中·俄·英文均可 · 可多文件</span></div>
+    <div class="card-b">
+      <label class="upbox">
+        <input type="file" id="upfile" accept=".pdf,image/*" multiple style="display:none" onchange="onUpload(this)">
+        <div class="up-icon"><svg viewBox="0 0 24 24"><path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V8Z"/><path d="M14 3v5h4.5"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
+        <div class="up-t" id="upTitle">点击上传合同（可多页/多文件）</div>
+        <div class="up-d">AI 自动识别买卖双方、货物明细、价格条款，并比对中俄版本一致性</div>
+      </label>
+      <div class="bar" style="margin-top:13px">
+        <button class="btn btn-main" id="btnRecog" onclick="startRecognize()" disabled>开始 AI 识别</button>
+        <button class="btn btn-ghost" onclick="demoRecognize()">▶ 演示（样例合同 DXH-20260603）</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="recogCard" style="display:none">
+    <div class="card-h"><span class="tag"></span><h3>AI 识别中</h3><span class="ru">Claude 视觉识别 · 含审单校验</span></div>
+    <div class="card-b">
+      <div class="recog-steps" id="recogSteps"></div>
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <div class="card-h"><span class="tag"></span><h3 id="resultTitle">识别结果 · 请核对</h3><span class="ru">黄色为预警/低置信字段，带入前请确认</span></div>
+    <div class="card-b" style="overflow-x:auto">
+      <table class="items"><thead><tr><th>字段</th><th>识别值</th><th>置信度</th></tr></thead><tbody id="resultBody"></tbody></table>
+      <div id="warnList" style="margin-top:12px"></div>
+      <div class="bar" style="margin-top:14px">
+        <button class="btn btn-main" onclick="applyExtract()">✓ 核对完成，带入录入表 →</button>
+        <button class="btn btn-ghost" onclick="resetRecognize()">重新上传</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 核对录入 ============ -->
+<div class="panel" id="p1">
+  <div class="pagehead"><div><h2>核对录入</h2><p>核对识别数据 / 手工录入，补充运输信息后出单证</p></div><div class="sp"></div><div class="bill-no">本票 <b id="curNo">—</b></div></div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>票型与双方</h3><span class="ru">Стороны сделки</span></div>
+    <div class="card-b grid g3">
+      <div class="field"><label>票型</label>
+        <select id="f_type" onchange="onTypeChange()">
+          <option value="export">出口票（我方为卖方）</option>
+          <option value="import">进口采购票（我方为买方）</option>
+        </select></div>
+      <div class="field"><label>卖方 Продавец</label><input id="f_seller" placeholder="公司名称" oninput="render()"></div>
+      <div class="field"><label>买方 Покупатель</label><input id="f_buyer" list="clientList" placeholder="如 TOO «KazPack Trade»" oninput="render()"><datalist id="clientList"></datalist></div>
+      <div class="field"><label>目的国</label>
+        <select id="f_country" onchange="render()">
+          <option value="KZ">哈萨克斯坦 Казахстан</option>
+          <option value="UZ">乌兹别克斯坦 Узбекистан</option>
+        </select></div>
+      <div class="field"><label>合同号</label><input id="f_contract" placeholder="如 LTD-KZ-2026-018" oninput="render()"></div>
+      <div class="field"><label>单证日期</label><input id="f_date" type="date" oninput="render()"></div>
+      <div class="field"><label>贸易条款 Incoterms</label>
+        <select id="f_terms" onchange="render()">
+          <option>CPT Алматы</option><option>CPT Астана</option><option>DAP Ташкент</option><option>DAP Самарканд</option><option>FCA 霍尔果斯</option><option>FCA 阿拉山口</option><option>EXW 工厂</option><option>CIF</option>
+        </select></div>
+      <div class="field"><label>币种</label>
+        <select id="f_cur" onchange="render()"><option>USD</option><option>CNY</option><option>RUB</option><option>EUR</option></select></div>
+      <div class="field"><label>付款方式</label><input id="f_pay" value="T/T 30%预付 70%发货前" oninput="render()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>单证模版选择</h3><span class="ru">按目的国自动匹配 · 可勾选增减</span><span style="flex:1"></span><span class="tpl-cnt" id="tplCnt"></span></div>
+    <div class="card-b">
+      <div class="tpl-verify" id="tplVerify"></div>
+      <div class="tpls" id="tplGrid"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>货物明细</h3><span class="ru">Спецификация товара</span></div>
+    <div class="card-b" style="overflow-x:auto">
+      <table class="items" id="itemsTbl">
+        <thead><tr><th>品名 / 规格</th><th>HS编码</th><th>数量</th><th>单价</th><th class="num">金额</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button class="add-row" onclick="addRow()">＋ 添加一行</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>运输信息</h3><span class="ru">Транспорт</span></div>
+    <div class="card-b grid g3">
+      <div class="field"><label>运输方式</label>
+        <select id="f_trans"><option>公路卡航（中欧卡车）</option><option>铁路集装箱</option><option>公铁联运</option></select></div>
+      <div class="field"><label>出境口岸</label>
+        <select id="f_port"><option>霍尔果斯</option><option>阿拉山口</option><option>巴克图</option><option>伊尔克什坦</option></select></div>
+      <div class="field"><label>车牌 / 箱号</label><input id="f_truck" placeholder="装车后填写" oninput="render()"></div>
+      <div class="field"><label>毛重 (kg)</label><input id="f_gw" inputmode="decimal" placeholder="如 21500" oninput="render()"></div>
+      <div class="field"><label>净重 (kg)</label><input id="f_nw" inputmode="decimal" placeholder="如 21000" oninput="render()"></div>
+      <div class="field"><label>件数（打/托）</label><input id="f_pkg" placeholder="如 200 打 / 60 托" oninput="render()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>进口税费速算</h3><span class="ru">报价参考 · 实际以海关核定为准</span><span style="flex:1"></span><span class="tpl-cnt" id="rateStamp"></span></div>
+    <div class="card-b tax">
+      <div class="tax-box">
+        <h4><span class="flagdot" style="background:#27AE9B"></span><span id="kz_head">哈萨克斯坦</span></h4>
+        <div class="tax-line"><span>货值 CIF</span><b id="kz_cif">—</b></div>
+        <div class="tax-line"><span id="kz_duty_l">进口关税</span><b id="kz_duty">—</b></div>
+        <div class="tax-line"><span id="kz_vat_l">增值税 НДС</span><b id="kz_vat">—</b></div>
+        <div class="tax-line total"><span>清关税费合计</span><b id="kz_total">—</b></div>
+        <p class="rate-basis" id="kz_basis"></p>
+      </div>
+      <div class="tax-box">
+        <h4><span class="flagdot" style="background:#3F7FBF"></span><span id="uz_head">乌兹别克斯坦</span></h4>
+        <div class="tax-line"><span>货值 CIF</span><b id="uz_cif">—</b></div>
+        <div class="tax-line"><span id="uz_duty_l">进口关税</span><b id="uz_duty">—</b></div>
+        <div class="tax-line"><span id="uz_vat_l">增值税 НДС</span><b id="uz_vat">—</b></div>
+        <div class="tax-line total"><span>清关税费合计</span><b id="uz_total">—</b></div>
+        <p class="rate-basis" id="uz_basis"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 单证预览 ============ -->
+<div class="panel" id="p2">
+  <div class="pagehead"><div><h2>单证预览</h2><p>数据与录入表实时联动 · 每份单证可单独导出PDF</p></div><div class="sp"></div><div class="bill-no">本票 <b id="curNo2">—</b></div></div>
+  <div class="doc-tabs" id="docTabs"></div>
+  <div class="bar" style="margin-bottom:13px;align-items:flex-end">
+    <div class="field" style="min-width:175px;flex:none"><label>单证语言 Язык документа</label>
+      <select id="docLangSel" onchange="setDocLang(this.value)">
+        <option value="ru">Русский · 俄文</option>
+        <option value="en">English · 英文</option>
+        <option value="cn">中文</option>
+      </select></div>
+    <button class="btn btn-ink" onclick="printDoc(false)">🖨 导出当前单证 PDF</button>
+    <button class="btn btn-ghost" onclick="printDoc(true)">导出全部已选单证</button>
+  </div>
+  <div id="docLangHint" style="font-size:12px;font-weight:700;color:var(--steel);margin:-6px 0 12px"></div>
+  <div class="doc-wrap"><div id="docArea"></div></div>
+</div>
+
+<!-- ============ 历史档案 ============ -->
+<div class="panel" id="p3">
+  <div class="pagehead"><div><h2>历史档案</h2><p>点状态可切换 单证中→在途→已放行 · 复制翻单直接带入旧数据</p></div><div class="sp"></div>
+    <div class="bar"><button class="mini" onclick="exportBackup()">⬇ 备份数据</button><label class="mini" style="display:inline-flex;align-items:center">⬆ 恢复备份<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label></div>
+  </div>
+  <div class="card"><div id="archiveList"></div></div>
+</div>
+
+<!-- ============ 海关模版库 ============ -->
+<div class="panel" id="p4">
+  <div class="pagehead"><div><h2>海关模版库</h2><p>三国官方格式 · 按现行法规版本维护，出单自动套用</p></div></div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:#C8382E"></span><h3>🇨🇳 中国 · 出口申报</h3><span class="ru">经报关行提交"单一窗口"</span></div>
+    <div class="card-b" style="padding:0">
+      <div class="archive-item"><div class="a-main"><div class="t">出口货物报关单（草单）</div><div class="d">现行横版A4格式 · 依据《海关进出口货物报关单填制规范》</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2');pickDoc('dec')">预览</button></div>
+      <div class="archive-item"><div class="a-main"><div class="t">申报要素表（编织袋/吨袋）</div><div class="d">品名、材质PP、克重、规格、用途，按 6305/3923 预设</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2');pickDoc('ysys')">预览</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:#27AE9B"></span><h3>🇰🇿 哈萨克斯坦 · 进口申报</h3><span class="ru">брокер 经 ASTANA-1 提交</span></div>
+    <div class="card-b" style="padding:0">
+      <div class="archive-item"><div class="a-main"><div class="t">ДТ 申报资料包（Декларация на товары）</div><div class="d">ЕАЭС 统一格式 · 关税同盟委员会 Решение №257 · 按各栏整理给брокер</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2');pickDoc('bro')">预览</button></div>
+      <div class="archive-item"><div class="a-main"><div class="t">ТН ВЭД ЕАЭС 编码对照 + 税率</div><div class="d">6305.32/6305.33 关税10%，6305.39 关税7% · НДС 16%</div></div><span class="status s-done">已内置</span><button class="mini" onclick="alert(HS_NOTE)">查看编码库</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:#3F7FBF"></span><h3>🇺🇿 乌兹别克斯坦 · 进口申报</h3><span class="ru">брокер 经电子申报系统提交</span></div>
+    <div class="card-b" style="padding:0">
+      <div class="archive-item"><div class="a-main"><div class="t">ГТД 申报资料包（Форма Т-6）</div><div class="d">e-BYuD 电子申报所需字段整理表</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2');pickDoc('bro')">预览</button></div>
+      <div class="archive-item"><div class="a-main"><div class="t">UZ 编码与税率对照</div><div class="d">НДС 12% · 关税按 tarif.customs.uz 10位码逐票核验</div></div><span class="status s-done">已内置</span><button class="mini" onclick="alert(HS_NOTE)">查看编码库</button></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:var(--orange)"></span><h3>🌍 通用运输/商务单证</h3><span class="ru">中俄双语</span></div>
+    <div class="card-b" style="padding:0">
+      <div class="archive-item"><div class="a-main"><div class="t">商业发票 Инвойс · 装箱单 · CMR 运输单</div><div class="d">国际通行格式，中俄双语，自动从订单数据生成</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2')">预览</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 基础资料 ============ -->
+<div class="panel" id="p5">
+  <div class="pagehead"><div><h2>系统设置（管理员）</h2><p>公司信息 / 接口 / 税率 / 业务配置 · 修改后全系统即时生效</p></div></div>
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:var(--orange)"></span><h3>后台 API 接口设置</h3><span class="ru">识别服务连接 · 部署Render后填入网址</span></div>
+    <div class="card-b">
+      <div class="grid g3">
+        <div class="field" style="grid-column:span 2"><label>后端服务地址（留空 = 当前网址同源）</label><input id="api_base" placeholder="https://dongda-customs.onrender.com"></div>
+        <div class="field"><label>识别通道</label>
+          <select id="api_ch"><option value="2">双通道交叉验证（推荐）</option><option value="1">单通道（省API费用）</option></select></div>
+      </div>
+      <div class="bar" style="margin-top:13px">
+        <button class="btn btn-ink" onclick="saveApi()">保存接口设置</button>
+        <button class="btn btn-ghost" onclick="testApi()">⚡ 测试连接</button>
+        <span id="apiStatus" style="align-self:center;font-size:13px;font-weight:800"></span>
+      </div>
+      <p style="font-size:12px;color:var(--steel);font-weight:600;margin-top:10px">说明：Claude API 密钥保存在服务器环境变量（ANTHROPIC_API_KEY），不经过浏览器，安全。本页只需填后端网址。</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>出口卖方（中国公司）</h3></div>
+    <div class="card-b grid g2">
+      <div class="field"><label>公司名称（中文）</label><input id="c_ex_name"></div>
+      <div class="field"><label>公司名称（拉丁/英文）</label><input id="c_ex_lat"></div>
+      <div class="field"><label>开户行</label><input id="c_ex_bank"></div>
+      <div class="field"><label>SWIFT</label><input id="c_ex_swift"></div>
+      <div class="field"><label>银行账号</label><input id="c_ex_acct"></div>
+      <div class="field"><label>统一社会信用代码</label><input id="c_ex_tax"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>进口买方（哈国东大）</h3></div>
+    <div class="card-b grid g2">
+      <div class="field"><label>公司名称</label><input id="c_im_name"></div>
+      <div class="field"><label>地址</label><input id="c_im_addr"></div>
+      <div class="field"><label>电话</label><input id="c_im_tel"></div>
+      <div class="field"><label>BIN</label><input id="c_im_bin"></div>
+      <div class="field"><label>开户行</label><input id="c_im_bank"></div>
+      <div class="field"><label>IBAN</label><input id="c_im_iban"></div>
+      <div class="field"><label>БИК</label><input id="c_im_bik"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:#27AE9B"></span><h3>税率与编码库（已核验·可更新）</h3><span class="ru">税率变动时在此更新，全系统生效</span></div>
+    <div class="card-b">
+      <div class="tpl-verify" id="rateVerify"></div>
+      <div class="grid g2" style="margin-bottom:13px">
+        <div class="field"><label>🇰🇿 哈萨克斯坦 · 默认进口关税 %（6305.32/6305.33）</label><input id="r_kz_duty" inputmode="decimal"></div>
+        <div class="field"><label>🇰🇿 哈萨克斯坦 · 增值税 НДС %</label><input id="r_kz_vat" inputmode="decimal"></div>
+        <div class="field"><label>🇺🇿 乌兹别克斯坦 · 进口关税 %（按10位码核验）</label><input id="r_uz_duty" inputmode="decimal"></div>
+        <div class="field"><label>🇺🇿 乌兹别克斯坦 · 增值税 НДС %</label><input id="r_uz_vat" inputmode="decimal"></div>
+      </div>
+      <div class="bar"><button class="btn btn-ink" onclick="saveRates()">保存税率（记录核验日期）</button></div>
+      <p style="font-size:12px;color:var(--steel);font-weight:600;margin-top:11px;line-height:1.8">
+      官方核验渠道：哈/ЕАЭС关税 → ЕЭК统一税则 ЕТТ（eec.eaeunion.org 按ТН ВЭД查询）· 哈НДС → НК РК / 2026税法改革公告 · 
+      乌关税 → <b>tarif.customs.uz</b>（综合税率查询，按10位编码）· 乌НДС → НК РУз · 中国 → 单一窗口/海关总署/国家税务总局退税率文库。<br>
+      ⚠ 对乌出口建议随附CO/原产地资料，并由брокер确认是否涉及额外关税、限制、认证或原产地审查。<br>
+      系统提醒：税率核验超过60天时概览页将提示复核。申报税率最终以海关、税务机关、брокер核定为准。</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>业务配置</h3><span class="ru">票号 / 口岸 / 条款 / 编码 / 客户库</span></div>
+    <div class="card-b">
+      <div class="grid g3" style="margin-bottom:13px">
+        <div class="field"><label>票号前缀</label><input id="c_prefix" placeholder="DD"></div>
+        <div class="field"><label>单证印章名称（留空=按票型自动）</label><input id="c_seal" placeholder="如 新疆立天东大贸易有限公司"></div>
+        <div class="field"><label>管理密码（留空=不加锁；设置后进入本页需输入）</label><input id="c_pin" placeholder="4-8位数字"></div>
+      </div>
+      <div class="grid g2">
+        <div class="field"><label>口岸库（每行一个：中文=俄文）</label><textarea id="c_ports" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
+        <div class="field"><label>贸易条款库（每行一个）</label><textarea id="c_terms" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
+        <div class="field"><label>HS编码库（每行一个）</label><textarea id="c_hs" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
+        <div class="field"><label>常用客户库（每行：名称|KZ或UZ，录入买方时自动联想）</label><textarea id="c_clients" rows="5" style="font-family:var(--mono);font-size:12.5px" placeholder="TOO «KazPack Trade»|KZ&#10;OOO «Samarkand Agro»|UZ"></textarea></div>
+      </div>
+      <div class="bar" style="margin-top:13px">
+        <button class="btn btn-ink" onclick="saveCfg()">保存业务配置</button>
+        <button class="btn btn-ghost" onclick="resetCfg()">恢复默认配置</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:var(--seal)"></span><h3>数据管理</h3><span class="ru">谨慎操作</span></div>
+    <div class="card-b bar">
+      <button class="btn btn-ghost" onclick="exportBackup()">⬇ 导出全部数据备份</button>
+      <label class="btn btn-ghost" style="cursor:pointer">⬆ 恢复备份<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label>
+      <button class="btn btn-ghost" style="border-color:#E8B4AE;color:var(--bad)" onclick="wipeAll()">🗑 清空全部票据与配置</button>
+    </div>
+  </div>
+
+  <div class="bar"><button class="btn btn-ink" onclick="saveCompany()">保存基础资料</button></div>
+</div>
+
+</main>
+</div>
+
+<div class="footbar">
+  <button class="btn btn-ghost" onclick="go('p1')">核对录入</button>
+  <button class="btn btn-main" onclick="saveTicket();go('p2')">生成单证并保存 →</button>
+  <button class="btn btn-ghost" id="installPwaBtn" style="display:none" onclick="installPWA()">安装到本机</button>
+  <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
+</div>
+
+<script src="app.js?v=20260614-db1"></script>
+</body>
+</html>

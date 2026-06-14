@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="东大报关单证工作台">
+  <rect width="512" height="512" rx="112" fill="#0D5247"/>
+  <rect x="64" y="68" width="384" height="376" rx="42" fill="#F3F6F5"/>
+  <rect x="94" y="112" width="220" height="26" rx="13" fill="#147D6A"/>
+  <rect x="94" y="164" width="324" height="16" rx="8" fill="#AFC7BF"/>
+  <rect x="94" y="204" width="324" height="16" rx="8" fill="#AFC7BF"/>
+  <rect x="94" y="244" width="188" height="16" rx="8" fill="#AFC7BF"/>
+  <path d="M114 318h126v70H114z" fill="#E3F0EC" stroke="#147D6A" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M274 318h126v70H274z" fill="#E3F0EC" stroke="#147D6A" stroke-width="14" stroke-linejoin="round"/>
+  <circle cx="364" cy="132" r="54" fill="#E8772E"/>
+  <path d="M337 132l18 18 37-42" fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="256" y="303" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="800" fill="#0D5247">DD</text>
+</svg>
