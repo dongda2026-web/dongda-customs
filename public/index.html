@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0D5247">
-<meta name="application-name" content="东大报关单证工作台">
+<meta name="application-name" content="东大制单工作台">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="东大单证">
+<meta name="apple-mobile-web-app-title" content="东大制单">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>东大报关单证工作台</title>
+<title>东大制单工作台</title>
 <style>
 :root{
   --green:#0D5247;--green-2:#0A4239;--teal:#147D6A;--teal-soft:#E3F0EC;
@@ -151,6 +151,18 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .tpl .ver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--ok);background:#E2F3EA;border-radius:8px;padding:2px 8px;margin-top:6px;margin-right:4px}
 .tpl .ver.req{color:var(--orange);background:#FBEBDD}
 .tpl-cnt{font-size:13px;font-weight:800;color:var(--green)}
+.contract-panel{display:grid;grid-template-columns:280px 1fr;gap:14px}
+.contract-menu{display:flex;flex-direction:column;gap:9px}
+.contract-choice{border:1.5px solid var(--line);border-radius:9px;padding:11px 12px;background:#FBFDFC;cursor:pointer;transition:.15s}
+.contract-choice.on{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 1px var(--teal)}
+.contract-choice b{display:block;font-size:13px;color:var(--ink);margin-bottom:3px}
+.contract-choice span{font-size:11.5px;color:var(--steel);line-height:1.5}
+.contract-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.contract-fields .wide{grid-column:span 3}
+.contract-tools{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:11px}
+.contract-preview{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px}
+.param-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.param-list span{font-size:11px;font-weight:800;color:var(--green);background:#E7F1ED;border:1px solid #CDE1D9;border-radius:15px;padding:4px 8px}
 .rate-basis{font-size:11px;font-weight:600;color:var(--steel);margin-top:9px;line-height:1.6;border-top:1px dashed var(--line);padding-top:8px}
 
 .doc-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -242,7 +254,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .mnav .mi.active{background:var(--green);color:#fff;box-shadow:0 3px 10px rgba(13,82,71,.3)}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}
   .kpi .v{font-size:22px}
-  .dash2,.g3,.g2,.tax,.tpls{grid-template-columns:1fr}
+  .dash2,.g3,.g2,.tax,.tpls,.contract-panel,.contract-fields,.contract-tools{grid-template-columns:1fr}
+  .contract-fields .wide{grid-column:span 1}
   .footbar{left:0}
   .doc{padding:22px 16px;min-height:auto}
   .doc .seal-area{margin:12px 0 16px}
@@ -268,7 +281,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 <div class="toast" id="toast"></div>
 <div id="printArea"></div>
 
-<div class="mtop"><span class="brand-mark" role="img" aria-label="Litian Dongda company logo"></span>报关单证工作台<small>立天·东大贸易</small></div>
+<div class="mtop"><span class="brand-mark" role="img" aria-label="Litian Dongda company logo"></span>东大制单工作台<small>立天·东大贸易</small></div>
 <div class="mnav">
   <div class="mi active" data-p="pd" onclick="go('pd')">概览</div>
   <div class="mi" data-p="p0" onclick="go('p0')">合同识别</div>
@@ -281,7 +294,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 
 <div class="app">
 <aside class="side">
-  <div class="logo"><span class="brand-mark" role="img" aria-label="Litian Dongda company logo"></span><div>报关单证工作台<small>立天·东大贸易 LITIAN DONGDA</small></div></div>
+  <div class="logo"><span class="brand-mark" role="img" aria-label="Litian Dongda company logo"></span><div>东大制单工作台<small>立天·东大贸易 LITIAN DONGDA</small></div></div>
   <div class="nav-cap">工作流程</div>
   <div class="nav-item active" data-p="pd" onclick="go('pd')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="9.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="1.5"/><rect x="13.5" y="11.5" width="7.5" height="9.5" rx="1.5"/><rect x="3" y="15.5" width="7.5" height="5.5" rx="1.5"/></svg></span>概览 Dashboard</div>
   <div class="nav-item" data-p="p0" onclick="go('p0')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><line x1="7" y1="12" x2="17" y2="12"/></svg></span>合同识别</div>
@@ -289,7 +302,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <div class="nav-item" data-p="p2" onclick="go('p2')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V8Z"/><path d="M14 3v5h4.5"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>单证预览</div>
   <div class="nav-cap">管理</div>
   <div class="nav-item" data-p="p3" onclick="go('p3')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5"/><line x1="10" y1="13" x2="14" y2="13"/></svg></span>历史档案</div>
-  <div class="nav-item" data-p="p4" onclick="go('p4')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="3.6" height="16" rx="0.8"/><rect x="10" y="4" width="3.6" height="16" rx="0.8"/><path d="M16.2 5.2l3.4 1-4 14.6-3.4-1Z"/></svg></span>海关模版库</div>
+  <div class="nav-item" data-p="p4" onclick="go('p4')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="3.6" height="16" rx="0.8"/><rect x="10" y="4" width="3.6" height="16" rx="0.8"/><path d="M16.2 5.2l3.4 1-4 14.6-3.4-1Z"/></svg></span>模版库</div>
   <div class="nav-item" data-p="p5" onclick="go('p5')"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.2 12c0-.4 0-.8-.1-1.2l2-1.5-1.9-3.3-2.3 1a7 7 0 0 0-2.1-1.2L14.4 3H9.6l-.4 2.8a7 7 0 0 0-2.1 1.2l-2.3-1L2.9 9.3l2 1.5a7.4 7.4 0 0 0 0 2.4l-2 1.5 1.9 3.3 2.3-1a7 7 0 0 0 2.1 1.2l.4 2.8h4.8l.4-2.8a7 7 0 0 0 2.1-1.2l2.3 1 1.9-3.3-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg></span>基础资料</div>
   <div class="sp"></div>
   <div class="user"><div class="av">大</div><div><b>大 · 管理员</b><span>东大 Astana / 新疆</span></div></div>
@@ -481,7 +494,32 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 
 <!-- ============ 海关模版库 ============ -->
 <div class="panel" id="p4">
-  <div class="pagehead"><div><h2>海关模版库</h2><p>三国官方格式 · 按现行法规版本维护，出单自动套用</p></div></div>
+  <div class="pagehead"><div><h2>模版库</h2><p>合同模版、海关单证和运输资料统一维护，按参数自动制单</p></div></div>
+
+  <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>合同模版</h3><span class="ru">采购 / 销售 · 按参数提取关键数据并带入制单</span><span style="flex:1"></span><span class="tpl-cnt" id="contractTplHint"></span></div>
+    <div class="card-b">
+      <div class="contract-panel">
+        <div class="contract-menu" id="contractTplMenu"></div>
+        <div>
+          <div class="tpl-verify" id="contractTplVerify"></div>
+          <div class="contract-tools">
+            <div class="field"><label>基础信息来源</label><select id="contractBaseSource" onchange="applyContractBaseSource()"></select></div>
+            <button class="mini" onclick="applyContractBaseSource()">载入</button>
+          </div>
+          <div class="param-list" id="contractParamList"></div>
+          <div class="contract-fields" id="contractFields"></div>
+          <div class="bar" style="margin-top:13px">
+            <button class="btn btn-main" onclick="applyContractTemplate()">套用到制单数据</button>
+            <button class="btn btn-ink" onclick="previewContractTemplate()">预览合同</button>
+            <button class="btn btn-ghost" onclick="exportContractTemplate()">导出合同PDF</button>
+            <button class="btn btn-ghost" onclick="copyContractParams()">复制参数清单</button>
+          </div>
+          <div class="contract-preview" id="contractPreview"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="card">
     <div class="card-h"><span class="tag" style="background:#C8382E"></span><h3>🇨🇳 中国 · 出口申报</h3><span class="ru">经报关行提交"单一窗口"</span></div>
@@ -618,6 +656,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260614-db1"></script>
+<script src="app.js?v=20260615-contract2"></script>
 </body>
 </html>

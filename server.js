@@ -1,4 +1,4 @@
-/* 东大报关单证工作台 · 后端 v1.0
+/* 东大制单工作台 · 后端 v1.0
  * 多层验证识别管线：
  *   层1 双通道独立识别(Claude A提取员 + B稽核员并行)
  *   层2 字段交叉比对(逐字段/逐字符)
@@ -415,4 +415,4 @@ http.createServer((req, res) => {
   if (req.method === "GET" && pathname === "/api/tickets/list") return ticketList(req, res);
   if (req.method === "GET" || req.method === "HEAD") return serveStatic(req, res);
   sendText(res, 405, "Method not allowed");
-}).listen(PORT, HOST, () => console.log("东大报关单证工作台 · " + HOST + ":" + PORT + " · 识别通道 " + CHANNELS));
+}).listen(PORT, HOST, () => console.log("东大制单工作台 · " + HOST + ":" + PORT + " · 识别通道 " + CHANNELS));

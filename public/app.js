@@ -1,4 +1,4 @@
-/* 东大报关单证工作台 · 前端逻辑 v1.0 */
+/* 东大制单工作台 · 前端逻辑 v1.0 */
 "use strict";
 const $=id=>document.getElementById(id);
 const fmt=n=>(+n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -193,6 +193,160 @@ function drawTpls(){
 function tplToggle(id,must){if(must)return;tplState[id]=!tplState[id];drawTpls();drawTabs()}
 function selectedTpls(){return tplList().filter(t=>t.must||tplState[t.id])}
 
+/* ================= 合同模版参数 ================= */
+const CONTRACT_TPLS=[
+  {id:"purchase",type:"import",name:"货物采购合同",sub:"按上传的采购合同版式拟定 · 我方 Dongda Ltd. 为买方",hint:"采购模版：适合哈国东大向中国供应商采购，自动生成进口采购票。",
+    params:[
+      ["contract","合同编号","DD-PUR-"+today().replace(/-/g,""),"合同首页编号 / Contract No."],
+      ["date","签订日期",today(),"YYYY-MM-DD"],
+      ["seller","供方 / 卖方","新疆立天东大贸易有限公司","中国供应商名称"],
+      ["buyer","需方 / 买方",DEF_COMPANY.im.name,"哈国 Dongda Ltd."],
+      ["country","目的国","KZ","KZ 或 UZ"],
+      ["terms","交货条款","CPT Астана","Incoterms + 目的地"],
+      ["cur","币种","CNY","CNY / USD / RUB / EUR"],
+      ["pay","付款方式","货到付款","预付款、货到付款或分期付款"],
+      ["goods","货物名称","PP编织袋 50kg 白色 55×95cm 复膜","合同货物名称、规格型号"],
+      ["hs","HS编码","6305.33","报关建议编码"],
+      ["qty","数量","10000","数量"],
+      ["price","单价","0.22","不含税/含税按合同约定"],
+      ["pkg","包装","编织袋包装","包装方式"],
+      ["gw","毛重","", "kg，可留空"],
+      ["nw","净重","", "kg，可留空"],
+      ["port","口岸/交货地","霍尔果斯","口岸或到货地"],
+      ["trans","运输方式","公路卡航（中欧卡车）","公路、铁路、海运等"],
+      ["quality","质量标准","按双方确认样品及合同规格执行","验收标准"],
+      ["dispute","争议解决","协商不成，提交买方所在地有管辖权法院处理","争议条款"]
+    ]},
+  {id:"sale",type:"export",name:"货物销售合同",sub:"中国公司为卖方 · 客户为买方",hint:"销售模版：适合中方向哈萨克斯坦/乌兹别克斯坦客户出口销售。",
+    params:[
+      ["contract","合同编号","DD-SALE-"+today().replace(/-/g,""),"Contract No."],
+      ["date","签订日期",today(),"YYYY-MM-DD"],
+      ["seller","卖方",DEF_COMPANY.ex.name,"中国出口公司"],
+      ["buyer","买方","TOO «KazPack Trade»","境外客户名称"],
+      ["country","目的国","KZ","KZ 或 UZ"],
+      ["terms","贸易条款","CPT Алматы","Incoterms + 目的地"],
+      ["cur","币种","USD","USD / CNY / RUB / EUR"],
+      ["pay","付款方式","T/T 30%预付 70%发货前","付款条款"],
+      ["goods","货物名称","PP集装袋(吨袋) 90×90×110cm 四吊带","合同货物名称、规格型号"],
+      ["hs","HS编码","6305.32","报关建议编码"],
+      ["qty","数量","1000","数量"],
+      ["price","单价","3.20","单价"],
+      ["pkg","包装","托盘/打包带固定","包装方式"],
+      ["gw","毛重","", "kg，可留空"],
+      ["nw","净重","", "kg，可留空"],
+      ["port","出口口岸","霍尔果斯","出口口岸"],
+      ["trans","运输方式","公路卡航（中欧卡车）","公路、铁路、海运等"],
+      ["quality","质量标准","按合同规格及出口包装要求执行","验收标准"],
+      ["dispute","争议解决","协商不成，提交卖方所在地有管辖权法院处理","争议条款"]
+    ]}
+];
+let contractTplId="purchase";
+function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
+function drawContractTemplates(){
+  const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
+  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" onclick="selectContractTemplate('${t.id}')"><b>${t.name}</b><span>${t.sub}</span></div>`).join("");
+  const t=contractTpl();
+  $("contractTplVerify").innerHTML="🛡 合同模版参数：可从原合同/扫描件提取后填写；采购模版已按用户提供的货物采购合同用途拟定。";
+  $("contractTplHint").textContent=t.name;
+  drawContractBaseSources();
+  $("contractParamList").innerHTML=t.params.map(p=>`<span>${p[1]}</span>`).join("");
+  if(fields.dataset.tpl!==t.id){
+    fields.dataset.tpl=t.id;
+    fields.innerHTML=t.params.map(p=>`<div class="field ${["goods","quality","dispute"].includes(p[0])?"wide":""}"><label>${p[1]}</label><input id="ct_${p[0]}" value="${esc(p[2])}" placeholder="${esc(p[3]||p[1])}" oninput="previewContractTemplate(false)"></div>`).join("");
+  }
+  if(!$("contractPreview").innerHTML)previewContractTemplate(false);
+}
+function selectContractTemplate(id){contractTplId=id;const p=$("contractPreview");if(p)p.innerHTML="";drawContractTemplates()}
+function contractParamData(){
+  const d={};contractTpl().params.forEach(p=>{const el=$("ct_"+p[0]);d[p[0]]=el?el.value.trim():p[2]});return d;
+}
+function contractBaseOptions(){
+  const c=loadCompany(),cur=collectSafe();
+  return [
+    {id:"tpl",name:"按当前合同模版默认值",data:null},
+    {id:"purchase",name:"采购默认：Dongda Ltd. 买方 / 立天东大卖方",data:{seller:c.ex.name,buyer:c.im.name,country:"KZ",cur:"CNY",terms:"CPT Астана",pay:"货到付款",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"}},
+    {id:"sale",name:"销售默认：立天东大卖方 / 境外客户买方",data:{seller:c.ex.name,buyer:"TOO «KazPack Trade»",country:"KZ",cur:"USD",terms:"CPT Алматы",pay:"T/T 30%预付 70%发货前",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"}},
+    {id:"company",name:"公司资料：使用基础资料中的进出口公司信息",data:{seller:c.ex.name,buyer:c.im.name,country:"KZ",cur:contractTplId==="purchase"?"CNY":"USD"}},
+    {id:"current",name:"当前录入数据：从核对录入页读取",data:cur}
+  ];
+}
+function collectSafe(){
+  const val=id=>$(id)?$(id).value:"";
+  const it=items[0]||{};
+  return {seller:val("f_seller"),buyer:val("f_buyer"),country:val("f_country"),contract:val("f_contract"),date:val("f_date"),terms:val("f_terms"),cur:val("f_cur"),pay:val("f_pay"),goods:it.name||"",hs:it.hs||"",qty:it.qty||"",price:it.price||"",pkg:val("f_pkg"),gw:val("f_gw"),nw:val("f_nw"),port:val("f_port"),trans:val("f_trans")};
+}
+function drawContractBaseSources(){
+  const s=$("contractBaseSource");if(!s)return;
+  const old=s.value||"tpl";
+  s.innerHTML=contractBaseOptions().map(o=>`<option value="${o.id}">${esc(o.name)}</option>`).join("");
+  if([...s.options].some(o=>o.value===old))s.value=old;
+}
+function setContractField(k,v){const el=$("ct_"+k);if(el&&v!==undefined&&v!==null&&String(v)!=="")el.value=v}
+function applyContractBaseSource(){
+  const s=$("contractBaseSource"),opt=contractBaseOptions().find(o=>o.id===(s&&s.value));
+  if(!opt||!opt.data)return;
+  Object.entries(opt.data).forEach(([k,v])=>setContractField(k,v));
+  previewContractTemplate(false);
+  toast("基础信息已载入合同模版");
+}
+function applyContractTemplate(){
+  const t=contractTpl(),d=contractParamData();
+  if(!curTicket||curTicket.type!==t.type)newTicket(t.type);
+  $("f_type").value=t.type;
+  $("f_seller").value=d.seller||"";
+  $("f_buyer").value=d.buyer||"";
+  $("f_country").value=(d.country||"KZ").toUpperCase()==="UZ"?"UZ":"KZ";
+  $("f_contract").value=d.contract||"";
+  $("f_date").value=d.date||today();
+  setSelectOrAdd($("f_terms"),d.terms||"CPT Алматы");
+  $("f_cur").value=d.cur||"USD";
+  $("f_pay").value=d.pay||"";
+  $("f_trans").value=d.trans||"公路卡航（中欧卡车）";
+  setSelectOrAdd($("f_port"),d.port||"霍尔果斯");
+  $("f_gw").value=d.gw||"";
+  $("f_nw").value=d.nw||"";
+  $("f_pkg").value=d.pkg||"";
+  items=[{name:d.goods||"",nameRu:"",hs:d.hs||"6305.33",qty:+d.qty||0,price:+d.price||0}];
+  curTicket.type=t.type;
+  drawItems();render();go("p1");toast("已套用"+t.name+"参数，可继续核对保存");
+}
+function copyContractParams(){
+  const t=contractTpl(),txt=t.name+" 参数清单\n"+t.params.map(p=>p[1]+"：{{"+p[0]+"}}").join("\n");
+  if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast("参数清单已复制 ✓")).catch(()=>alert(txt));
+  else alert(txt);
+}
+function contractRows(d){
+  return `<table><tr><th>货物名称</th><th>HS编码</th><th>数量</th><th>单价</th><th>金额</th></tr>
+    <tr><td>${esc(d.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt((+d.qty||0)*(+d.price||0))}</td></tr></table>`;
+}
+function contractDocHtml(){
+  const t=contractTpl(),d=contractParamData(),amount=(+d.qty||0)*(+d.price||0);
+  const buyerLabel=t.id==="purchase"?"需方 / 买方":"买方";
+  const sellerLabel=t.id==="purchase"?"供方 / 卖方":"卖方";
+  const title=t.id==="purchase"?"货物采购合同":"货物销售合同";
+  const no=d.contract||"—";
+  return `<div class="doc">${docBrand()}<h1>${title}</h1><div class="sub">Goods ${t.id==="purchase"?"Purchase":"Sales"} Contract · Dongda Controlled File</div>
+    <div class="meta"><span>合同编号 ${esc(no)}</span><span>签订日期 ${esc(d.date||today())}</span><span>币种 ${esc(d.cur)}</span></div>
+    <table><tr><th style="width:130px">${sellerLabel}</th><td>${esc(d.seller)}</td></tr><tr><th>${buyerLabel}</th><td>${esc(d.buyer)}</td></tr>
+    <tr><th>交货条款</th><td>${esc(d.terms)} · ${esc(d.port||"")}</td></tr><tr><th>付款方式</th><td>${esc(d.pay)}</td></tr>
+    <tr><th>运输方式</th><td>${esc(d.trans||"")}</td></tr><tr><th>目的国</th><td>${esc(d.country==="UZ"?"乌兹别克斯坦":"哈萨克斯坦")}</td></tr></table>
+    ${contractRows(d)}
+    <table><tr><th style="width:130px">包装</th><td>${esc(d.pkg||"—")}</td><th>毛重</th><td>${esc(d.gw||"—")} kg</td><th>净重</th><td>${esc(d.nw||"—")} kg</td></tr>
+    <tr><th>合同总金额</th><td colspan="5"><b>${esc(d.cur)} ${fmt(amount)}</b></td></tr>
+    <tr><th>质量标准</th><td colspan="5">${esc(d.quality||"按双方确认样品及合同规格执行")}</td></tr>
+    <tr><th>争议解决</th><td colspan="5">${esc(d.dispute||"双方友好协商解决")}</td></tr></table>
+    <div class="row2" style="margin-top:28px"><span><b>卖方签章：</b><br><br>__________________</span><span><b>买方签章：</b><br><br>__________________</span></div>${seal()}<div class="foot">CONTRACT-${t.id.toUpperCase()} · ${today()} · ${esc(no)}</div></div>`;
+}
+function previewContractTemplate(showToast=true){
+  const p=$("contractPreview");if(!p)return;
+  p.innerHTML=contractDocHtml();
+  if(showToast)toast("合同预览已生成");
+}
+function exportContractTemplate(){
+  $("printArea").innerHTML=contractDocHtml();
+  setTimeout(()=>window.print(),100);
+}
+
 /* ================= 渲染联动 ================= */
 function render(){
   const t=total(),R=loadRates();
@@ -208,7 +362,7 @@ function render(){
   $("kz_cif").textContent=cur+" "+fmt(t);$("kz_duty").textContent=cur+" "+fmt(kzD);$("kz_vat").textContent=cur+" "+fmt(kzV);$("kz_total").textContent=cur+" "+fmt(kzD+kzV);
   $("uz_cif").textContent=cur+" "+fmt(t);$("uz_duty").textContent=cur+" "+fmt(uzD);$("uz_vat").textContent=cur+" "+fmt(uzV);$("uz_total").textContent=cur+" "+fmt(uzD+uzV);
   if(curTicket){$("curNo").textContent=curTicket.no;$("curNo2").textContent=curTicket.no}
-  drawTpls();drawTabs();drawDoc();
+  drawTpls();drawContractTemplates();drawTabs();drawDoc();
 }
 
 /* ================= 合同识别（多层验证） ================= */
@@ -313,7 +467,11 @@ function applyExtract(){
   toast(blocks.length?("已带入 ✓ 注意："+blocks.length+" 个阻断字段（"+blocks.join("、")+"）必须修正后才能出单证"):"识别数据已带入 ✓ 请补充运输信息");
 }
 function normHs(h){const d=String(h||"").replace(/\D/g,"");return d.length>=6?d.slice(0,4)+"."+d.slice(4,6):(h||"6305.33")}
-function setSelectOrAdd(sel,val){if(![...sel.options].some(o=>o.value===val||o.text===val)){const o=document.createElement("option");o.text=val;sel.add(o)}sel.value=val}
+function setSelectOrAdd(sel,val){
+  if(!sel||!val)return;
+  if(![...sel.options].some(o=>o.value===val||o.text===val)){const o=document.createElement("option");o.text=val;sel.add(o)}
+  sel.value=val;
+}
 
 /* ================= 单证引擎（语言按使用方锁定，术语=当地海关官方用语） =================
    俄文单证(inv/pkl/cmr/bro)：纯俄文，ДТ按ЕАЭС официальные графы；屏幕灰字中文对照(.cnh)打印自动去除
@@ -553,7 +711,7 @@ function renderArchive(){
 }
 function exportBackup(){
   const blob=new Blob([JSON.stringify({company:loadCompany(),tickets:tickets()},null,2)],{type:"application/json"});
-  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="东大报关数据备份-"+today()+".json";a.click();
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="东大制单数据备份-"+today()+".json";a.click();
 }
 function importBackup(inp){
   const f=inp.files[0];if(!f)return;
@@ -650,6 +808,15 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.register("/sw.js").catch(()=>{});
   });
 }
+
+Object.assign(window,{
+  addRow,applyContractBaseSource,applyContractTemplate,applyExtract,copyContractParams,
+  copyTicket,cycleStatus,delItem,delTicket,demoRecognize,exportBackup,
+  exportContractTemplate,go,importBackup,installPWA,
+  loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
+  previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
+  setDocLang,startRecognize,testApi,tplToggle,wipeAll
+});
 
 /* ================= 初始化 ================= */
 fillApiForm();fillRatesForm();fillCfgForm();applyCfg();
