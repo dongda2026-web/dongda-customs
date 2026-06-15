@@ -273,6 +273,18 @@ const CONTRACT_TPLS=[
     ]}
 ];
 let contractTplId="purchase";
+let contractLangLeft="cn",contractLangRight="ru",formLangLeft="cn",formLangRight="ru";
+const ML={
+  cn:{name:"中文",purchase:"货物采购合同",sale:"货物销售合同",sub:"东大受控文件",no:"合同编号",place:"签约地点",date:"签订日期",seller:"卖方",buyer:"买方",addr:"地址",tax:"税号/信用代码",bank:"开户行",swift:"SWIFT",account:"银行账号/IBAN",bik:"BIK/SWIFT",goods:"第一条 标的物",goodsText:"双方确认以下货物名称、规格、数量、单价及金额。",item:"货物名称",hs:"HS编码",qty:"数量",price:"单价",amount:"金额",total:"合同总金额",country:"目的国",pkg:"包装",weight:"毛重/净重",quality:"第二条 质量要求",pack:"第三条 包装标准",delivery:"第四条 交货与运输",payment:"第五条 结算与支付",acceptance:"第六条 验收",breach:"第七条 违约责任与不可抗力",law:"第八条 法律适用与争议解决",effective:"第九条 合同生效",effectiveText:"本合同自双方授权代表签字并加盖公章或合同专用章之日起生效；传真件、扫描件与原件具有同等效力。",sellerSeal:"卖方签章",buyerSeal:"买方签章"},
+  ru:{name:"Русский",purchase:"ДОГОВОР ПОСТАВКИ ТОВАРА",sale:"ДОГОВОР КУПЛИ-ПРОДАЖИ ТОВАРА",sub:"Контролируемый документ Dongda",no:"№ договора",place:"Место подписания",date:"Дата подписания",seller:"Продавец",buyer:"Покупатель",addr:"Адрес",tax:"Налоговый номер / код",bank:"Банк",swift:"SWIFT",account:"Счет / IBAN",bik:"БИК / SWIFT",goods:"1. Предмет договора",goodsText:"Стороны согласовали наименование, спецификацию, количество, цену и сумму товара.",item:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",price:"Цена",amount:"Сумма",total:"Общая сумма договора",country:"Страна назначения",pkg:"Упаковка",weight:"Брутто / нетто",quality:"2. Требования к качеству",pack:"3. Упаковка",delivery:"4. Поставка и транспортировка",payment:"5. Расчеты и оплата",acceptance:"6. Приемка",breach:"7. Ответственность и форс-мажор",law:"8. Применимое право и споры",effective:"9. Вступление в силу",effectiveText:"Договор вступает в силу после подписания уполномоченными представителями и проставления печати; скан-копия имеет силу оригинала.",sellerSeal:"Подпись/печать продавца",buyerSeal:"Подпись/печать покупателя"},
+  en:{name:"English",purchase:"GOODS PURCHASE CONTRACT",sale:"GOODS SALES CONTRACT",sub:"Dongda controlled file",no:"Contract No.",place:"Place of signing",date:"Signing date",seller:"Seller",buyer:"Buyer",addr:"Address",tax:"Tax ID / registration code",bank:"Bank",swift:"SWIFT",account:"Account / IBAN",bik:"BIK / SWIFT",goods:"1. Subject matter",goodsText:"The parties confirm the goods, specifications, quantity, unit price and amount below.",item:"Description",hs:"HS code",qty:"Quantity",price:"Unit price",amount:"Amount",total:"Total contract amount",country:"Destination country",pkg:"Packaging",weight:"Gross / net weight",quality:"2. Quality requirements",pack:"3. Packaging standard",delivery:"4. Delivery and transport",payment:"5. Settlement and payment",acceptance:"6. Acceptance",breach:"7. Liability and force majeure",law:"8. Governing law and disputes",effective:"9. Effectiveness",effectiveText:"This contract becomes effective after signing by authorized representatives and affixing the company seal; scanned copies have the same legal effect as originals.",sellerSeal:"Seller signature/seal",buyerSeal:"Buyer signature/seal"},
+  kk:{name:"Қазақша",purchase:"ТАУАР САТЫП АЛУ ШАРТЫ",sale:"ТАУАР САТУ ШАРТЫ",sub:"Dongda бақыланатын құжаты",no:"Шарт нөмірі",place:"Қол қою орны",date:"Қол қою күні",seller:"Сатушы",buyer:"Сатып алушы",addr:"Мекенжай",tax:"Салық нөмірі / тіркеу коды",bank:"Банк",swift:"SWIFT",account:"Шот / IBAN",bik:"BIK / SWIFT",goods:"1. Шарт нысанасы",goodsText:"Тараптар тауардың атауын, сипаттамасын, санын, бірлік бағасын және сомасын растайды.",item:"Тауар атауы",hs:"HS / ТН ВЭД коды",qty:"Саны",price:"Бірлік бағасы",amount:"Сома",total:"Шарттың жалпы сомасы",country:"Межелі ел",pkg:"Қаптама",weight:"Брутто / нетто салмақ",quality:"2. Сапа талаптары",pack:"3. Қаптама стандарты",delivery:"4. Жеткізу және тасымалдау",payment:"5. Есеп айырысу және төлем",acceptance:"6. Қабылдау",breach:"7. Жауапкершілік және форс-мажор",law:"8. Қолданылатын құқық және даулар",effective:"9. Күшіне енуі",effectiveText:"Шарт уәкілетті өкілдер қол қойып, мөр басылғаннан кейін күшіне енеді; сканерленген көшірме түпнұсқамен бірдей күшке ие.",sellerSeal:"Сатушы қолы/мөрі",buyerSeal:"Сатып алушы қолы/мөрі"}
+};
+function langName(k){return (ML[k]||ML.cn).name}
+function setSelectVal(id,v){const el=$(id);if(el)el.value=v}
+function syncTemplateLangSelects(){setSelectVal("contractLangLeft",contractLangLeft);setSelectVal("contractLangRight",contractLangRight);setSelectVal("formLangLeft",formLangLeft);setSelectVal("formLangRight",formLangRight)}
+function setContractLang(side,v){if(side==="left")contractLangLeft=v;else contractLangRight=v;previewContractTemplate(false)}
+function setFormLang(side,v){if(side==="left")formLangLeft=v;else formLangRight=v;drawFormTemplateLibrary()}
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
 function drawContractTemplates(){
   const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
@@ -280,6 +292,7 @@ function drawContractTemplates(){
   const t=contractTpl();
   $("contractTplVerify").innerHTML="🛡 合同模版参数：可从原合同/扫描件提取后填写；采购模版已按用户提供的货物采购合同用途拟定。";
   $("contractTplHint").textContent=t.name;
+  syncTemplateLangSelects();
   drawContractBaseSources();
   $("contractParamList").innerHTML=t.params.map(p=>`<span>${p[1]}</span>`).join("");
   if(fields.dataset.tpl!==t.id){
@@ -365,19 +378,31 @@ const FORM_TPLS=[
   {id:"tax",group:"核算",name:"进口税费测算表",desc:"KZ/UZ 关税、НДС、税率依据和风险提示"},
   {id:"check",group:"核验",name:"通关合规核验清单",desc:"合同、HS、CO、运输、银行、税费逐项核对"}
 ];
+const FORM_DESC={
+  cn:{inv:"商业发票：合同号、买卖方、货物、金额、贸易条款自动带入。",pkl:"装箱单：货物、件数、毛重、净重、包装信息自动生成。",dec:"出口报关单草单：用于中国单一窗口预录入核对。",ysys:"申报要素表：品名、用途、材质、规格、品牌等要素。",cmr:"CMR国际公路运输单：发货人、收货人、装卸地、车辆信息。",bro:"KZ/UZ申报资料表：给进口国报关代理录入ДТ/ГТД。",broker:"报关代理委托资料：给брокер的资料清单和核对要点。",co:"CO申请资料：原产地证申请所需出口商、收货人、路线、商品信息。",origin:"原产地声明资料：非优惠原产地说明和生产依据。",tax:"进口税费测算表：KZ/UZ关税、НДС和税率依据。",check:"通关合规核验清单：合同、HS、CO、运输、银行、税费逐项核对。"},
+  ru:{inv:"Инвойс: автоматически подставляет контракт, стороны, товар, сумму и условия поставки.",pkl:"Упаковочный лист: товар, места, брутто, нетто и упаковка.",dec:"Черновик экспортной декларации КНР: для проверки перед подачей в Single Window.",ysys:"Сведения о товаре: наименование, назначение, материал, спецификация и бренд.",cmr:"CMR: отправитель, получатель, места погрузки/разгрузки и транспорт.",bro:"Сведения для ДТ/ГТД KZ/UZ: для таможенного брокера страны импорта.",broker:"Пакет для брокера: перечень документов и контрольные вопросы.",co:"Заявка на CO: экспортер, получатель, маршрут и сведения о товаре.",origin:"Сведения о происхождении: непреференциальное происхождение и производственные основания.",tax:"Расчет платежей: пошлина KZ/UZ, НДС и основания ставок.",check:"Чек-лист комплаенса: контракт, HS, CO, транспорт, банк и налоги."},
+  en:{inv:"Commercial invoice: auto-fills contract, parties, goods, value and trade terms.",pkl:"Packing list: goods, packages, gross/net weight and packaging data.",dec:"China export declaration draft: for Single Window pre-entry checks.",ysys:"Declaration elements: name, use, material, specification and brand.",cmr:"CMR waybill: consignor, consignee, loading/unloading points and vehicle.",bro:"KZ/UZ customs declaration data sheet for the import broker.",broker:"Broker instruction pack: document list and control checks.",co:"CO application data: exporter, consignee, route and goods information.",origin:"Origin statement data: non-preferential origin and production basis.",tax:"Import tax estimate: KZ/UZ duty, VAT and rate basis.",check:"Customs compliance checklist: contract, HS, CO, transport, bank and taxes."},
+  kk:{inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."}
+};
 let formTplId="inv";
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
 function drawFormTemplateLibrary(){
   const menu=$("formTplMenu"),detail=$("formTplDetail");if(!menu||!detail)return;
   menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" data-form-id="${t.id}"><b>${t.name}</b><span>${t.group} · ${t.desc}</span></div>`).join("");
   const t=formTpl(),meta=DOC_META[t.id]||[t.name,""];
+  syncTemplateLangSelects();
   $("formTplHint").textContent=t.name;
-  $("formTplVerify").innerHTML="🛡 表单模版可单独选择；需要纳入整套出单时点击“加入/移出当前出单”。";
+  $("formTplVerify").innerHTML="🛡 表单模版可单独选择；语言说明按左右栏显示，正式单证仍以目的国/海关要求的语言为准。";
   const selected=!!tplState[t.id]||!!(tplList().find(x=>x.id===t.id)&&tplList().find(x=>x.id===t.id).must);
-  detail.innerHTML=`<div class="archive-item"><div class="a-main"><div class="t">${esc(t.name)}</div><div class="d">${esc(t.desc)}<br>文档类型：${esc(meta[0])} · ${esc(meta[1]||"")}</div></div><span class="status ${selected?"s-done":"s-doc"}">${selected?"当前已选":"未加入"}</span></div>`;
+  const panel=lang=>`<section class="lang-page"><div class="lang-tag">${esc(langName(lang))}</div><h2>${esc(t.name)}</h2><p>${esc((FORM_DESC[lang]&&FORM_DESC[lang][t.id])||t.desc)}</p><table><tr><th>Template</th><td>${esc(meta[0])}</td></tr><tr><th>Code</th><td>${esc(TPL_CODE[t.id]||t.id)}</td></tr><tr><th>Status</th><td>${selected?"Selected":"Optional"}</td></tr></table></section>`;
+  detail.innerHTML=`<div style="padding:12px"><div class="bilingual-doc">${panel(formLangLeft)}${panel(formLangRight)}</div></div>`;
 }
 function selectFormTemplate(id){formTplId=id;drawFormTemplateLibrary()}
-function applyFormTemplate(){const t=formTpl();go("p2");pickDoc(t.id);toast("已打开表单模版："+t.name)}
+function applyFormTemplate(){
+  const t=formTpl(),langs=DOC_LANGS[t.id]||["ru"];
+  prefLang=langs.includes(formLangRight)?formLangRight:langs.includes(formLangLeft)?formLangLeft:langs[0];
+  go("p2");pickDoc(t.id);toast("已打开表单模版："+t.name+" · "+langName(prefLang));
+}
 function toggleFormTemplate(){
   const t=formTpl(),def=tplList().find(x=>x.id===t.id);
   if(def&&def.must){toast("该表单为当前票型必选模版");return}
@@ -390,32 +415,33 @@ function contractRows(d){
   return `<table><tr><th>货物名称</th><th>HS编码</th><th>数量</th><th>单价</th><th>金额</th></tr>
     <tr><td>${esc(d.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt((+d.qty||0)*(+d.price||0))}</td></tr></table>`;
 }
+function contractPanelHtml(d,t,lang){
+  const m=ML[lang]||ML.cn,amount=(+d.qty||0)*(+d.price||0),title=t.id==="purchase"?m.purchase:m.sale;
+  const dest=d.country==="UZ"?(lang==="cn"?"乌兹别克斯坦":lang==="ru"?"Узбекистан":lang==="kk"?"Өзбекстан":"Uzbekistan"):(lang==="cn"?"哈萨克斯坦":lang==="ru"?"Казахстан":lang==="kk"?"Қазақстан":"Kazakhstan");
+  return `<section class="lang-page"><div class="lang-tag">${esc(m.name)}</div><h2>${esc(title)}</h2><p style="text-align:center">${esc(m.sub)}</p>
+    <table><tr><th>${m.no}</th><td>${esc(d.contract||"—")}</td><th>${m.date}</th><td>${esc(d.date||today())}</td></tr><tr><th>${m.place}</th><td colspan="3">${esc(d.place||"")}</td></tr></table>
+    <table><tr><th>${m.seller}</th><td>${esc(d.seller)}</td></tr><tr><th>${m.addr}</th><td>${esc(d.seller_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.seller_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(d.seller_bank||"—")}</td></tr><tr><th>${m.swift}</th><td>${esc(d.seller_swift||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.seller_account||"—")}</td></tr></table>
+    <table><tr><th>${m.buyer}</th><td>${esc(d.buyer)}</td></tr><tr><th>${m.addr}</th><td>${esc(d.buyer_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.buyer_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(d.buyer_bank||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.buyer_iban||"—")}</td></tr><tr><th>${m.bik}</th><td>${esc(d.buyer_bik||"—")}</td></tr></table>
+    <h3>${m.goods}</h3><p>${esc(m.goodsText)}</p><table><tr><th>${m.item}</th><th>${m.hs}</th><th>${m.qty}</th><th>${m.price}</th><th>${m.amount}</th></tr>
+    <tr><td>${esc(d.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt(amount)}</td></tr></table>
+    <table><tr><th>${m.total}</th><td><b>${esc(d.cur)} ${fmt(amount)}</b></td></tr><tr><th>${m.country}</th><td>${esc(dest)}</td></tr><tr><th>${m.pkg}</th><td>${esc(d.pkg||"—")}</td></tr><tr><th>${m.weight}</th><td>${esc(d.gw||"—")} kg / ${esc(d.nw||"—")} kg</td></tr></table>
+    <h3>${m.quality}</h3><p>${esc(d.quality||"货物应符合合同约定规格、双方确认样品及相关标准。")}</p>
+    <h3>${m.pack}</h3><p>${esc(d.pack_clause||"包装应适合长途运输，确保货物不破损、不受潮。")}</p>
+    <h3>${m.delivery}</h3><p>${esc(d.terms)} · ${esc(d.port||"")} · ${esc(d.trans||"")} · ${esc(d.delivery||"按双方确认计划执行")}</p>
+    <h3>${m.payment}</h3><p>${esc(d.pay||"按双方约定执行")}</p>
+    <h3>${m.acceptance}</h3><p>${esc(d.acceptance||"买方应在合理期限内完成验收，如有异议应及时书面通知卖方。")}</p>
+    <h3>${m.breach}</h3><p>${esc(d.breach||"违约方应赔偿守约方直接损失；不可抗力按法律规定处理。")}</p>
+    <h3>${m.law}</h3><p>${esc(d.law||"中华人民共和国法律")} · ${esc(d.dispute||"双方协商不成的，提交有管辖权人民法院解决。")}</p>
+    <h3>${m.effective}</h3><p>${esc(m.effectiveText)}</p>
+    <div class="row2" style="margin-top:14px"><span><b>${m.sellerSeal}</b><br><br>__________________</span><span><b>${m.buyerSeal}</b><br><br>__________________</span></div></section>`;
+}
 function contractDocHtml(){
   const t=contractTpl(),d=contractParamData(),amount=(+d.qty||0)*(+d.price||0);
-  const buyerLabel=t.id==="purchase"?"需方 / 买方":"买方";
-  const sellerLabel=t.id==="purchase"?"供方 / 卖方":"卖方";
   const title=t.id==="purchase"?"货物采购合同":"货物销售合同";
   const no=d.contract||"—";
-  return `<div class="doc">${docBrand()}<h1>${title}</h1><div class="sub">Goods ${t.id==="purchase"?"Purchase":"Sales"} Contract · Dongda Controlled File</div>
+  return `<div class="doc">${docBrand()}<h1>${esc(title)}</h1><div class="sub">${langName(contractLangLeft)} / ${langName(contractLangRight)} · Goods ${t.id==="purchase"?"Purchase":"Sales"} Contract · Dongda Controlled File</div>
     <div class="meta"><span>合同编号 ${esc(no)}</span><span>签约地点 ${esc(d.place||"")}</span><span>签订日期 ${esc(d.date||today())}</span></div>
-    <table><tr><th style="width:130px">${sellerLabel}</th><td>${esc(d.seller)}</td><th style="width:130px">${buyerLabel}</th><td>${esc(d.buyer)}</td></tr>
-    <tr><th>地址</th><td>${esc(d.seller_addr||"—")}</td><th>地址</th><td>${esc(d.buyer_addr||"—")}</td></tr>
-    <tr><th>税号/信用代码</th><td>${esc(d.seller_tax||"—")}</td><th>税号/BIN</th><td>${esc(d.buyer_tax||"—")}</td></tr>
-    <tr><th>开户行</th><td>${esc(d.seller_bank||"—")}</td><th>开户行</th><td>${esc(d.buyer_bank||"—")}</td></tr>
-    <tr><th>SWIFT</th><td>${esc(d.seller_swift||"—")}</td><th>IBAN/账号</th><td>${esc(d.buyer_iban||"—")}</td></tr>
-    <tr><th>银行账号</th><td>${esc(d.seller_account||"—")}</td><th>BIK/SWIFT</th><td>${esc(d.buyer_bik||"—")}</td></tr></table>
-    <h2>第一条 标的物</h2><p>买方向卖方采购/购买以下货物，货物名称、规格、数量、单价及金额如下：</p>${contractRows(d)}
-    <table><tr><th style="width:130px">合同总金额</th><td><b>${esc(d.cur)} ${fmt(amount)}</b></td><th style="width:130px">目的国</th><td>${esc(d.country==="UZ"?"乌兹别克斯坦":"哈萨克斯坦")}</td></tr>
-    <tr><th>包装</th><td>${esc(d.pkg||"—")}</td><th>毛重/净重</th><td>${esc(d.gw||"—")} kg / ${esc(d.nw||"—")} kg</td></tr></table>
-    <h2>第二条 质量要求</h2><p>${esc(d.quality||"货物应符合合同约定规格、双方确认样品及相关标准。")}</p>
-    <h2>第三条 包装标准</h2><p>${esc(d.pack_clause||"包装应适合长途运输，确保货物不破损、不受潮。")}</p>
-    <h2>第四条 交货与运输</h2><p>交货条款：${esc(d.terms)}；交货/口岸：${esc(d.port||"")}; 运输方式：${esc(d.trans||"")}; 交货期限：${esc(d.delivery||"按双方确认计划执行")}。</p>
-    <h2>第五条 结算与支付</h2><p>付款方式：${esc(d.pay||"按双方约定执行")}。买方应按合同约定向卖方指定银行账户支付合同款项。</p>
-    <h2>第六条 验收</h2><p>${esc(d.acceptance||"买方应在合理期限内完成验收，如有异议应及时书面通知卖方。")}</p>
-    <h2>第七条 违约责任与不可抗力</h2><p>${esc(d.breach||"违约方应赔偿守约方直接损失；不可抗力按法律规定处理。")}</p>
-    <h2>第八条 法律适用与争议解决</h2><p>本合同适用${esc(d.law||"中华人民共和国法律")}。${esc(d.dispute||"双方协商不成的，提交有管辖权人民法院解决。")}</p>
-    <h2>第九条 合同生效</h2><p>本合同自双方授权代表签字并加盖公章或合同专用章之日起生效；传真件、扫描件与原件具有同等效力。</p>
-    <div class="row2" style="margin-top:28px"><span><b>卖方签章：</b><br><br>__________________</span><span><b>买方签章：</b><br><br>__________________</span></div>${seal()}<div class="foot">CONTRACT-${t.id.toUpperCase()} · ${today()} · ${esc(no)}</div></div>`;
+    <div class="bilingual-doc">${contractPanelHtml(d,t,contractLangLeft)}${contractPanelHtml(d,t,contractLangRight)}</div>${seal()}<div class="foot">CONTRACT-${t.id.toUpperCase()} · ${today()} · ${esc(no)}</div></div>`;
 }
 function previewContractTemplate(showToast=true){
   const p=$("contractPreview");if(!p)return;
@@ -567,12 +593,13 @@ function drawTabs(){
 }
 function pickDoc(d){curDoc=d;drawTabs();syncLangSel();drawDoc()}
 /* 单证语言：inv/pkl 可选 ru/en/cn；cmr/bro 锁俄文(官方)；dec/ysys/co 锁中文(官方) */
-const DOC_LANGS={inv:["ru","en","cn"],pkl:["ru","en","cn"],cmr:["ru"],bro:["ru"],broker:["ru"],dec:["cn"],ysys:["cn"],co:["cn"],origin:["cn"],tax:["cn"],check:["cn"]};
+const DOC_LANGS={inv:["ru","en","cn","kk"],pkl:["ru","en","cn","kk"],cmr:["ru"],bro:["ru"],broker:["ru"],dec:["cn"],ysys:["cn"],co:["cn"],origin:["cn"],tax:["cn"],check:["cn"]};
 let docLang="ru",prefLang="ru"; // prefLang=用户偏好，docLang=当前单证生效语言
 const L={
  ru:{inv:"КОММЕРЧЕСКИЙ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"УПАКОВОЧНЫЙ ЛИСТ",pkl2:"PACKING LIST",seller:"Продавец",buyer:"Покупатель",bank:"Банк",terms:"Условия поставки",pay:"Условия оплаты",cur:"Валюта",name:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",unit:"Ед.",unitv:"шт.",price:"Цена",amount:"Сумма",total:"ИТОГО",gross:"Вес брутто",net:"Вес нетто",places:"Кол-во мест",kg:"кг",veh:"Транспортное средство",port:"Пункт пропуска",contract:"Контракт №",date:"Дата",invno:"Инвойс №"},
  en:{inv:"COMMERCIAL INVOICE",inv2:"",pkl:"PACKING LIST",pkl2:"",seller:"Seller",buyer:"Buyer",bank:"Bank",terms:"Delivery terms",pay:"Payment terms",cur:"Currency",name:"Description of goods",hs:"HS Code",qty:"Quantity",unit:"Unit",unitv:"pcs",price:"Unit price",amount:"Amount",total:"TOTAL",gross:"Gross weight",net:"Net weight",places:"Packages",kg:"kg",veh:"Vehicle",port:"Border crossing",contract:"Contract No.",date:"Date",invno:"Invoice No."},
- cn:{inv:"商 业 发 票",inv2:"COMMERCIAL INVOICE",pkl:"装 箱 单",pkl2:"PACKING LIST",seller:"卖方",buyer:"买方",bank:"开户行",terms:"贸易条款",pay:"付款方式",cur:"币种",name:"商品名称及规格",hs:"HS编码",qty:"数量",unit:"单位",unitv:"条",price:"单价",amount:"金额",total:"合 计",gross:"毛重",net:"净重",places:"件数",kg:"千克",veh:"运输车辆",port:"出境口岸",contract:"合同号",date:"日期",invno:"发票号"}
+ cn:{inv:"商 业 发 票",inv2:"COMMERCIAL INVOICE",pkl:"装 箱 单",pkl2:"PACKING LIST",seller:"卖方",buyer:"买方",bank:"开户行",terms:"贸易条款",pay:"付款方式",cur:"币种",name:"商品名称及规格",hs:"HS编码",qty:"数量",unit:"单位",unitv:"条",price:"单价",amount:"金额",total:"合 计",gross:"毛重",net:"净重",places:"件数",kg:"千克",veh:"运输车辆",port:"出境口岸",contract:"合同号",date:"日期",invno:"发票号"},
+ kk:{inv:"КОММЕРЦИЯЛЫҚ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"ҚАПТАМА ПАРАҒЫ",pkl2:"PACKING LIST",seller:"Сатушы",buyer:"Сатып алушы",bank:"Банк",terms:"Жеткізу талаптары",pay:"Төлем талаптары",cur:"Валюта",name:"Тауар сипаттамасы",hs:"HS / ТН ВЭД коды",qty:"Саны",unit:"Өлш.",unitv:"дана",price:"Бірлік бағасы",amount:"Сома",total:"БАРЛЫҒЫ",gross:"Брутто салмақ",net:"Нетто салмақ",places:"Орын саны",kg:"кг",veh:"Көлік құралы",port:"Шекара өткізу пункті",contract:"Шарт №",date:"Күні",invno:"Инвойс №"}
 };
 function setDocLang(v){prefLang=v;drawDoc()}
 const PAY_TR={
@@ -965,7 +992,7 @@ Object.assign(window,{
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   renderDocHistory,recordGeneratedDoc,
   previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
-  selectFormTemplate,setDocLang,startRecognize,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
+  selectFormTemplate,setContractLang,setDocLang,setFormLang,startRecognize,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
 
 /* ================= 初始化 ================= */
