@@ -151,16 +151,20 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .tpl .ver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--ok);background:#E2F3EA;border-radius:8px;padding:2px 8px;margin-top:6px;margin-right:4px}
 .tpl .ver.req{color:var(--orange);background:#FBEBDD}
 .tpl-cnt{font-size:13px;font-weight:800;color:var(--green)}
-.contract-panel{display:grid;grid-template-columns:280px 1fr;gap:14px}
-.contract-menu{display:flex;flex-direction:column;gap:9px}
-.contract-choice{border:1.5px solid var(--line);border-radius:9px;padding:11px 12px;background:#FBFDFC;cursor:pointer;transition:.15s}
+.contract-panel{display:grid;grid-template-columns:1fr;gap:12px}
+.contract-menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px}
+.contract-choice{border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;background:#FBFDFC;cursor:pointer;transition:.15s;min-height:74px;display:flex;flex-direction:column;justify-content:center}
 .contract-choice.on{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 0 1px var(--teal)}
+.contract-choice:hover{border-color:var(--orange);transform:translateY(-1px)}
 .contract-choice b{display:block;font-size:13px;color:var(--ink);margin-bottom:3px}
-.contract-choice span{font-size:11.5px;color:var(--steel);line-height:1.5}
+.contract-choice span{font-size:11px;color:var(--steel);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.contract-choice small{margin-top:6px;font-size:10px;font-weight:900;color:var(--orange);letter-spacing:.3px}
 .contract-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .contract-fields .wide{grid-column:span 3}
 .contract-tools{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:11px}
-.contract-preview{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px}
+.contract-preview{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;max-height:620px;overflow:auto;background:#F6FAF8;border-radius:10px}
+.contract-preview:empty{display:none}
+.compact-fields{max-height:250px;overflow:auto;padding-right:4px}
 .lang-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
 .bilingual-doc{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
 .lang-page{border:1px solid #C9D5D1;border-radius:8px;padding:12px;background:rgba(255,255,255,.72);min-width:0}
@@ -525,7 +529,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
             <div class="field"><label>右侧语言</label><select id="contractLangRight" onchange="setContractLang('right',this.value)"><option value="ru">Русский</option><option value="cn">中文</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
           </div>
           <div class="param-list" id="contractParamList"></div>
-          <div class="contract-fields" id="contractFields"></div>
+          <div class="contract-fields compact-fields" id="contractFields"></div>
           <div class="bar" style="margin-top:13px">
             <button class="btn btn-main" id="btnApplyContract" onclick="applyContractTemplate()">套用到制单数据</button>
             <button class="btn btn-ink" id="btnPreviewContract" onclick="previewContractTemplate()">预览合同</button>
@@ -695,6 +699,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260615-contract5"></script>
+<script src="app.js?v=20260616-contract6"></script>
 </body>
 </html>

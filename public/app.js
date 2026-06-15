@@ -288,7 +288,7 @@ function setFormLang(side,v){if(side==="left")formLangLeft=v;else formLangRight=
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
 function drawContractTemplates(){
   const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
-  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" data-contract-id="${t.id}"><b>${t.name}</b><span>${t.sub}</span></div>`).join("");
+  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" data-contract-id="${t.id}"><b>${t.name}</b><span>${t.sub}</span><small>点击打开</small></div>`).join("");
   const t=contractTpl();
   $("contractTplVerify").innerHTML="🛡 合同模版参数：可从原合同/扫描件提取后填写；采购模版已按用户提供的货物采购合同用途拟定。";
   $("contractTplHint").textContent=t.name;
@@ -388,7 +388,7 @@ let formTplId="inv";
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
 function drawFormTemplateLibrary(){
   const menu=$("formTplMenu"),detail=$("formTplDetail");if(!menu||!detail)return;
-  menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" data-form-id="${t.id}"><b>${t.name}</b><span>${t.group} · ${t.desc}</span></div>`).join("");
+  menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" data-form-id="${t.id}"><b>${t.name}</b><span>${t.group} · ${t.desc}</span><small>点击打开</small></div>`).join("");
   const t=formTpl(),meta=DOC_META[t.id]||[t.name,""];
   syncTemplateLangSelects();
   $("formTplHint").textContent=t.name;
