@@ -272,7 +272,7 @@ const CONTRACT_TPLS=[
       ["dispute","争议解决","协商不成，提交卖方所在地有管辖权人民法院诉讼解决。","争议条款"]
     ]}
 ];
-let contractTplId="purchase";
+let contractTplId="purchase",contractTplCollapsed=false,formTplCollapsed=false;
 let contractLangLeft="cn",contractLangRight="ru",formLangLeft="cn",formLangRight="ru";
 const ML={
   cn:{name:"中文",purchase:"货物采购合同",sale:"货物销售合同",sub:"东大受控文件",no:"合同编号",place:"签约地点",date:"签订日期",seller:"卖方",buyer:"买方",addr:"地址",tax:"税号/信用代码",bank:"开户行",swift:"SWIFT",account:"银行账号/IBAN",bik:"BIK/SWIFT",goods:"第一条 标的物",goodsText:"双方确认以下货物名称、规格、数量、单价及金额。",item:"货物名称",hs:"HS编码",qty:"数量",price:"单价",amount:"金额",total:"合同总金额",country:"目的国",pkg:"包装",weight:"毛重/净重",quality:"第二条 质量要求",pack:"第三条 包装标准",delivery:"第四条 交货与运输",payment:"第五条 结算与支付",acceptance:"第六条 验收",breach:"第七条 违约责任与不可抗力",law:"第八条 法律适用与争议解决",effective:"第九条 合同生效",effectiveText:"本合同自双方授权代表签字并加盖公章或合同专用章之日起生效；传真件、扫描件与原件具有同等效力。",sellerSeal:"卖方签章",buyerSeal:"买方签章"},
@@ -288,8 +288,10 @@ function setFormLang(side,v){if(side==="left")formLangLeft=v;else formLangRight=
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
 function drawContractTemplates(){
   const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
-  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" data-contract-id="${t.id}"><b>${t.name}</b><span>${t.sub}</span><small>点击打开</small></div>`).join("");
+  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" data-contract-id="${t.id}"><b>${t.name}</b><span>${t.sub}</span><small>${t.id===contractTplId&&!contractTplCollapsed?"点击折叠":"点击打开"}</small></div>`).join("");
+  menu.querySelectorAll("[data-contract-id]").forEach(el=>el.onclick=e=>{e.preventDefault();e.stopPropagation();selectContractTemplate(el.dataset.contractId)});
   const t=contractTpl();
+  const body=$("contractTplBody");if(body)body.style.display=contractTplCollapsed?"none":"block";
   $("contractTplVerify").innerHTML="🛡 合同模版参数：可从原合同/扫描件提取后填写；采购模版已按用户提供的货物采购合同用途拟定。";
   $("contractTplHint").textContent=t.name;
   syncTemplateLangSelects();
@@ -302,7 +304,12 @@ function drawContractTemplates(){
   }
   if(!$("contractPreview").innerHTML)previewContractTemplate(false);
 }
-function selectContractTemplate(id){contractTplId=id;const p=$("contractPreview");if(p)p.innerHTML="";drawContractTemplates()}
+function selectContractTemplate(id){
+  if(id===contractTplId)contractTplCollapsed=!contractTplCollapsed;
+  else{contractTplId=id;contractTplCollapsed=false}
+  const p=$("contractPreview");if(p)p.innerHTML="";
+  drawContractTemplates();
+}
 function contractParamData(){
   const d={};contractTpl().params.forEach(p=>{const el=$("ct_"+p[0]);d[p[0]]=el?el.value.trim():p[2]});return d;
 }
@@ -388,8 +395,10 @@ let formTplId="inv";
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
 function drawFormTemplateLibrary(){
   const menu=$("formTplMenu"),detail=$("formTplDetail");if(!menu||!detail)return;
-  menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" data-form-id="${t.id}"><b>${t.name}</b><span>${t.group} · ${t.desc}</span><small>点击打开</small></div>`).join("");
+  menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" data-form-id="${t.id}"><b>${t.name}</b><span>${t.group} · ${t.desc}</span><small>${t.id===formTplId&&!formTplCollapsed?"点击折叠":"点击打开"}</small></div>`).join("");
+  menu.querySelectorAll("[data-form-id]").forEach(el=>el.onclick=e=>{e.preventDefault();e.stopPropagation();selectFormTemplate(el.dataset.formId)});
   const t=formTpl(),meta=DOC_META[t.id]||[t.name,""];
+  const body=$("formTplBody");if(body)body.style.display=formTplCollapsed?"none":"block";
   syncTemplateLangSelects();
   $("formTplHint").textContent=t.name;
   $("formTplVerify").innerHTML="🛡 表单模版可单独选择；语言说明按左右栏显示，正式单证仍以目的国/海关要求的语言为准。";
@@ -397,7 +406,11 @@ function drawFormTemplateLibrary(){
   const panel=lang=>`<section class="lang-page"><div class="lang-tag">${esc(langName(lang))}</div><h2>${esc(t.name)}</h2><p>${esc((FORM_DESC[lang]&&FORM_DESC[lang][t.id])||t.desc)}</p><table><tr><th>Template</th><td>${esc(meta[0])}</td></tr><tr><th>Code</th><td>${esc(TPL_CODE[t.id]||t.id)}</td></tr><tr><th>Status</th><td>${selected?"Selected":"Optional"}</td></tr></table></section>`;
   detail.innerHTML=`<div style="padding:12px"><div class="bilingual-doc">${panel(formLangLeft)}${panel(formLangRight)}</div></div>`;
 }
-function selectFormTemplate(id){formTplId=id;drawFormTemplateLibrary()}
+function selectFormTemplate(id){
+  if(id===formTplId)formTplCollapsed=!formTplCollapsed;
+  else{formTplId=id;formTplCollapsed=false}
+  drawFormTemplateLibrary();
+}
 function applyFormTemplate(){
   const t=formTpl(),langs=DOC_LANGS[t.id]||["ru"];
   prefLang=langs.includes(formLangRight)?formLangRight:langs.includes(formLangLeft)?formLangLeft:langs[0];

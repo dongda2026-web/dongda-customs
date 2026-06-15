@@ -518,7 +518,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="card-b">
       <div class="contract-panel">
         <div class="contract-menu" id="contractTplMenu"></div>
-        <div>
+        <div id="contractTplBody">
           <div class="tpl-verify" id="contractTplVerify"></div>
           <div class="contract-tools">
             <div class="field"><label>基础信息来源</label><select id="contractBaseSource" onchange="applyContractBaseSource()"></select></div>
@@ -547,7 +547,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="card-b">
       <div class="contract-panel">
         <div class="contract-menu" id="formTplMenu"></div>
-        <div>
+        <div id="formTplBody">
           <div class="tpl-verify" id="formTplVerify"></div>
           <div class="lang-tools">
             <div class="field"><label>左侧语言</label><select id="formLangLeft" onchange="setFormLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
@@ -699,6 +699,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260616-contract6"></script>
+<script src="app.js?v=20260616-contract8"></script>
 </body>
 </html>
