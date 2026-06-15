@@ -76,7 +76,7 @@ function getHS(){return loadCfg().hs}
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
   if(!confirm("再次确认：真的要清空全部数据？"))return;
-  ["dd_tickets","dd_cfg","dd_rates","dd_company","dd_api"].forEach(k=>localStorage.removeItem(k));
+  ["dd_tickets","dd_doc_history","dd_cfg","dd_rates","dd_company","dd_api"].forEach(k=>localStorage.removeItem(k));
   location.reload();}
 let adminOk=false;
 
@@ -276,7 +276,7 @@ let contractTplId="purchase";
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
 function drawContractTemplates(){
   const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
-  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" onclick="selectContractTemplate('${t.id}')"><b>${t.name}</b><span>${t.sub}</span></div>`).join("");
+  menu.innerHTML=CONTRACT_TPLS.map(t=>`<div class="contract-choice ${t.id===contractTplId?"on":""}" data-contract-id="${t.id}"><b>${t.name}</b><span>${t.sub}</span></div>`).join("");
   const t=contractTpl();
   $("contractTplVerify").innerHTML="🛡 合同模版参数：可从原合同/扫描件提取后填写；采购模版已按用户提供的货物采购合同用途拟定。";
   $("contractTplHint").textContent=t.name;
@@ -369,7 +369,7 @@ let formTplId="inv";
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
 function drawFormTemplateLibrary(){
   const menu=$("formTplMenu"),detail=$("formTplDetail");if(!menu||!detail)return;
-  menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" onclick="selectFormTemplate('${t.id}')"><b>${t.name}</b><span>${t.group} · ${t.desc}</span></div>`).join("");
+  menu.innerHTML=FORM_TPLS.map(t=>`<div class="contract-choice ${t.id===formTplId?"on":""}" data-form-id="${t.id}"><b>${t.name}</b><span>${t.group} · ${t.desc}</span></div>`).join("");
   const t=formTpl(),meta=DOC_META[t.id]||[t.name,""];
   $("formTplHint").textContent=t.name;
   $("formTplVerify").innerHTML="🛡 表单模版可单独选择；需要纳入整套出单时点击“加入/移出当前出单”。";
@@ -423,7 +423,9 @@ function previewContractTemplate(showToast=true){
   if(showToast)toast("合同预览已生成");
 }
 function exportContractTemplate(){
-  $("printArea").innerHTML=contractDocHtml();
+  const html=contractDocHtml(),t=contractTpl();
+  recordGeneratedDoc({kind:"contract",docId:t.id,title:t.name,action:"导出合同PDF",html});
+  $("printArea").innerHTML=html;
   setTimeout(()=>window.print(),100);
 }
 
@@ -728,11 +730,14 @@ function drawDoc(){syncLangSel();const a=$("docArea");if(a)a.innerHTML=docHtml(c
 function printDoc(all){
   const ids=all?selectedTpls().map(t=>t.id):[curDoc];
   const saved=docLang;
-  $("printArea").innerHTML=ids.map(id=>{
+  const docs=ids.map(id=>{
     const langs=DOC_LANGS[id]||["ru"];
     docLang=langs.includes(prefLang)?prefLang:langs[0]; // 每份单证按各自语言规则
-    return docHtml(id);
-  }).join("");
+    const html=docHtml(id),meta=DOC_META[id]||[id,""];
+    return {id,html,title:meta[0]||id};
+  });
+  docs.forEach(d=>recordGeneratedDoc({kind:"form",docId:d.id,title:d.title,action:all?"导出全部已选单证":"导出当前单证PDF",html:d.html}));
+  $("printArea").innerHTML=docs.map(d=>d.html).join("");
   docLang=saved;
   setTimeout(()=>window.print(),100);
 }
@@ -740,6 +745,41 @@ function printDoc(all){
 /* ================= 存档 ================= */
 function tickets(){try{return JSON.parse(localStorage.getItem("dd_tickets")||"[]")}catch(e){return[]}}
 function setTickets(a){localStorage.setItem("dd_tickets",JSON.stringify(a))}
+function docHistory(){try{return JSON.parse(localStorage.getItem("dd_doc_history")||"[]")}catch(e){return[]}}
+function setDocHistory(a){localStorage.setItem("dd_doc_history",JSON.stringify(a.slice(0,80)))}
+const DH_STATUS={review:["待审核","s-doc"],approved:["已审核","s-way"],archived:["已归档","s-done"]};
+function recordGeneratedDoc(r){
+  const d=collect(),meta=DOC_META[r.docId]||[r.title||r.docId,""];
+  const rec={id:Date.now()+Math.floor(Math.random()*999),created:Date.now(),kind:r.kind||"form",docId:r.docId||"",title:r.title||meta[0]||"文件",action:r.action||"生成文件",status:"review",ticket_no:curTicket?curTicket.no:"",contract_no:d.contract||"",buyer:d.buyer||"",seller:d.seller||"",html:r.html||""};
+  const a=docHistory();a.unshift(rec);setDocHistory(a);renderDocHistory();
+}
+function docRecordLine(r){
+  const st=DH_STATUS[r.status]||DH_STATUS.review,dt=new Date(r.created).toLocaleString("zh-CN",{hour12:false});
+  return `<div class="archive-item">
+    <span class="route ${r.kind==="contract"?"imp":""}">${r.kind==="contract"?"合同":"表单"}</span>
+    <div class="a-main"><div class="t">${esc(r.title)} · ${esc(r.ticket_no||r.contract_no||"未绑定票号")}</div>
+    <div class="d">${esc(r.action)} · ${esc(dt)} · 合同号 ${esc(r.contract_no||"—")} · ${esc(r.seller||"—")} → ${esc(r.buyer||"—")}</div></div>
+    <button class="status ${st[1]}" onclick="approveDocRecord(${r.id})">${st[0]}</button>
+    <button class="mini" onclick="viewDocRecord(${r.id})">查看</button>
+    <button class="mini" onclick="archiveDocRecord(${r.id})">归档</button>
+    <button class="mini del" onclick="deleteDocRecord(${r.id})">删</button></div>`;
+}
+function renderDocHistory(){
+  const el=$("docHistoryList");if(!el)return;
+  const a=docHistory();
+  if(!a.length){el.innerHTML='<div class="empty"><div class="big">📄</div>还没有生成记录 · 导出合同或单证后会自动出现在这里</div>';return}
+  el.innerHTML=a.map(docRecordLine).join("");
+}
+function updateDocRecord(id,fn){const a=docHistory(),r=a.find(x=>x.id===id);if(!r)return;fn(r);setDocHistory(a);renderDocHistory()}
+function approveDocRecord(id){updateDocRecord(id,r=>{r.status=r.status==="approved"?"review":"approved";r.reviewed=Date.now()})}
+function archiveDocRecord(id){updateDocRecord(id,r=>{r.status="archived";r.archived=Date.now()})}
+function deleteDocRecord(id){if(!confirm("确定删除该生成记录？"))return;setDocHistory(docHistory().filter(r=>r.id!==id));renderDocHistory()}
+function viewDocRecord(id){
+  const r=docHistory().find(x=>x.id===id);if(!r)return;
+  go("p2");
+  $("docArea").innerHTML=r.html||'<div class="empty">该记录没有可预览内容</div>';
+  toast("已打开历史文件："+r.title);
+}
 function collect(){return{type:$("f_type").value,seller:$("f_seller").value,buyer:$("f_buyer").value,country:$("f_country").value,
   contract:$("f_contract").value,date:$("f_date").value,terms:$("f_terms").value,cur:$("f_cur").value,pay:$("f_pay").value,
   trans:$("f_trans").value,port:$("f_port").value,truck:$("f_truck").value,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value,
@@ -776,8 +816,8 @@ function cycleStatus(id){
 }
 function renderArchive(){
   const a=tickets(),el=$("archiveList");
-  if(!a.length){el.innerHTML='<div class="empty"><div class="big">🗂</div>还没有票据 · 去"合同识别"或"新建空白票"开始</div>';return}
-  el.innerHTML=a.map(t=>{
+  if(!a.length)el.innerHTML='<div class="empty"><div class="big">🗂</div>还没有票据 · 去"合同识别"或"新建空白票"开始</div>';
+  else el.innerHTML=a.map(t=>{
     const d=t.data||{},st=ST[t.status]||ST.doc;
     return `<div class="archive-item">
       <span class="route ${d.type==="import"?"imp":""}">${d.type==="import"?"进口·":"中国→"}${d.country||"KZ"}</span>
@@ -788,9 +828,10 @@ function renderArchive(){
       <button class="mini" onclick="copyTicket(${t.id})">复制翻单</button>
       <button class="mini del" onclick="delTicket(${t.id})">删</button></div>`;
   }).join("");
+  renderDocHistory();
 }
 function exportBackup(){
-  const blob=new Blob([JSON.stringify({company:loadCompany(),tickets:tickets()},null,2)],{type:"application/json"});
+  const blob=new Blob([JSON.stringify({company:loadCompany(),tickets:tickets(),docHistory:docHistory()},null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="东大制单数据备份-"+today()+".json";a.click();
 }
 function importBackup(inp){
@@ -798,6 +839,7 @@ function importBackup(inp){
   const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);
     if(d.tickets)setTickets(d.tickets);
+    if(d.docHistory)setDocHistory(d.docHistory);
     if(d.company)localStorage.setItem("dd_company",JSON.stringify(d.company));
     fillCompanyForm();renderArchive();computeDash();toast("备份已恢复 ✓");
   }catch(e){alert("备份文件格式错误")}};
@@ -889,18 +931,47 @@ if("serviceWorker" in navigator){
   });
 }
 
+function bindTemplateButtons(){
+  const binds=[
+    ["btnContractBaseLoad",applyContractBaseSource],
+    ["btnApplyContract",applyContractTemplate],
+    ["btnPreviewContract",()=>previewContractTemplate(true)],
+    ["btnExportContract",exportContractTemplate],
+    ["btnCopyContractParams",copyContractParams],
+    ["btnApplyFormTpl",applyFormTemplate],
+    ["btnToggleFormTpl",toggleFormTemplate]
+  ];
+  binds.forEach(([id,fn])=>{
+    const el=$(id);if(!el||el.dataset.bound)return;
+    el.removeAttribute("onclick");
+    el.addEventListener("click",e=>{e.preventDefault();fn()});
+    el.dataset.bound="1";
+  });
+  if(!window.__ddTemplateDelegation){
+    document.addEventListener("click",e=>{
+      const c=e.target.closest("[data-contract-id]");
+      if(c){e.preventDefault();selectContractTemplate(c.dataset.contractId);return}
+      const f=e.target.closest("[data-form-id]");
+      if(f){e.preventDefault();selectFormTemplate(f.dataset.formId)}
+    });
+    window.__ddTemplateDelegation=true;
+  }
+}
+
 Object.assign(window,{
-  addRow,applyContractBaseSource,applyContractTemplate,applyExtract,copyContractParams,
-  copyTicket,cycleStatus,delItem,delTicket,demoRecognize,exportBackup,
+  addRow,applyContractBaseSource,applyContractTemplate,applyExtract,approveDocRecord,archiveDocRecord,copyContractParams,
+  copyTicket,cycleStatus,deleteDocRecord,delItem,delTicket,demoRecognize,exportBackup,
   exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
+  renderDocHistory,recordGeneratedDoc,
   previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
-  selectFormTemplate,setDocLang,startRecognize,testApi,toggleFormTemplate,tplToggle,wipeAll
+  selectFormTemplate,setDocLang,startRecognize,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
 
 /* ================= 初始化 ================= */
 fillApiForm();fillRatesForm();fillCfgForm();applyCfg();
 fillCompanyForm();
 newTicket("export");
+bindTemplateButtons();
 renderArchive();
 computeDash();

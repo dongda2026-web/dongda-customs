@@ -185,11 +185,11 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .doc table th{background:#F4F2EC;font-weight:600}
 .doc .num{font-family:var(--mono);text-align:right}
 .doc .row2{display:flex;justify-content:space-between;gap:20px;font-size:12px;flex-wrap:wrap}
-.doc .seal-area{display:flex;justify-content:flex-end;align-items:flex-start;margin:16px 0 20px;break-inside:avoid;page-break-inside:avoid}
-.doc .seal-box{width:210px;min-height:118px;position:relative;text-align:center;font-family:var(--sans);font-size:11px;color:#333}
-.doc .seal-line{border-top:1px solid #777;padding-top:7px;margin-top:38px;font-weight:700}
+.doc .seal-area{display:flex;justify-content:flex-end;align-items:flex-start;margin:12px 0 16px;break-inside:avoid;page-break-inside:avoid}
+.doc .seal-box{width:52mm;min-height:38mm;position:relative;text-align:center;font-family:var(--sans);font-size:11px;color:#333}
+.doc .seal-line{border-top:1px solid #777;padding-top:7px;margin-top:23mm;font-weight:700}
 .doc .seal-meta{font-size:10px;color:#666;margin-top:3px;line-height:1.35}
-.doc .seal{position:absolute;right:26px;top:0;width:118px;height:122px;pointer-events:none;opacity:.9;transform:rotate(-6deg)}
+.doc .seal{position:absolute;right:7mm;top:0;width:34mm;height:34mm;pointer-events:none;opacity:.92;transform:rotate(-5deg)}
 .doc .seal img{width:100%;height:100%;object-fit:contain;display:block}
 .doc .foot{position:absolute;left:40px;bottom:14px;font-size:9px;color:#999;font-family:var(--mono)}
 
@@ -258,9 +258,9 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .contract-fields .wide{grid-column:span 1}
   .footbar{left:0}
   .doc{padding:22px 16px;min-height:auto}
-  .doc .seal-area{margin:12px 0 16px}
-  .doc .seal-box{width:180px;min-height:104px}
-  .doc .seal{width:94px;height:98px;right:20px}
+  .doc .seal-area{margin:10px 0 14px}
+  .doc .seal-box{width:48mm;min-height:35mm}
+  .doc .seal{width:31mm;height:31mm;right:7mm}
   .doc-wrap{padding:8px}
   .archive-item{flex-wrap:wrap}
   .pagehead h2{font-size:18px}
@@ -490,6 +490,10 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="bar"><button class="mini" onclick="exportBackup()">⬇ 备份数据</button><label class="mini" style="display:inline-flex;align-items:center">⬆ 恢复备份<input type="file" accept=".json" style="display:none" onchange="importBackup(this)"></label></div>
   </div>
   <div class="card"><div id="archiveList"></div></div>
+  <div class="card">
+    <div class="card-h"><span class="tag" style="background:var(--orange)"></span><h3>文件生成记录</h3><span class="ru">每次导出/生成自动记录 · 可审核、归档、查看</span></div>
+    <div class="card-b" style="padding:0"><div id="docHistoryList"></div></div>
+  </div>
 </div>
 
 <!-- ============ 海关模版库 ============ -->
@@ -505,15 +509,15 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
           <div class="tpl-verify" id="contractTplVerify"></div>
           <div class="contract-tools">
             <div class="field"><label>基础信息来源</label><select id="contractBaseSource" onchange="applyContractBaseSource()"></select></div>
-            <button class="mini" onclick="applyContractBaseSource()">载入</button>
+            <button class="mini" id="btnContractBaseLoad" onclick="applyContractBaseSource()">载入</button>
           </div>
           <div class="param-list" id="contractParamList"></div>
           <div class="contract-fields" id="contractFields"></div>
           <div class="bar" style="margin-top:13px">
-            <button class="btn btn-main" onclick="applyContractTemplate()">套用到制单数据</button>
-            <button class="btn btn-ink" onclick="previewContractTemplate()">预览合同</button>
-            <button class="btn btn-ghost" onclick="exportContractTemplate()">导出合同PDF</button>
-            <button class="btn btn-ghost" onclick="copyContractParams()">复制参数清单</button>
+            <button class="btn btn-main" id="btnApplyContract" onclick="applyContractTemplate()">套用到制单数据</button>
+            <button class="btn btn-ink" id="btnPreviewContract" onclick="previewContractTemplate()">预览合同</button>
+            <button class="btn btn-ghost" id="btnExportContract" onclick="exportContractTemplate()">导出合同PDF</button>
+            <button class="btn btn-ghost" id="btnCopyContractParams" onclick="copyContractParams()">复制参数清单</button>
           </div>
           <div class="contract-preview" id="contractPreview"></div>
         </div>
@@ -530,8 +534,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
           <div class="tpl-verify" id="formTplVerify"></div>
           <div class="card-b" id="formTplDetail" style="padding:0"></div>
           <div class="bar" style="margin-top:13px">
-            <button class="btn btn-main" onclick="applyFormTemplate()">选择并预览该表单</button>
-            <button class="btn btn-ghost" onclick="toggleFormTemplate()">加入/移出当前出单</button>
+            <button class="btn btn-main" id="btnApplyFormTpl" onclick="applyFormTemplate()">选择并预览该表单</button>
+            <button class="btn btn-ghost" id="btnToggleFormTpl" onclick="toggleFormTemplate()">加入/移出当前出单</button>
           </div>
         </div>
       </div>
@@ -674,6 +678,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260615-contract3"></script>
+<script src="app.js?v=20260615-contract4"></script>
 </body>
 </html>
