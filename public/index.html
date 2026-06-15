@@ -522,6 +522,23 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 
   <div class="card">
+    <div class="card-h"><span class="tag" style="background:var(--orange)"></span><h3>表单模版</h3><span class="ru">发票 / 装箱单 / 报关资料 · 左侧单独选择</span><span style="flex:1"></span><span class="tpl-cnt" id="formTplHint"></span></div>
+    <div class="card-b">
+      <div class="contract-panel">
+        <div class="contract-menu" id="formTplMenu"></div>
+        <div>
+          <div class="tpl-verify" id="formTplVerify"></div>
+          <div class="card-b" id="formTplDetail" style="padding:0"></div>
+          <div class="bar" style="margin-top:13px">
+            <button class="btn btn-main" onclick="applyFormTemplate()">选择并预览该表单</button>
+            <button class="btn btn-ghost" onclick="toggleFormTemplate()">加入/移出当前出单</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-h"><span class="tag" style="background:#C8382E"></span><h3>🇨🇳 中国 · 出口申报</h3><span class="ru">经报关行提交"单一窗口"</span></div>
     <div class="card-b" style="padding:0">
       <div class="archive-item"><div class="a-main"><div class="t">出口货物报关单（草单）</div><div class="d">现行横版A4格式 · 依据《海关进出口货物报关单填制规范》</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2');pickDoc('dec')">预览</button></div>
@@ -577,6 +594,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="card-b grid g2">
       <div class="field"><label>公司名称（中文）</label><input id="c_ex_name"></div>
       <div class="field"><label>公司名称（拉丁/英文）</label><input id="c_ex_lat"></div>
+      <div class="field" style="grid-column:span 2"><label>公司地址</label><input id="c_ex_addr"></div>
       <div class="field"><label>开户行</label><input id="c_ex_bank"></div>
       <div class="field"><label>SWIFT</label><input id="c_ex_swift"></div>
       <div class="field"><label>银行账号</label><input id="c_ex_acct"></div>
@@ -656,6 +674,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260615-contract2"></script>
+<script src="app.js?v=20260615-contract3"></script>
 </body>
 </html>
