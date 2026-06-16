@@ -165,15 +165,15 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .contract-preview{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;max-height:620px;overflow:auto;background:#F6FAF8;border-radius:10px}
 .contract-preview:empty{display:none}
 .compact-fields{max-height:250px;overflow:auto;padding-right:4px}
-.lang-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+.lang-tools,.seal-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
 .bilingual-doc{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
-.lang-page{border:1px solid #C9D5D1;border-radius:8px;padding:12px;background:rgba(255,255,255,.72);min-width:0}
-.lang-page .lang-tag{font-family:var(--sans);font-size:11px;font-weight:900;color:var(--green);text-transform:uppercase;margin-bottom:8px}
-.lang-page h2{font-size:15px;text-align:center;margin:0 0 8px;letter-spacing:1px;color:#111}
-.lang-page h3{font-size:12px;margin:10px 0 4px;color:#163C57;border-bottom:1px solid #DCE5E1;padding-bottom:3px}
-.lang-page p{font-size:11.5px;line-height:1.55;margin:4px 0}
-.lang-page table{font-size:10.5px}
-.lang-page table th,.lang-page table td{padding:4px 5px}
+.lang-page{border:1px solid #C9D5D1;border-radius:8px;padding:9px;background:rgba(255,255,255,.72);min-width:0;overflow:hidden}
+.lang-page .lang-tag{font-family:var(--sans);font-size:10px;font-weight:900;color:var(--green);text-transform:uppercase;margin-bottom:5px}
+.lang-page h2{font-size:13px;text-align:center;margin:0 0 6px;letter-spacing:0;color:#111;line-height:1.25}
+.lang-page h3{font-size:11px;margin:8px 0 3px;color:#163C57;border-bottom:1px solid #DCE5E1;padding-bottom:2px}
+.lang-page p{font-size:10.2px;line-height:1.42;margin:3px 0}
+.lang-page table{font-size:9.4px;table-layout:fixed;width:100%;margin:5px 0}
+.lang-page table th,.lang-page table td{padding:3px 4px;word-break:break-word;overflow-wrap:anywhere;vertical-align:middle}
 .param-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
 .param-list span{font-size:11px;font-weight:800;color:var(--green);background:#E7F1ED;border:1px solid #CDE1D9;border-radius:15px;padding:4px 8px}
 .rate-basis{font-size:11px;font-weight:600;color:var(--steel);margin-top:9px;line-height:1.6;border-top:1px dashed var(--line);padding-top:8px}
@@ -183,7 +183,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .chip small{display:block;font-size:10px;font-weight:500;opacity:.7}
 .chip.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 4px 12px rgba(13,82,71,.28)}
 .doc-wrap{background:#E5ECE9;border:1px solid var(--line);border-radius:16px;padding:18px;overflow-x:auto}
-.doc{background-color:#fff;background-image:linear-gradient(rgba(255,255,255,.70),rgba(255,255,255,.70)),url("brand/dongda-logo-header.jpg?v=20260613-6");background-repeat:no-repeat;background-position:center 54%;background-size:52%;max-width:760px;margin:0 auto;padding:34px 40px;font-family:var(--song);box-shadow:0 3px 18px rgba(13,40,35,.16);position:relative;min-height:560px;font-size:13px;line-height:1.7;color:#111}
+.doc{background-color:#fff;background-image:linear-gradient(rgba(255,255,255,.72),rgba(255,255,255,.72)),url("brand/dongda-logo-header.jpg?v=20260613-6");background-repeat:no-repeat;background-position:center 54%;background-size:48%;max-width:920px;margin:0 auto;padding:26px 30px;font-family:var(--song);box-shadow:0 3px 18px rgba(13,40,35,.16);position:relative;min-height:560px;font-size:12px;line-height:1.55;color:#111}
 .doc-brand{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:2px solid #163C57;padding-bottom:10px;margin-bottom:16px;font-family:var(--sans)}
 .doc-brand img{width:132px;height:auto;display:block;object-fit:contain;flex:none}
 .doc-brand .brand-copy{text-align:right;line-height:1.45;color:#163C57;font-weight:700;max-width:430px}
@@ -193,12 +193,15 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .doc h1{text-align:center;font-size:19px;letter-spacing:3px;margin-bottom:2px}
 .doc .sub{text-align:center;font-size:12px;color:#444;margin-bottom:16px;letter-spacing:1px}
 .doc .meta{display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;font-family:var(--mono);flex-wrap:wrap;gap:6px}
-.doc table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
-.doc table th,.doc table td{border:1px solid #555;padding:6px 8px}
+.doc table{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0;table-layout:fixed}
+.doc table th,.doc table td{border:1px solid #555;padding:4px 5px;word-break:break-word;overflow-wrap:anywhere}
 .doc table th{background:#F4F2EC;font-weight:600}
 .doc .num{font-family:var(--mono);text-align:right}
 .doc .row2{display:flex;justify-content:space-between;gap:20px;font-size:12px;flex-wrap:wrap}
 .doc .seal-area{display:flex;justify-content:flex-end;align-items:flex-start;margin:12px 0 16px;break-inside:avoid;page-break-inside:avoid}
+.doc .seal-area.pos-left{justify-content:flex-start}
+.doc .seal-area.pos-center{justify-content:center}
+.doc .seal-area.pos-right{justify-content:flex-end}
 .doc .seal-box{width:52mm;min-height:38mm;position:relative;text-align:center;font-family:var(--sans);font-size:11px;color:#333}
 .doc .seal-line{border-top:1px solid #777;padding-top:7px;margin-top:23mm;font-weight:700}
 .doc .seal-meta{font-size:10px;color:#666;margin-top:3px;line-height:1.35}
@@ -267,7 +270,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .mnav .mi.active{background:var(--green);color:#fff;box-shadow:0 3px 10px rgba(13,82,71,.3)}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}
   .kpi .v{font-size:22px}
-  .dash2,.g3,.g2,.tax,.tpls,.contract-panel,.contract-fields,.contract-tools,.lang-tools,.bilingual-doc{grid-template-columns:1fr}
+  .dash2,.g3,.g2,.tax,.tpls,.contract-panel,.contract-fields,.contract-tools,.lang-tools,.seal-tools,.bilingual-doc{grid-template-columns:1fr}
   .contract-fields .wide{grid-column:span 1}
   .footbar{left:0}
   .doc{padding:22px 16px;min-height:auto}
@@ -528,6 +531,10 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
             <div class="field"><label>左侧语言</label><select id="contractLangLeft" onchange="setContractLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
             <div class="field"><label>右侧语言</label><select id="contractLangRight" onchange="setContractLang('right',this.value)"><option value="ru">Русский</option><option value="cn">中文</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
           </div>
+          <div class="seal-tools">
+            <div class="field"><label>印章版本</label><select id="sealMode" onchange="setSealMode(this.value)"><option value="on">带印章</option><option value="none">无印章版</option></select></div>
+            <div class="field"><label>印章位置</label><select id="sealPosition" onchange="setSealPosition(this.value)"><option value="right">右侧签章区</option><option value="center">中间签章区</option><option value="left">左侧签章区</option></select></div>
+          </div>
           <div class="param-list" id="contractParamList"></div>
           <div class="contract-fields compact-fields" id="contractFields"></div>
           <div class="bar" style="margin-top:13px">
@@ -699,6 +706,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260616-contract9"></script>
+<script src="app.js?v=20260616-contract10"></script>
 </body>
 </html>

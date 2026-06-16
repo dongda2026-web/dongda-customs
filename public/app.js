@@ -274,6 +274,7 @@ const CONTRACT_TPLS=[
 ];
 let contractTplId="purchase",contractTplCollapsed=false,formTplCollapsed=false;
 let contractLangLeft="cn",contractLangRight="ru",formLangLeft="cn",formLangRight="ru";
+let sealMode="on",sealPosition="right";
 const ML={
   cn:{name:"中文",purchase:"货物采购合同",sale:"货物销售合同",sub:"东大受控文件",no:"合同编号",place:"签约地点",date:"签订日期",seller:"卖方",buyer:"买方",addr:"地址",tax:"税号/信用代码",bank:"开户行",swift:"SWIFT",account:"银行账号/IBAN",bik:"BIK/SWIFT",goods:"第一条 标的物",goodsText:"双方确认以下货物名称、规格、数量、单价及金额。",item:"货物名称",hs:"HS编码",qty:"数量",price:"单价",amount:"金额",total:"合同总金额",country:"目的国",pkg:"包装",weight:"毛重/净重",quality:"第二条 质量要求",pack:"第三条 包装标准",delivery:"第四条 交货与运输",payment:"第五条 结算与支付",acceptance:"第六条 验收",breach:"第七条 违约责任与不可抗力",law:"第八条 法律适用与争议解决",effective:"第九条 合同生效",effectiveText:"本合同自双方授权代表签字并加盖公章或合同专用章之日起生效；传真件、扫描件与原件具有同等效力。",sellerSeal:"卖方签章",buyerSeal:"买方签章"},
   ru:{name:"Русский",purchase:"ДОГОВОР ПОСТАВКИ ТОВАРА",sale:"ДОГОВОР КУПЛИ-ПРОДАЖИ ТОВАРА",sub:"Контролируемый документ Dongda",no:"№ договора",place:"Место подписания",date:"Дата подписания",seller:"Продавец",buyer:"Покупатель",addr:"Адрес",tax:"Налоговый номер / код",bank:"Банк",swift:"SWIFT",account:"Счет / IBAN",bik:"БИК / SWIFT",goods:"1. Предмет договора",goodsText:"Стороны согласовали наименование, спецификацию, количество, цену и сумму товара.",item:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",price:"Цена",amount:"Сумма",total:"Общая сумма договора",country:"Страна назначения",pkg:"Упаковка",weight:"Брутто / нетто",quality:"2. Требования к качеству",pack:"3. Упаковка",delivery:"4. Поставка и транспортировка",payment:"5. Расчеты и оплата",acceptance:"6. Приемка",breach:"7. Ответственность и форс-мажор",law:"8. Применимое право и споры",effective:"9. Вступление в силу",effectiveText:"Договор вступает в силу после подписания уполномоченными представителями и проставления печати; скан-копия имеет силу оригинала.",sellerSeal:"Подпись/печать продавца",buyerSeal:"Подпись/печать покупателя"},
@@ -282,9 +283,11 @@ const ML={
 };
 function langName(k){return (ML[k]||ML.cn).name}
 function setSelectVal(id,v){const el=$(id);if(el)el.value=v}
-function syncTemplateLangSelects(){setSelectVal("contractLangLeft",contractLangLeft);setSelectVal("contractLangRight",contractLangRight);setSelectVal("formLangLeft",formLangLeft);setSelectVal("formLangRight",formLangRight)}
+function syncTemplateLangSelects(){setSelectVal("contractLangLeft",contractLangLeft);setSelectVal("contractLangRight",contractLangRight);setSelectVal("formLangLeft",formLangLeft);setSelectVal("formLangRight",formLangRight);setSelectVal("sealMode",sealMode);setSelectVal("sealPosition",sealPosition)}
 function setContractLang(side,v){if(side==="left")contractLangLeft=v;else contractLangRight=v;previewContractTemplate(false)}
 function setFormLang(side,v){if(side==="left")formLangLeft=v;else formLangRight=v;drawFormTemplateLibrary()}
+function setSealMode(v){sealMode=v==="none"?"none":"on";syncTemplateLangSelects();previewContractTemplate(false);drawDoc()}
+function setSealPosition(v){sealPosition=["left","center","right"].includes(v)?v:"right";syncTemplateLangSelects();previewContractTemplate(false);drawDoc()}
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
 function drawContractTemplates(){
   const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
@@ -669,7 +672,10 @@ function syncLangSel(){const s=$("docLangSel"),h=$("docLangHint");if(!s)return;
   h.textContent=langs.length===1?(langs[0]==="ru"?"🔒 本单证为当地海关/报关代理使用格式，语言固定：俄文":"🔒 本单证为中文核对/申报辅助格式，语言固定：中文"):"";}
 function cn(s){return `<span class="cnh">${s}</span>`} // 中文对照·仅屏显
 function ruName(it){return it.nameRu&&it.nameRu.trim()?it.nameRu:it.name} // 俄文单证优先俄文品名
-function seal(){return `<div class="seal-area"><div class="seal-box"><div class="seal"><img src="brand/dongda-seal.png?v=20260613-6" alt="Dongda Ltd official seal"></div><div class="seal-line">Dongda Ltd.</div><div class="seal-meta">Подпись / печать<br>Signature / company seal</div></div></div>`}
+function seal(){
+  if(sealMode==="none")return "";
+  return `<div class="seal-area pos-${sealPosition}"><div class="seal-box"><div class="seal"><img src="brand/dongda-seal.png?v=20260613-6" alt="Dongda Ltd official seal"></div><div class="seal-line">Dongda Ltd.</div><div class="seal-meta">Подпись / печать<br>Signature / company seal</div></div></div>`;
+}
 function docBrand(){
   const c=loadCompany();
   return `<div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Litian Dongda Ltd logo"><div class="brand-copy"><b>Litian Dongda Ltd · Dongda Ltd.</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(c.im.addr)}<br>Тел. ${esc(c.im.tel||DEF_COMPANY.im.tel)}</small></div></div>`;
@@ -1043,7 +1049,7 @@ Object.assign(window,{
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   renderDocHistory,recordGeneratedDoc,
   previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
-  selectFormTemplate,setContractLang,setDocLang,setFormLang,startRecognize,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
+  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
 
 /* ================= 初始化 ================= */
