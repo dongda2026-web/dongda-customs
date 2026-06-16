@@ -1,4 +1,4 @@
-const CACHE_NAME = "dongda-customs-pwa-v20260617-archive-db";
+const CACHE_NAME = "dongda-customs-pwa-v20260617-logo";
 const APP_SHELL = [
   "/",
   "/index.html",
