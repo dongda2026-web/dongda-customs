@@ -535,7 +535,7 @@ function contractPanelHtml(d,t,lang){
     <table><tr><th>${m.no}</th><td>${esc(d.contract||"—")}</td><th>${m.date}</th><td>${esc(d.date||today())}</td></tr><tr><th>${m.place}</th><td colspan="3">${esc(v.place||"")}</td></tr></table>
     <table><tr><th>${m.seller}</th><td>${esc(v.seller)}</td></tr><tr><th>${m.addr}</th><td>${esc(v.seller_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.seller_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(v.seller_bank||"—")}</td></tr><tr><th>${m.swift}</th><td>${esc(d.seller_swift||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.seller_account||"—")}</td></tr></table>
     <table><tr><th>${m.buyer}</th><td>${esc(v.buyer)}</td></tr><tr><th>${m.addr}</th><td>${esc(v.buyer_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.buyer_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(v.buyer_bank||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.buyer_iban||"—")}</td></tr><tr><th>${m.bik}</th><td>${esc(d.buyer_bik||"—")}</td></tr></table>
-    <h3>${m.goods}</h3><p>${esc(m.goodsText)}</p><table><tr><th style="width:24px">№</th><th>${m.item}</th><th>${m.hs}</th><th>${m.qty}</th><th>${m.price}</th><th>${m.amount}</th></tr>
+    <h3>${m.goods}</h3><p>${esc(m.goodsText)}</p><table class="contract-goods"><colgroup><col style="width:7%"><col style="width:32%"><col style="width:15%"><col style="width:13%"><col style="width:14%"><col style="width:19%"></colgroup><tr><th>№</th><th>${m.item}</th><th>${m.hs}</th><th>${m.qty}</th><th>${m.price}</th><th>${m.amount}</th></tr>
     ${contractGoodsRows(lines,lang,m,d.cur)}
     <tr><td colspan="5" style="text-align:right"><b>${m.total}</b></td><td class="num"><b>${fmt(amount)}</b></td></tr></table>
     <table><tr><th>${m.total}</th><td><b>${esc(d.cur)} ${fmt(amount)}</b></td></tr><tr><th>${m.country}</th><td>${esc(dest)}</td></tr><tr><th>${m.pkg}</th><td>${esc(v.pkg||"—")}</td></tr><tr><th>${m.weight}</th><td>${esc(d.gw||"—")} kg / ${esc(d.nw||"—")} kg</td></tr></table>
@@ -552,7 +552,7 @@ function contractPanelHtml(d,t,lang){
 function contractDocHtml(){
   const t=contractTpl(),d=contractParamData();
   const no=d.contract||"—";
-  return `<div class="doc">${docBrand()}<h1>Dongda Contract File</h1><div class="sub">${langName(contractLangLeft)} / ${langName(contractLangRight)} · ${t.id==="purchase"?"Purchase":"Sales"} · No. ${esc(no)} · ${esc(d.date||today())}</div>
+  return `<div class="doc contract-doc">${docBrand()}<h1>Dongda Contract File</h1><div class="sub">${langName(contractLangLeft)} / ${langName(contractLangRight)} · ${t.id==="purchase"?"Purchase":"Sales"} · No. ${esc(no)} · ${esc(d.date||today())}</div>
     <div class="bilingual-doc">${contractPanelHtml(d,t,contractLangLeft)}${contractPanelHtml(d,t,contractLangRight)}</div>${seal()}<div class="foot">CONTRACT-${t.id.toUpperCase()} · ${today()} · ${esc(no)}</div></div>`;
 }
 function previewContractTemplate(showToast=true){

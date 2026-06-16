@@ -241,11 +241,37 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 #printArea .cnh{display:none}
 #printArea{display:none}
 @media print{
+  @page{size:A4 landscape;margin:8mm}
   body *{visibility:hidden}
   #printArea,#printArea *{visibility:visible}
-  #printArea{display:block;position:absolute;left:0;top:0;width:100%}
-  #printArea .doc{box-shadow:none;max-width:100%;min-height:auto;page-break-after:always}
+  html,body{width:297mm;background:#fff}
+  #printArea{display:block;position:absolute;left:0;top:0;width:281mm;overflow:visible}
+  #printArea .doc{box-shadow:none;max-width:none;width:281mm;min-height:auto;page-break-after:always;box-sizing:border-box;padding:7mm 8mm;background-size:38%;font-size:10px;line-height:1.35}
+  #printArea .contract-doc{width:281mm}
+  #printArea .contract-doc .doc-brand{padding-bottom:5px;margin-bottom:7px}
+  #printArea .contract-doc .doc-brand img{width:96px}
+  #printArea .contract-doc .brand-copy b{font-size:11px}
+  #printArea .contract-doc .brand-copy span,#printArea .contract-doc .brand-copy small{font-size:8px}
+  #printArea .contract-doc h1{font-size:13px;margin:0 0 2px;letter-spacing:1px}
+  #printArea .contract-doc .sub{font-size:8.5px;margin-bottom:6px;letter-spacing:0}
+  #printArea .contract-doc .bilingual-doc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:5mm;align-items:start}
+  #printArea .contract-doc .lang-page{padding:4mm;border-radius:0;overflow:visible;background:rgba(255,255,255,.82)}
+  #printArea .contract-doc .lang-page .lang-tag{font-size:7.5px;margin-bottom:2px}
+  #printArea .contract-doc .lang-page h2{font-size:10px;line-height:1.18;margin-bottom:3px}
+  #printArea .contract-doc .lang-page h3{font-size:8.5px;margin:5px 0 2px;padding-bottom:1px}
+  #printArea .contract-doc .lang-page p{font-size:8px;line-height:1.28;margin:2px 0}
+  #printArea .contract-doc table{font-size:7.6px;line-height:1.2;margin:2.5px 0;table-layout:fixed}
+  #printArea .contract-doc table th,#printArea .contract-doc table td{padding:2px 2.5px;overflow-wrap:anywhere;word-break:break-word}
+  #printArea .contract-doc .contract-goods{font-size:7.2px}
+  #printArea .contract-doc .contract-goods small{font-size:6.6px}
+  #printArea .contract-doc .seal-area{margin:4mm 0 2mm}
+  #printArea .contract-doc .seal-box{width:42mm;min-height:30mm;font-size:8px}
+  #printArea .contract-doc .seal-line{margin-top:18mm;padding-top:4px}
+  #printArea .contract-doc .seal-meta{font-size:7px}
+  #printArea .contract-doc .seal{width:27mm;height:27mm;right:6mm}
+  #printArea .contract-doc .foot{left:8mm;bottom:3mm;font-size:6.5px}
   .doc-brand{break-inside:avoid}
+  table,tr,td,th{break-inside:auto;page-break-inside:auto}
   .side,.mtop,.mnav,.footbar,.toast{display:none!important}
 }
 
@@ -722,6 +748,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260616-contract11"></script>
+<script src="app.js?v=20260616-contract12"></script>
 </body>
 </html>
