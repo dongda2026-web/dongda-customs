@@ -275,6 +275,7 @@ const CONTRACT_TPLS=[
 let contractTplId="purchase",contractTplCollapsed=false,formTplCollapsed=false;
 let contractLangLeft="cn",contractLangRight="ru",formLangLeft="cn",formLangRight="ru";
 let sealMode="on",sealPosition="right";
+let contractLines=[];
 const ML={
   cn:{name:"中文",purchase:"货物采购合同",sale:"货物销售合同",sub:"东大受控文件",no:"合同编号",place:"签约地点",date:"签订日期",seller:"卖方",buyer:"买方",addr:"地址",tax:"税号/信用代码",bank:"开户行",swift:"SWIFT",account:"银行账号/IBAN",bik:"BIK/SWIFT",goods:"第一条 标的物",goodsText:"双方确认以下货物名称、规格、数量、单价及金额。",item:"货物名称",hs:"HS编码",qty:"数量",price:"单价",amount:"金额",total:"合同总金额",country:"目的国",pkg:"包装",weight:"毛重/净重",quality:"第二条 质量要求",pack:"第三条 包装标准",delivery:"第四条 交货与运输",payment:"第五条 结算与支付",acceptance:"第六条 验收",breach:"第七条 违约责任与不可抗力",law:"第八条 法律适用与争议解决",effective:"第九条 合同生效",effectiveText:"本合同自双方授权代表签字并加盖公章或合同专用章之日起生效；传真件、扫描件与原件具有同等效力。",sellerSeal:"卖方签章",buyerSeal:"买方签章"},
   ru:{name:"Русский",purchase:"ДОГОВОР ПОСТАВКИ ТОВАРА",sale:"ДОГОВОР КУПЛИ-ПРОДАЖИ ТОВАРА",sub:"Контролируемый документ Dongda",no:"№ договора",place:"Место подписания",date:"Дата подписания",seller:"Продавец",buyer:"Покупатель",addr:"Адрес",tax:"Налоговый номер / код",bank:"Банк",swift:"SWIFT",account:"Счет / IBAN",bik:"БИК / SWIFT",goods:"1. Предмет договора",goodsText:"Стороны согласовали наименование, спецификацию, количество, цену и сумму товара.",item:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",price:"Цена",amount:"Сумма",total:"Общая сумма договора",country:"Страна назначения",pkg:"Упаковка",weight:"Брутто / нетто",quality:"2. Требования к качеству",pack:"3. Упаковка",delivery:"4. Поставка и транспортировка",payment:"5. Расчеты и оплата",acceptance:"6. Приемка",breach:"7. Ответственность и форс-мажор",law:"8. Применимое право и споры",effective:"9. Вступление в силу",effectiveText:"Договор вступает в силу после подписания уполномоченными представителями и проставления печати; скан-копия имеет силу оригинала.",sellerSeal:"Подпись/печать продавца",buyerSeal:"Подпись/печать покупателя"},
@@ -288,6 +289,39 @@ function setContractLang(side,v){if(side==="left")contractLangLeft=v;else contra
 function setFormLang(side,v){if(side==="left")formLangLeft=v;else formLangRight=v;drawFormTemplateLibrary()}
 function setSealMode(v){sealMode=v==="none"?"none":"on";syncTemplateLangSelects();previewContractTemplate(false);drawDoc()}
 function setSealPosition(v){sealPosition=["left","center","right"].includes(v)?v:"right";syncTemplateLangSelects();previewContractTemplate(false);drawDoc()}
+function makeContractLine(src={}){
+  return {name:src.name||src.goods||"PP集装袋(吨袋) 90×90×110cm 四吊带",nameRu:src.nameRu||"",spec:src.spec||"",hs:src.hs||"6305.32",qty:+src.qty||1,unit:src.unit||"条",price:+src.price||0,gw:src.gw||"",nw:src.nw||"",pkg:src.pkg||"",elements:src.elements||""};
+}
+function ensureContractLines(){
+  if(contractLines.length)return;
+  const d=contractParamData();
+  contractLines=[makeContractLine({name:d.goods,hs:d.hs,qty:d.qty,price:d.price,gw:d.gw,nw:d.nw,pkg:d.pkg})];
+}
+function drawContractItems(){
+  const tb=$("contractItemsBody");if(!tb)return;
+  ensureContractLines();
+  tb.innerHTML=contractLines.map((it,i)=>`<tr>
+    <td><input value="${esc(it.name)}" oninput="contractLines[${i}].name=this.value;previewContractTemplate(false)"></td>
+    <td><input value="${esc(it.nameRu||"")}" placeholder="RU/EN/KZ" oninput="contractLines[${i}].nameRu=this.value;previewContractTemplate(false)"></td>
+    <td><input value="${esc(it.spec||"")}" placeholder="规格型号/参数" oninput="contractLines[${i}].spec=this.value;previewContractTemplate(false)"></td>
+    <td><input value="${esc(it.hs)}" oninput="contractLines[${i}].hs=this.value;previewContractTemplate(false)"></td>
+    <td><input class="num" value="${esc(it.qty)}" inputmode="decimal" oninput="contractLines[${i}].qty=+this.value||0;previewContractTemplate(false)"></td>
+    <td><input value="${esc(it.unit||"条")}" oninput="contractLines[${i}].unit=this.value;previewContractTemplate(false)"></td>
+    <td><input class="num" value="${esc(it.price)}" inputmode="decimal" oninput="contractLines[${i}].price=+this.value||0;previewContractTemplate(false)"></td>
+    <td><input class="num" value="${esc(it.gw||"")}" oninput="contractLines[${i}].gw=this.value;previewContractTemplate(false)"></td>
+    <td><input class="num" value="${esc(it.nw||"")}" oninput="contractLines[${i}].nw=this.value;previewContractTemplate(false)"></td>
+    <td><input value="${esc(it.pkg||"")}" oninput="contractLines[${i}].pkg=this.value;previewContractTemplate(false)"></td>
+    <td><input value="${esc(it.elements||"")}" placeholder="材质/用途/品牌" oninput="contractLines[${i}].elements=this.value;previewContractTemplate(false)"></td>
+    <td><button class="mini" onclick="copyContractItem(${i})">复制</button><button class="mini del" onclick="delContractItem(${i})" style="margin-top:4px">删</button></td>
+  </tr>`).join("");
+}
+function addContractItem(){ensureContractLines();contractLines.push(makeContractLine({}));drawContractItems();previewContractTemplate(false)}
+function copyContractItem(i){ensureContractLines();contractLines.splice(i+1,0,Object.assign({},contractLines[i]));drawContractItems();previewContractTemplate(false)}
+function delContractItem(i){ensureContractLines();contractLines.splice(i,1);if(!contractLines.length)contractLines.push(makeContractLine({}));drawContractItems();previewContractTemplate(false)}
+function syncContractItemsFromEntry(){
+  contractLines=(items.length?items:[{name:"",hs:"6305.33",qty:0,price:0}]).map(it=>makeContractLine({name:it.name,nameRu:it.nameRu,hs:it.hs,qty:it.qty,price:it.price,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value}));
+  drawContractItems();previewContractTemplate(false);toast("已同步核对录入商品到合同明细");
+}
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
 function drawContractTemplates(){
   const menu=$("contractTplMenu"),fields=$("contractFields");if(!menu||!fields)return;
@@ -299,12 +333,13 @@ function drawContractTemplates(){
   $("contractTplHint").textContent=t.name;
   syncTemplateLangSelects();
   drawContractBaseSources();
-  $("contractParamList").innerHTML=t.params.map(p=>`<span>${p[1]}</span>`).join("");
+  $("contractParamList").innerHTML=t.params.map(p=>`<span>${p[1]}</span>`).join("")+["产品名称","外文品名","规格/参数","HS","数量","单位","单价","毛重","净重","包装","申报要素"].map(x=>`<span>${x}</span>`).join("");
   if(fields.dataset.tpl!==t.id){
     fields.dataset.tpl=t.id;
     const wideKeys=["goods","seller_addr","buyer_addr","quality","pack_clause","acceptance","breach","law","dispute"];
     fields.innerHTML=t.params.map(p=>`<div class="field ${wideKeys.includes(p[0])?"wide":""}"><label>${p[1]}</label><input id="ct_${p[0]}" value="${esc(p[2])}" placeholder="${esc(p[3]||p[1])}" oninput="previewContractTemplate(false)"></div>`).join("");
   }
+  drawContractItems();
   if(!$("contractPreview").innerHTML)previewContractTemplate(false);
 }
 function selectContractTemplate(id){
@@ -316,6 +351,7 @@ function selectContractTemplate(id){
 function contractParamData(){
   const d={};contractTpl().params.forEach(p=>{const el=$("ct_"+p[0]);d[p[0]]=el?el.value.trim():p[2]});return d;
 }
+function contractLineData(){ensureContractLines();return contractLines.map(makeContractLine).filter(x=>x.name||x.hs||x.qty||x.price)}
 function contractBaseOptions(){
   const c=loadCompany(),cur=collectSafe();
   return [
@@ -344,6 +380,7 @@ function applyContractBaseSource(){
   const s=$("contractBaseSource"),opt=contractBaseOptions().find(o=>o.id===(s&&s.value));
   if(!opt||!opt.data)return;
   Object.entries(opt.data).forEach(([k,v])=>setContractField(k,v));
+  if(opt.id==="current")syncContractItemsFromEntry();
   previewContractTemplate(false);
   toast("基础信息已载入合同模版");
 }
@@ -364,12 +401,14 @@ function applyContractTemplate(){
   $("f_gw").value=d.gw||"";
   $("f_nw").value=d.nw||"";
   $("f_pkg").value=d.pkg||"";
-  items=[{name:d.goods||"",nameRu:"",hs:d.hs||"6305.33",qty:+d.qty||0,price:+d.price||0}];
+  ensureContractLines();
+  items=contractLines.map(x=>({name:x.name||"",nameRu:x.nameRu||"",hs:x.hs||"6305.33",qty:+x.qty||0,price:+x.price||0}));
   curTicket.type=t.type;
   drawItems();render();go("p1");toast("已套用"+t.name+"参数，可继续核对保存");
 }
 function copyContractParams(){
-  const t=contractTpl(),txt=t.name+" 参数清单\n"+t.params.map(p=>p[1]+"：{{"+p[0]+"}}").join("\n");
+  const t=contractTpl(),goods="商品明细：{{items[]: name,name_foreign,spec,hs,qty,unit,price,gw,nw,pkg,elements}}";
+  const txt=t.name+" 参数清单\n"+t.params.map(p=>p[1]+"：{{"+p[0]+"}}").join("\n")+"\n"+goods;
   if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>toast("参数清单已复制 ✓")).catch(()=>alert(txt));
   else alert(txt);
 }
@@ -470,16 +509,35 @@ function trClause(key,val,lang){
   if(lang==="cn")return val||CLAUSE_TR[key]?.cn||"";
   return (!val||hasZh(val))?(CLAUSE_TR[key]?.[lang]||CLAUSE_TR[key]?.en||val):val;
 }
+const PENDING_TR={ru:"наименование требует перевода",en:"name pending translation",kk:"атауы аударуды қажет етеді"};
+function lineNameByLang(it,lang){
+  if(lang==="cn")return it.name||it.nameRu||"—";
+  if(it.nameRu)return it.nameRu;
+  if(!hasZh(it.name||""))return it.name||"—";
+  return PENDING_TR[lang]||PENDING_TR.en;
+}
+function lineSpecByLang(it,lang){
+  const s=[it.spec,it.elements].filter(Boolean).join("; ");
+  if(lang==="cn")return s;
+  return hasZh(s)?(lang==="ru"?"характеристики требуют перевода":lang==="kk"?"сипаттамалар аударуды қажет етеді":"parameters pending translation"):s;
+}
+function contractGoodsRows(lines,lang,m,cur){
+  return lines.map((it,i)=>{
+    const amt=(+it.qty||0)*(+it.price||0),spec=lineSpecByLang(it,lang);
+    return `<tr><td>${i+1}</td><td>${esc(lineNameByLang(it,lang))}${spec?`<br><small>${esc(spec)}</small>`:""}</td><td class="num">${esc(it.hs)}</td><td class="num">${esc(it.qty)} ${esc(it.unit||"")}</td><td class="num">${fmt(it.price)}</td><td class="num">${fmt(amt)}</td></tr>`;
+  }).join("");
+}
 function contractPanelHtml(d,t,lang){
-  const m=ML[lang]||ML.cn,amount=(+d.qty||0)*(+d.price||0),title=t.id==="purchase"?m.purchase:m.sale;
+  const m=ML[lang]||ML.cn,lines=contractLineData(),amount=lines.reduce((s,it)=>s+(+it.qty||0)*(+it.price||0),0),title=t.id==="purchase"?m.purchase:m.sale;
   const dest=d.country==="UZ"?(lang==="cn"?"乌兹别克斯坦":lang==="ru"?"Узбекистан":lang==="kk"?"Өзбекстан":"Uzbekistan"):(lang==="cn"?"哈萨克斯坦":lang==="ru"?"Казахстан":lang==="kk"?"Қазақстан":"Kazakhstan");
   const v={place:trValue("place",d.place,lang),seller:trValue("seller",d.seller,lang),seller_addr:trValue("seller_addr",d.seller_addr,lang),seller_bank:trValue("bank",d.seller_bank,lang),buyer:trValue("buyer",d.buyer,lang),buyer_addr:trValue("buyer_addr",d.buyer_addr,lang),buyer_bank:trValue("bank",d.buyer_bank,lang),goods:trValue("goods",d.goods,lang),pkg:trValue("pkg",d.pkg,lang),port:trValue("port",d.port,lang),trans:trValue("trans",d.trans,lang),pay:trValue("pay",d.pay,lang),law:trValue("law",d.law,lang),delivery:trClause("delivery",d.delivery,lang),quality:trClause("quality",d.quality,lang),pack_clause:trClause("pack_clause",d.pack_clause,lang),acceptance:trClause("acceptance",d.acceptance,lang),breach:trClause("breach",d.breach,lang),dispute:trClause("dispute",d.dispute,lang)};
   return `<section class="lang-page"><div class="lang-tag">${esc(m.name)}</div><h2>${esc(title)}</h2><p style="text-align:center">${esc(m.sub)}</p>
     <table><tr><th>${m.no}</th><td>${esc(d.contract||"—")}</td><th>${m.date}</th><td>${esc(d.date||today())}</td></tr><tr><th>${m.place}</th><td colspan="3">${esc(v.place||"")}</td></tr></table>
     <table><tr><th>${m.seller}</th><td>${esc(v.seller)}</td></tr><tr><th>${m.addr}</th><td>${esc(v.seller_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.seller_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(v.seller_bank||"—")}</td></tr><tr><th>${m.swift}</th><td>${esc(d.seller_swift||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.seller_account||"—")}</td></tr></table>
     <table><tr><th>${m.buyer}</th><td>${esc(v.buyer)}</td></tr><tr><th>${m.addr}</th><td>${esc(v.buyer_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.buyer_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(v.buyer_bank||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.buyer_iban||"—")}</td></tr><tr><th>${m.bik}</th><td>${esc(d.buyer_bik||"—")}</td></tr></table>
-    <h3>${m.goods}</h3><p>${esc(m.goodsText)}</p><table><tr><th>${m.item}</th><th>${m.hs}</th><th>${m.qty}</th><th>${m.price}</th><th>${m.amount}</th></tr>
-    <tr><td>${esc(v.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt(amount)}</td></tr></table>
+    <h3>${m.goods}</h3><p>${esc(m.goodsText)}</p><table><tr><th style="width:24px">№</th><th>${m.item}</th><th>${m.hs}</th><th>${m.qty}</th><th>${m.price}</th><th>${m.amount}</th></tr>
+    ${contractGoodsRows(lines,lang,m,d.cur)}
+    <tr><td colspan="5" style="text-align:right"><b>${m.total}</b></td><td class="num"><b>${fmt(amount)}</b></td></tr></table>
     <table><tr><th>${m.total}</th><td><b>${esc(d.cur)} ${fmt(amount)}</b></td></tr><tr><th>${m.country}</th><td>${esc(dest)}</td></tr><tr><th>${m.pkg}</th><td>${esc(v.pkg||"—")}</td></tr><tr><th>${m.weight}</th><td>${esc(d.gw||"—")} kg / ${esc(d.nw||"—")} kg</td></tr></table>
     <h3>${m.quality}</h3><p>${esc(v.quality)}</p>
     <h3>${m.pack}</h3><p>${esc(v.pack_clause)}</p>
@@ -1043,13 +1101,13 @@ function bindTemplateButtons(){
 }
 
 Object.assign(window,{
-  addRow,applyContractBaseSource,applyContractTemplate,applyExtract,approveDocRecord,archiveDocRecord,copyContractParams,
-  copyTicket,cycleStatus,deleteDocRecord,delItem,delTicket,demoRecognize,exportBackup,
+  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyExtract,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
+  copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
   exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   renderDocHistory,recordGeneratedDoc,
   previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
-  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
+  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
 
 /* ================= 初始化 ================= */

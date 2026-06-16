@@ -165,6 +165,12 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .contract-preview{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;max-height:620px;overflow:auto;background:#F6FAF8;border-radius:10px}
 .contract-preview:empty{display:none}
 .compact-fields{max-height:250px;overflow:auto;padding-right:4px}
+.contract-items{border:1px solid var(--line);border-radius:10px;overflow:auto;background:#fff;margin-top:10px}
+.contract-items table{width:100%;min-width:980px;border-collapse:collapse;font-size:11px}
+.contract-items th,.contract-items td{border-bottom:1px solid #EDF2F0;padding:6px;vertical-align:top}
+.contract-items th{background:#F4F8F6;color:var(--green);font-weight:900;white-space:nowrap}
+.contract-items input{font-size:11px;padding:7px 8px;border-radius:7px}
+.contract-items .num{text-align:right;font-family:var(--mono)}
 .lang-tools,.seal-tools{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
 .bilingual-doc{display:grid;grid-template-columns:1fr 1fr;gap:13px;align-items:start}
 .lang-page{border:1px solid #C9D5D1;border-radius:8px;padding:9px;background:rgba(255,255,255,.72);min-width:0;overflow:hidden}
@@ -537,6 +543,16 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
           </div>
           <div class="param-list" id="contractParamList"></div>
           <div class="contract-fields compact-fields" id="contractFields"></div>
+          <div class="bar" style="margin-top:10px">
+            <button class="mini" id="btnSyncContractItems" onclick="syncContractItemsFromEntry()">从核对录入商品同步</button>
+            <button class="mini" id="btnAddContractItem" onclick="addContractItem()">新增产品</button>
+          </div>
+          <div class="contract-items">
+            <table>
+              <thead><tr><th>中文品名</th><th>外文品名</th><th>规格/参数</th><th>HS</th><th>数量</th><th>单位</th><th>单价</th><th>毛重</th><th>净重</th><th>包装</th><th>申报要素</th><th></th></tr></thead>
+              <tbody id="contractItemsBody"></tbody>
+            </table>
+          </div>
           <div class="bar" style="margin-top:13px">
             <button class="btn btn-main" id="btnApplyContract" onclick="applyContractTemplate()">套用到制单数据</button>
             <button class="btn btn-ink" id="btnPreviewContract" onclick="previewContractTemplate()">预览合同</button>
@@ -706,6 +722,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260616-contract10"></script>
+<script src="app.js?v=20260616-contract11"></script>
 </body>
 </html>
