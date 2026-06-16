@@ -428,32 +428,70 @@ function contractRows(d){
   return `<table><tr><th>货物名称</th><th>HS编码</th><th>数量</th><th>单价</th><th>金额</th></tr>
     <tr><td>${esc(d.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt((+d.qty||0)*(+d.price||0))}</td></tr></table>`;
 }
+const hasZh=s=>/[\u4e00-\u9fff]/.test(s||"");
+const VALUE_TR={
+  place:{cn:"中国 · 新疆",ru:"Китай · Синьцзян",en:"China · Xinjiang",kk:"Қытай · Шыңжаң"},
+  port:{cn:"霍尔果斯",ru:"Хоргос",en:"Khorgos",kk:"Қорғас"},
+  trans:{cn:"公路卡航（中欧卡车）",ru:"автомобильная перевозка",en:"road freight by truck",kk:"автокөлікпен тасымалдау"},
+  pay:{cn:"货到付款",ru:"оплата при доставке",en:"payment on delivery",kk:"жеткізілгеннен кейін төлеу"},
+  pkg:{cn:"托盘/打包带固定",ru:"паллеты / фиксация упаковочной лентой",en:"pallets / secured with strapping",kk:"паллет / қаптама таспасымен бекітілген"},
+  law:{cn:"中华人民共和国法律",ru:"право Китайской Народной Республики",en:"laws of the People's Republic of China",kk:"Қытай Халық Республикасының құқығы"},
+  goods:{cn:"PP集装袋(吨袋) 90×90×110cm 四吊带",ru:"полипропиленовый биг-бэг 90×90×110 см, 4 стропы",en:"PP jumbo bag 90×90×110 cm, four lifting loops",kk:"PP биг-бэг 90×90×110 см, төрт ілмекті"},
+  seller:{cn:"新疆立天东大贸易有限公司",ru:"Xinjiang Litian Dongda Trading Co., Ltd.",en:"Xinjiang Litian Dongda Trading Co., Ltd.",kk:"Xinjiang Litian Dongda Trading Co., Ltd."},
+  buyer:{cn:"Dongda Ltd.",ru:"Dongda Ltd.",en:"Dongda Ltd.",kk:"Dongda Ltd."},
+  seller_addr:{cn:"中国新疆",ru:"Китай, Синьцзян",en:"Xinjiang, China",kk:"Қытай, Шыңжаң"},
+  buyer_addr:{cn:"г. Астана, ул. Сауран 3/1, оф.783",ru:"г. Астана, ул. Сауран 3/1, оф.783",en:"Office 783, 3/1 Sauran St., Astana",kk:"Астана қ., Сауран к-сі 3/1, 783-кеңсе"},
+  bank:{cn:"开户银行",ru:"банк",en:"bank",kk:"банк"}
+};
+const CLAUSE_TR={
+  quality:{cn:"货物应符合合同约定规格、双方确认样品及出口包装要求。",ru:"Товар должен соответствовать согласованной спецификации, образцам и требованиям экспортной упаковки.",en:"The goods shall conform to the agreed specifications, confirmed samples and export packaging requirements.",kk:"Тауар келісілген сипаттамаға, расталған үлгілерге және экспорттық қаптама талаптарына сәйкес болуы тиіс."},
+  pack_clause:{cn:"卖方应采用适合国际运输的包装，保证货物在正常运输、装卸和仓储条件下完好。",ru:"Продавец обязан использовать упаковку, пригодную для международной перевозки, чтобы сохранить товар при обычной перевозке, погрузке и хранении.",en:"The seller shall use packaging suitable for international transport and keep the goods intact under normal transport, handling and storage conditions.",kk:"Сатушы халықаралық тасымалдауға жарамды қаптаманы қолданып, қалыпты тасымалдау, тиеу және сақтау кезінде тауардың сақталуын қамтамасыз етеді."},
+  acceptance:{cn:"买方应在收货后合理期限内完成验收；对数量、质量或规格有异议的，应及时提交书面证明。",ru:"Покупатель обязан провести приемку в разумный срок после получения товара; претензии по количеству, качеству или спецификации подаются письменно.",en:"The buyer shall complete acceptance within a reasonable period after receipt; any quantity, quality or specification claim shall be submitted in writing.",kk:"Сатып алушы тауарды алғаннан кейін ақылға қонымды мерзімде қабылдауды аяқтайды; саны, сапасы немесе сипаттамасы бойынша талап жазбаша беріледі."},
+  breach:{cn:"任一方违反本合同约定，应赔偿守约方因此遭受的直接损失；因不可抗力导致不能履约的，受影响方应及时通知并提供证明。",ru:"Сторона, нарушившая договор, возмещает другой стороне прямые убытки; при форс-мажоре затронутая сторона своевременно уведомляет другую сторону и предоставляет подтверждение.",en:"A breaching party shall compensate the non-breaching party for direct losses; in case of force majeure, the affected party shall promptly notify the other party and provide evidence.",kk:"Шартты бұзған тарап екінші тараптың тікелей шығындарын өтейді; форс-мажор кезінде зардап шеккен тарап дер кезінде хабарлап, дәлел ұсынады."},
+  dispute:{cn:"协商不成，提交卖方所在地有管辖权人民法院诉讼解决。",ru:"При недостижении соглашения спор передается в компетентный суд по месту нахождения продавца.",en:"If negotiation fails, the dispute shall be submitted to the competent court at the seller's location.",kk:"Келіссөз нәтиже бермесе, дау сатушы орналасқан жердегі құзыретті сотқа беріледі."},
+  delivery:{cn:"按双方确认计划执行",ru:"в соответствии с согласованным графиком",en:"according to the schedule confirmed by both parties",kk:"тараптар келіскен кестеге сәйкес"}
+};
+function trValue(key,val,lang){
+  if(lang==="cn")return val||VALUE_TR[key]?.cn||"—";
+  if(!val||val==="—")return "—";
+  if(VALUE_TR[key]&&hasZh(val))return VALUE_TR[key][lang]||VALUE_TR[key].en||val;
+  if(key==="port"&&VALUE_TR.port&&hasZh(val))return VALUE_TR.port[lang]||val;
+  if(key==="trans"&&hasZh(val))return VALUE_TR.trans[lang]||val;
+  if(key==="pay"&&hasZh(val))return VALUE_TR.pay[lang]||val;
+  if(key==="pkg"&&hasZh(val))return VALUE_TR.pkg[lang]||val;
+  if(key==="law"&&hasZh(val))return VALUE_TR.law[lang]||val;
+  if(key==="bank"&&hasZh(val))return VALUE_TR.bank[lang]||"bank";
+  return val;
+}
+function trClause(key,val,lang){
+  if(lang==="cn")return val||CLAUSE_TR[key]?.cn||"";
+  return (!val||hasZh(val))?(CLAUSE_TR[key]?.[lang]||CLAUSE_TR[key]?.en||val):val;
+}
 function contractPanelHtml(d,t,lang){
   const m=ML[lang]||ML.cn,amount=(+d.qty||0)*(+d.price||0),title=t.id==="purchase"?m.purchase:m.sale;
   const dest=d.country==="UZ"?(lang==="cn"?"乌兹别克斯坦":lang==="ru"?"Узбекистан":lang==="kk"?"Өзбекстан":"Uzbekistan"):(lang==="cn"?"哈萨克斯坦":lang==="ru"?"Казахстан":lang==="kk"?"Қазақстан":"Kazakhstan");
+  const v={place:trValue("place",d.place,lang),seller:trValue("seller",d.seller,lang),seller_addr:trValue("seller_addr",d.seller_addr,lang),seller_bank:trValue("bank",d.seller_bank,lang),buyer:trValue("buyer",d.buyer,lang),buyer_addr:trValue("buyer_addr",d.buyer_addr,lang),buyer_bank:trValue("bank",d.buyer_bank,lang),goods:trValue("goods",d.goods,lang),pkg:trValue("pkg",d.pkg,lang),port:trValue("port",d.port,lang),trans:trValue("trans",d.trans,lang),pay:trValue("pay",d.pay,lang),law:trValue("law",d.law,lang),delivery:trClause("delivery",d.delivery,lang),quality:trClause("quality",d.quality,lang),pack_clause:trClause("pack_clause",d.pack_clause,lang),acceptance:trClause("acceptance",d.acceptance,lang),breach:trClause("breach",d.breach,lang),dispute:trClause("dispute",d.dispute,lang)};
   return `<section class="lang-page"><div class="lang-tag">${esc(m.name)}</div><h2>${esc(title)}</h2><p style="text-align:center">${esc(m.sub)}</p>
-    <table><tr><th>${m.no}</th><td>${esc(d.contract||"—")}</td><th>${m.date}</th><td>${esc(d.date||today())}</td></tr><tr><th>${m.place}</th><td colspan="3">${esc(d.place||"")}</td></tr></table>
-    <table><tr><th>${m.seller}</th><td>${esc(d.seller)}</td></tr><tr><th>${m.addr}</th><td>${esc(d.seller_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.seller_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(d.seller_bank||"—")}</td></tr><tr><th>${m.swift}</th><td>${esc(d.seller_swift||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.seller_account||"—")}</td></tr></table>
-    <table><tr><th>${m.buyer}</th><td>${esc(d.buyer)}</td></tr><tr><th>${m.addr}</th><td>${esc(d.buyer_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.buyer_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(d.buyer_bank||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.buyer_iban||"—")}</td></tr><tr><th>${m.bik}</th><td>${esc(d.buyer_bik||"—")}</td></tr></table>
+    <table><tr><th>${m.no}</th><td>${esc(d.contract||"—")}</td><th>${m.date}</th><td>${esc(d.date||today())}</td></tr><tr><th>${m.place}</th><td colspan="3">${esc(v.place||"")}</td></tr></table>
+    <table><tr><th>${m.seller}</th><td>${esc(v.seller)}</td></tr><tr><th>${m.addr}</th><td>${esc(v.seller_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.seller_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(v.seller_bank||"—")}</td></tr><tr><th>${m.swift}</th><td>${esc(d.seller_swift||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.seller_account||"—")}</td></tr></table>
+    <table><tr><th>${m.buyer}</th><td>${esc(v.buyer)}</td></tr><tr><th>${m.addr}</th><td>${esc(v.buyer_addr||"—")}</td></tr><tr><th>${m.tax}</th><td>${esc(d.buyer_tax||"—")}</td></tr><tr><th>${m.bank}</th><td>${esc(v.buyer_bank||"—")}</td></tr><tr><th>${m.account}</th><td>${esc(d.buyer_iban||"—")}</td></tr><tr><th>${m.bik}</th><td>${esc(d.buyer_bik||"—")}</td></tr></table>
     <h3>${m.goods}</h3><p>${esc(m.goodsText)}</p><table><tr><th>${m.item}</th><th>${m.hs}</th><th>${m.qty}</th><th>${m.price}</th><th>${m.amount}</th></tr>
-    <tr><td>${esc(d.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt(amount)}</td></tr></table>
-    <table><tr><th>${m.total}</th><td><b>${esc(d.cur)} ${fmt(amount)}</b></td></tr><tr><th>${m.country}</th><td>${esc(dest)}</td></tr><tr><th>${m.pkg}</th><td>${esc(d.pkg||"—")}</td></tr><tr><th>${m.weight}</th><td>${esc(d.gw||"—")} kg / ${esc(d.nw||"—")} kg</td></tr></table>
-    <h3>${m.quality}</h3><p>${esc(d.quality||"货物应符合合同约定规格、双方确认样品及相关标准。")}</p>
-    <h3>${m.pack}</h3><p>${esc(d.pack_clause||"包装应适合长途运输，确保货物不破损、不受潮。")}</p>
-    <h3>${m.delivery}</h3><p>${esc(d.terms)} · ${esc(d.port||"")} · ${esc(d.trans||"")} · ${esc(d.delivery||"按双方确认计划执行")}</p>
-    <h3>${m.payment}</h3><p>${esc(d.pay||"按双方约定执行")}</p>
-    <h3>${m.acceptance}</h3><p>${esc(d.acceptance||"买方应在合理期限内完成验收，如有异议应及时书面通知卖方。")}</p>
-    <h3>${m.breach}</h3><p>${esc(d.breach||"违约方应赔偿守约方直接损失；不可抗力按法律规定处理。")}</p>
-    <h3>${m.law}</h3><p>${esc(d.law||"中华人民共和国法律")} · ${esc(d.dispute||"双方协商不成的，提交有管辖权人民法院解决。")}</p>
+    <tr><td>${esc(v.goods)}</td><td class="num">${esc(d.hs)}</td><td class="num">${esc(d.qty)}</td><td class="num">${esc(d.price)}</td><td class="num">${fmt(amount)}</td></tr></table>
+    <table><tr><th>${m.total}</th><td><b>${esc(d.cur)} ${fmt(amount)}</b></td></tr><tr><th>${m.country}</th><td>${esc(dest)}</td></tr><tr><th>${m.pkg}</th><td>${esc(v.pkg||"—")}</td></tr><tr><th>${m.weight}</th><td>${esc(d.gw||"—")} kg / ${esc(d.nw||"—")} kg</td></tr></table>
+    <h3>${m.quality}</h3><p>${esc(v.quality)}</p>
+    <h3>${m.pack}</h3><p>${esc(v.pack_clause)}</p>
+    <h3>${m.delivery}</h3><p>${esc(d.terms)} · ${esc(v.port||"")} · ${esc(v.trans||"")} · ${esc(v.delivery)}</p>
+    <h3>${m.payment}</h3><p>${esc(v.pay||"—")}</p>
+    <h3>${m.acceptance}</h3><p>${esc(v.acceptance)}</p>
+    <h3>${m.breach}</h3><p>${esc(v.breach)}</p>
+    <h3>${m.law}</h3><p>${esc(v.law)} · ${esc(v.dispute)}</p>
     <h3>${m.effective}</h3><p>${esc(m.effectiveText)}</p>
     <div class="row2" style="margin-top:14px"><span><b>${m.sellerSeal}</b><br><br>__________________</span><span><b>${m.buyerSeal}</b><br><br>__________________</span></div></section>`;
 }
 function contractDocHtml(){
-  const t=contractTpl(),d=contractParamData(),amount=(+d.qty||0)*(+d.price||0);
-  const title=t.id==="purchase"?"货物采购合同":"货物销售合同";
+  const t=contractTpl(),d=contractParamData();
   const no=d.contract||"—";
-  return `<div class="doc">${docBrand()}<h1>${esc(title)}</h1><div class="sub">${langName(contractLangLeft)} / ${langName(contractLangRight)} · Goods ${t.id==="purchase"?"Purchase":"Sales"} Contract · Dongda Controlled File</div>
-    <div class="meta"><span>合同编号 ${esc(no)}</span><span>签约地点 ${esc(d.place||"")}</span><span>签订日期 ${esc(d.date||today())}</span></div>
+  return `<div class="doc">${docBrand()}<h1>Dongda Contract File</h1><div class="sub">${langName(contractLangLeft)} / ${langName(contractLangRight)} · ${t.id==="purchase"?"Purchase":"Sales"} · No. ${esc(no)} · ${esc(d.date||today())}</div>
     <div class="bilingual-doc">${contractPanelHtml(d,t,contractLangLeft)}${contractPanelHtml(d,t,contractLangRight)}</div>${seal()}<div class="foot">CONTRACT-${t.id.toUpperCase()} · ${today()} · ${esc(no)}</div></div>`;
 }
 function previewContractTemplate(showToast=true){
