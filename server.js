@@ -121,6 +121,24 @@ async function ensureDb() {
         updated_at timestamptz not null default now()
       );
       create index if not exists tickets_updated_idx on tickets(updated_at desc);
+      create table if not exists generated_docs (
+        id text primary key,
+        title text not null,
+        kind text,
+        doc_id text,
+        action text,
+        status text not null default 'review',
+        ticket_no text,
+        contract_no text,
+        seller text,
+        buyer text,
+        html text not null,
+        payload jsonb,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now()
+      );
+      create index if not exists generated_docs_created_idx on generated_docs(created_at desc);
+      create index if not exists generated_docs_ticket_idx on generated_docs(ticket_no);
     `);
     return p;
   })();
@@ -401,6 +419,110 @@ async function ticketList(req, res) {
   }
 }
 
+async function generatedSave(req, res) {
+  try {
+    const body = await readJson(req);
+    const record = body && body.record;
+    if (!record || !record.html) return sendJson(res, 400, { error: "缺少生成文件内容" });
+    const p = await ensureDb();
+    if (!p) return sendJson(res, 503, { error: "服务器未配置 DATABASE_URL" });
+    const id = String(record.id || fileId());
+    const createdAt = record.created ? new Date(record.created) : new Date();
+    await p.query(
+      `insert into generated_docs
+       (id, title, kind, doc_id, action, status, ticket_no, contract_no, seller, buyer, html, payload, created_at, updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())
+       on conflict (id) do update set
+       title=excluded.title, kind=excluded.kind, doc_id=excluded.doc_id, action=excluded.action,
+       status=excluded.status, ticket_no=excluded.ticket_no, contract_no=excluded.contract_no,
+       seller=excluded.seller, buyer=excluded.buyer, html=excluded.html, payload=excluded.payload, updated_at=now()`,
+      [
+        id,
+        String(record.title || "生成文件").slice(0, 200),
+        String(record.kind || "form").slice(0, 40),
+        String(record.docId || record.doc_id || "").slice(0, 80),
+        String(record.action || "生成文件").slice(0, 80),
+        String(record.status || "review").slice(0, 30),
+        String(record.ticket_no || "").slice(0, 120),
+        String(record.contract_no || "").slice(0, 120),
+        String(record.seller || "").slice(0, 240),
+        String(record.buyer || "").slice(0, 240),
+        String(record.html || ""),
+        JSON.stringify(record),
+        createdAt,
+      ]
+    );
+    sendJson(res, 200, { ok: true, id });
+  } catch (err) {
+    sendJson(res, 500, { error: "保存生成文件失败：" + err.message });
+  }
+}
+
+async function generatedList(req, res) {
+  try {
+    const p = await ensureDb();
+    if (!p) return sendJson(res, 503, { error: "服务器未配置 DATABASE_URL" });
+    const url = new URL(req.url, "http://localhost");
+    const limit = Math.min(Math.max(+(url.searchParams.get("limit") || 80), 1), 200);
+    const r = await p.query(
+      `select id, title, kind, doc_id, action, status, ticket_no, contract_no, seller, buyer, html, created_at, updated_at
+       from generated_docs order by created_at desc limit $1`,
+      [limit]
+    );
+    sendJson(res, 200, {
+      ok: true,
+      docs: r.rows.map(x => ({
+        id: x.id,
+        title: x.title,
+        kind: x.kind,
+        docId: x.doc_id,
+        action: x.action,
+        status: x.status,
+        ticket_no: x.ticket_no,
+        contract_no: x.contract_no,
+        seller: x.seller,
+        buyer: x.buyer,
+        html: x.html,
+        created: x.created_at ? new Date(x.created_at).getTime() : Date.now(),
+        updated: x.updated_at,
+        remote: true,
+      })),
+    });
+  } catch (err) {
+    sendJson(res, 500, { error: "读取生成文件失败：" + err.message });
+  }
+}
+
+async function generatedStatus(req, res) {
+  try {
+    const body = await readJson(req);
+    const id = body && body.id;
+    const status = body && body.status;
+    if (!id || !["review", "approved", "archived"].includes(status)) return sendJson(res, 400, { error: "状态参数不正确" });
+    const p = await ensureDb();
+    if (!p) return sendJson(res, 503, { error: "服务器未配置 DATABASE_URL" });
+    const r = await p.query("update generated_docs set status=$2, updated_at=now() where id=$1", [String(id), status]);
+    if (!r.rowCount) return sendJson(res, 404, { error: "记录不存在" });
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    sendJson(res, 500, { error: "更新生成文件状态失败：" + err.message });
+  }
+}
+
+async function generatedDelete(req, res) {
+  try {
+    const body = await readJson(req);
+    const id = body && body.id;
+    if (!id) return sendJson(res, 400, { error: "缺少 id" });
+    const p = await ensureDb();
+    if (!p) return sendJson(res, 503, { error: "服务器未配置 DATABASE_URL" });
+    await p.query("delete from generated_docs where id=$1", [String(id)]);
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    sendJson(res, 500, { error: "删除生成文件失败：" + err.message });
+  }
+}
+
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 http.createServer((req, res) => {
@@ -413,6 +535,10 @@ http.createServer((req, res) => {
   if (req.method === "GET" && pathname.startsWith("/api/archive/file/")) return archiveDownload(req, res, decodeURIComponent(pathname.slice("/api/archive/file/".length)));
   if (req.method === "POST" && pathname === "/api/tickets/save") return ticketSave(req, res);
   if (req.method === "GET" && pathname === "/api/tickets/list") return ticketList(req, res);
+  if (req.method === "POST" && pathname === "/api/generated/save") return generatedSave(req, res);
+  if (req.method === "GET" && pathname === "/api/generated/list") return generatedList(req, res);
+  if (req.method === "POST" && pathname === "/api/generated/status") return generatedStatus(req, res);
+  if (req.method === "POST" && pathname === "/api/generated/delete") return generatedDelete(req, res);
   if (req.method === "GET" || req.method === "HEAD") return serveStatic(req, res);
   sendText(res, 405, "Method not allowed");
 }).listen(PORT, HOST, () => console.log("东大制单工作台 · " + HOST + ":" + PORT + " · 识别通道 " + CHANNELS));

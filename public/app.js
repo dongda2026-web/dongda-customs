@@ -890,38 +890,82 @@ function setTickets(a){localStorage.setItem("dd_tickets",JSON.stringify(a))}
 function docHistory(){try{return JSON.parse(localStorage.getItem("dd_doc_history")||"[]")}catch(e){return[]}}
 function setDocHistory(a){localStorage.setItem("dd_doc_history",JSON.stringify(a.slice(0,80)))}
 const DH_STATUS={review:["待审核","s-doc"],approved:["已审核","s-way"],archived:["已归档","s-done"]};
+let remoteDocHistory=[],remoteArchiveFiles=[];
+function jsArg(v){return JSON.stringify(String(v)).replace(/"/g,"&quot;")}
 function recordGeneratedDoc(r){
   const d=collect(),meta=DOC_META[r.docId]||[r.title||r.docId,""];
-  const rec={id:Date.now()+Math.floor(Math.random()*999),created:Date.now(),kind:r.kind||"form",docId:r.docId||"",title:r.title||meta[0]||"文件",action:r.action||"生成文件",status:"review",ticket_no:curTicket?curTicket.no:"",contract_no:d.contract||"",buyer:d.buyer||"",seller:d.seller||"",html:r.html||""};
+  const rec={id:"doc-"+Date.now()+"-"+Math.floor(Math.random()*999),created:Date.now(),kind:r.kind||"form",docId:r.docId||"",title:r.title||meta[0]||"文件",action:r.action||"生成文件",status:"review",ticket_no:curTicket?curTicket.no:"",contract_no:d.contract||"",buyer:d.buyer||"",seller:d.seller||"",html:r.html||""};
   const a=docHistory();a.unshift(rec);setDocHistory(a);renderDocHistory();
+  cloudSaveGeneratedDoc(rec);
+}
+function archiveRecordLine(r){
+  const dt=new Date(r.created).toLocaleString("zh-CN",{hour12:false});
+  const size=r.size_bytes?(" · "+Math.ceil(r.size_bytes/1024)+" KB"):"";
+  return `<div class="archive-item">
+    <span class="route imp">原件</span>
+    <div class="a-main"><div class="t">${esc(r.title)} · ${esc(r.ticket_no||"未绑定票号")}</div>
+    <div class="d">上传文件归档 · ${esc(dt)} · ${esc(r.category||"upload")}${size}</div></div>
+    <span class="status s-done">已入库</span>
+    <button class="mini" onclick="openArchiveFile(${jsArg(r.id)})">打开</button></div>`;
 }
 function docRecordLine(r){
   const st=DH_STATUS[r.status]||DH_STATUS.review,dt=new Date(r.created).toLocaleString("zh-CN",{hour12:false});
+  if(r.remoteFile)return archiveRecordLine(r);
   return `<div class="archive-item">
     <span class="route ${r.kind==="contract"?"imp":""}">${r.kind==="contract"?"合同":"表单"}</span>
     <div class="a-main"><div class="t">${esc(r.title)} · ${esc(r.ticket_no||r.contract_no||"未绑定票号")}</div>
     <div class="d">${esc(r.action)} · ${esc(dt)} · 合同号 ${esc(r.contract_no||"—")} · ${esc(r.seller||"—")} → ${esc(r.buyer||"—")}</div></div>
-    <button class="status ${st[1]}" onclick="approveDocRecord(${r.id})">${st[0]}</button>
-    <button class="mini" onclick="viewDocRecord(${r.id})">查看</button>
-    <button class="mini" onclick="archiveDocRecord(${r.id})">归档</button>
-    <button class="mini del" onclick="deleteDocRecord(${r.id})">删</button></div>`;
+    <button class="status ${st[1]}" onclick="approveDocRecord(${jsArg(r.id)})">${st[0]}</button>
+    <button class="mini" onclick="viewDocRecord(${jsArg(r.id)})">查看</button>
+    <button class="mini" onclick="archiveDocRecord(${jsArg(r.id)})">归档</button>
+    <button class="mini del" onclick="deleteDocRecord(${jsArg(r.id)})">删</button></div>`;
+}
+function remoteDocRecords(){
+  return remoteDocHistory.map(r=>Object.assign({},r,{remote:true,id:String(r.id),created:+r.created||Date.now()}));
+}
+function remoteFileRecords(){
+  return remoteArchiveFiles.map(f=>({id:String(f.id),remoteFile:true,kind:"upload",title:f.filename||"上传文件",action:"上传文件归档",status:"archived",ticket_no:f.ticket_no||"",category:f.category||"",created:f.created_at?new Date(f.created_at).getTime():Date.now(),size_bytes:f.size_bytes||0}));
+}
+function allDocRecords(){
+  const map=new Map();
+  [...remoteDocRecords(),...docHistory().map(r=>Object.assign({},r,{id:String(r.id)})),...remoteFileRecords()].forEach(r=>{
+    const key=(r.remoteFile?"file-":"doc-")+r.id;
+    map.set(key,r);
+  });
+  return [...map.values()].sort((a,b)=>(b.created||0)-(a.created||0));
 }
 function renderDocHistory(){
   const el=$("docHistoryList");if(!el)return;
-  const a=docHistory();
-  if(!a.length){el.innerHTML='<div class="empty"><div class="big">📄</div>还没有生成记录 · 导出合同或单证后会自动出现在这里</div>';return}
+  const a=allDocRecords();
+  if(!a.length){el.innerHTML='<div class="empty"><div class="big">📄</div>还没有生成/上传记录 · 导出合同、单证或上传原件后会自动出现在这里</div>';return}
   el.innerHTML=a.map(docRecordLine).join("");
 }
-function updateDocRecord(id,fn){const a=docHistory(),r=a.find(x=>x.id===id);if(!r)return;fn(r);setDocHistory(a);renderDocHistory()}
+function updateDocRecord(id,fn){
+  id=String(id);
+  const a=docHistory(),r=a.find(x=>String(x.id)===id);
+  if(r){fn(r);setDocHistory(a);renderDocHistory();cloudSaveGeneratedDoc(r);return r}
+  const rr=remoteDocHistory.find(x=>String(x.id)===id);
+  if(rr){fn(rr);renderDocHistory();cloudUpdateGeneratedStatus(rr);return rr}
+  return null;
+}
 function approveDocRecord(id){updateDocRecord(id,r=>{r.status=r.status==="approved"?"review":"approved";r.reviewed=Date.now()})}
 function archiveDocRecord(id){updateDocRecord(id,r=>{r.status="archived";r.archived=Date.now()})}
-function deleteDocRecord(id){if(!confirm("确定删除该生成记录？"))return;setDocHistory(docHistory().filter(r=>r.id!==id));renderDocHistory()}
+function deleteDocRecord(id){
+  id=String(id);
+  if(!confirm("确定删除该生成记录？"))return;
+  setDocHistory(docHistory().filter(r=>String(r.id)!==id));
+  remoteDocHistory=remoteDocHistory.filter(r=>String(r.id)!==id);
+  renderDocHistory();
+  cloudDeleteGeneratedDoc(id);
+}
 function viewDocRecord(id){
-  const r=docHistory().find(x=>x.id===id);if(!r)return;
+  const r=allDocRecords().find(x=>String(x.id)===String(id));if(!r)return;
+  if(r.remoteFile){openArchiveFile(r.id);return}
   go("p2");
   $("docArea").innerHTML=r.html||'<div class="empty">该记录没有可预览内容</div>';
   toast("已打开历史文件："+r.title);
 }
+function openArchiveFile(id){window.open(apiBase()+"/api/archive/file/"+encodeURIComponent(id),"_blank")}
 function collect(){return{type:$("f_type").value,seller:$("f_seller").value,buyer:$("f_buyer").value,country:$("f_country").value,
   contract:$("f_contract").value,date:$("f_date").value,terms:$("f_terms").value,cur:$("f_cur").value,pay:$("f_pay").value,
   trans:$("f_trans").value,port:$("f_port").value,truck:$("f_truck").value,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value,
@@ -1019,7 +1063,7 @@ function go(p){
   document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("active",x.id===p));
   document.querySelectorAll(".nav-item[data-p],.mnav .mi").forEach(s=>s.classList.toggle("active",s.dataset.p===p));
   window.scrollTo({top:0});
-  if(p==="p2")drawDoc();if(p==="pd")computeDash();if(p==="p3")renderArchive();
+  if(p==="p2")drawDoc();if(p==="pd")computeDash();if(p==="p3"){renderArchive();refreshCloudArchive()}
 }
 let toastTimer=null;
 function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",3400)}
@@ -1041,12 +1085,57 @@ async function cloudArchiveFiles(files,category,ticketNo){
   if(!files||!files.length)return;
   try{
     const r=await fetch(apiBase()+"/api/archive/upload",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({files,category,ticket_no:ticketNo||""})});
-    if(r.ok){const d=await r.json();if(d.files&&d.files.length)toast("上传文件已归档到数据库 ✓ "+d.files.length+" 个")}
+    if(r.ok){const d=await r.json();if(d.files&&d.files.length){toast("上传文件已归档到数据库 ✓ "+d.files.length+" 个");loadRemoteArchiveFiles()}}
   }catch(e){}
 }
 async function cloudSaveTicket(ticket){
   try{await fetch(apiBase()+"/api/tickets/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ticket})})}catch(e){}
 }
+async function cloudSaveGeneratedDoc(record){
+  if(!record||!record.html)return;
+  try{
+    const r=await fetch(apiBase()+"/api/generated/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({record})});
+    if(r.ok)loadRemoteDocHistory();
+  }catch(e){}
+}
+async function cloudUpdateGeneratedStatus(record){
+  if(!record||!record.id)return;
+  try{await fetch(apiBase()+"/api/generated/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:record.id,status:record.status||"review"})})}catch(e){}
+}
+async function cloudDeleteGeneratedDoc(id){
+  try{await fetch(apiBase()+"/api/generated/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id})})}catch(e){}
+}
+async function loadRemoteDocHistory(){
+  try{
+    const r=await fetch(apiBase()+"/api/generated/list?limit=100",{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json();
+    remoteDocHistory=Array.isArray(d.docs)?d.docs:[];
+    renderDocHistory();
+  }catch(e){}
+}
+async function loadRemoteArchiveFiles(){
+  try{
+    const r=await fetch(apiBase()+"/api/archive/list?limit=100",{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json();
+    remoteArchiveFiles=Array.isArray(d.files)?d.files:[];
+    renderDocHistory();
+  }catch(e){}
+}
+async function loadRemoteTickets(){
+  try{
+    const r=await fetch(apiBase()+"/api/tickets/list?limit=200",{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json(),remote=Array.isArray(d.tickets)?d.tickets:[];
+    if(!remote.length)return;
+    const map=new Map(tickets().map(t=>[String(t.id),t]));
+    remote.forEach(t=>{if(t&&t.id&&!map.has(String(t.id)))map.set(String(t.id),t)});
+    setTickets([...map.values()].sort((a,b)=>(b.updated||b.created||0)-(a.updated||a.created||0)));
+    renderArchive();computeDash();
+  }catch(e){}
+}
+function refreshCloudArchive(){loadRemoteTickets();loadRemoteDocHistory();loadRemoteArchiveFiles()}
 
 /* ================= PWA 本地安装 ================= */
 let deferredInstallPrompt=null;
@@ -1105,7 +1194,7 @@ Object.assign(window,{
   copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
   exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
-  renderDocHistory,recordGeneratedDoc,
+  openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,
   previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
@@ -1117,3 +1206,4 @@ newTicket("export");
 bindTemplateButtons();
 renderArchive();
 computeDash();
+refreshCloudArchive();
