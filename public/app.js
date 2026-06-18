@@ -65,11 +65,26 @@ function normRole(v){
   if(["both","双方","全部","all"].includes(s))return "both";
   return "buyer";
 }
-function normalizeCustomer(p){
-  if(Array.isArray(p)){
-    return {name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||""};
+function inferCustomerMeta(c,source){
+  source=String(source||[c.name,c.addr,c.tax,c.bank,c.account,c.swift,c.vat].filter(Boolean).join(" "));
+  const cn=/中国|新疆|阿克苏|霍尔果斯|China|KNR|КНР|Китай|CN\b/i.test(source);
+  const uz=/Узбекистан|Ташкент|Самарканд|UZ\b|OOO|ООО/i.test(source);
+  const kz=/Казахстан|Астана|Алматы|Шымкент|KZ[0-9A-Z]{10,}|БИН|РНН|ТОО|TOO|АО .*банк|АО Сити/i.test(source);
+  if(cn)c.country="CN";else if(uz)c.country="UZ";else if(kz)c.country="KZ";
+  if(c.role!=="both"){
+    if(c.country==="CN")c.role="seller";
+    if(c.country==="KZ"||c.country==="UZ")c.role="buyer";
   }
-  return {name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||""};
+  return c;
+}
+function normalizeCustomer(p){
+  let c;
+  if(Array.isArray(p)){
+    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||""};
+    return inferCustomerMeta(c,p.join(" "));
+  }
+  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||""};
+  return inferCustomerMeta(c);
 }
 function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||""].join("|")}
 function parseCustomerLine(l){return normalizeCustomer(l.split("|").map(s=>s.trim()))}
@@ -93,8 +108,10 @@ function parseCustomerBlock(txt){
   const vat=matchField(raw,/(Свидетельство[^\n]+)/i);
   const tel=matchField(raw,/^Тел\.?\s*[:：]?\s*([^\n]+)/im);
   const fax=matchField(raw,/^Факс\s*[:：]?\s*([^\n]+)/im);
-  const bankLine=lines.find(l=>/^(АО|AО|AO|ТОО|TOO|Банк|Bank)(\s|«|")/i.test(l)&&!l.includes("Покупатель")&&!l.includes("Шымкентцемент"))
-    ||lines.find(l=>/банк/i.test(l)&&!/реквизит/i.test(l))||"";
+  const bankStart=lines.findIndex(l=>/Банковские реквизиты|Bank details|银行/i.test(l));
+  const bankScope=bankStart>=0?lines.slice(bankStart+1):lines;
+  const bankLine=bankScope.find(l=>/^(АО|AО|AO|Банк|Bank)(\s|«|")/i.test(l))
+    ||bankScope.find(l=>/банк/i.test(l)&&!/реквизит/i.test(l))||"";
   const bank=cleanField(bankLine||after(labelLine(["Банк","Bank","银行"])));
   return normalizeCustomer({name,country:/Узбекистан|UZ/i.test(raw)?"UZ":"KZ",role:"buyer",addr,tax,bank,account,swift,kbe,corr,vat,tel,fax});
 }
@@ -702,7 +719,7 @@ function goLibrary(id){
 }
 function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
-  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.country||"")} · ${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
+  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryCustomer(${i},'${(c.role||"buyer")==="seller"?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
   if(pl)pl.innerHTML=(cfg.products||[]).map(p=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span></div>`).join("")||'<div class="empty">暂无产品资料</div>';
   const ce=$("libCustomersEdit");if(ce&&document.activeElement!==ce)ce.value=(cfg.clients||[]).map(customerLine).join("\n");
   const pe=$("libProductsEdit");if(pe&&document.activeElement!==pe)pe.value=(cfg.products||[]).map(productLine).join("\n");
