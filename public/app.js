@@ -107,7 +107,7 @@ function parseCustomerLine(l){return normalizeCustomer(l.split("|").map(s=>s.tri
 function cleanField(v){return String(v||"").replace(/^[：:\s]+|[；;,\s]+$/g,"").trim()}
 function matchField(txt,re){const m=String(txt||"").match(re);return cleanField(m&&m[1]||"")}
 function stripPartyLabel(s){return cleanField(String(s||"").replace(/^(?:Покупатель|Поставщик|Продавец|Етказиб берувчи|Buyer|Seller|Supplier|客户|买方|卖方|供方)\s*[:：]?\s*/i,""))}
-function isCustomerLabelLine(s){return /^(Покупатель|Поставщик|Продавец|Етказиб берувчи|Buyer|Seller|Supplier|客户|买方|卖方|供方|单位名称|公司名称|Адрес|Манзил|Address|地址|地址及电话|Банковские реквизиты|Bank details|银行|开户行|开户账号|银行账号|Контакты|Contacts|联系方式|Тел\.?|Факс|Директор|SWIFT|IBAN|БИН|РНН|СТИР|ҚҚС|VAT|统一社会信用代码|税号|кБе|Х\/Р|МФО|Account number with the Correspondent Bank)\b/i.test(String(s||"").trim())}
+function isCustomerLabelLine(s){return /^(Покупатель|Поставщик|Продавец|Етказиб берувчи|Buyer|Seller|Supplier|客户|买方|卖方|供方|单位名称|公司名称|Юридический и почтовый адрес|Адрес|Манзил|Address|地址|地址及电话|Банковские реквизиты|Bank details|银行|开户行|开户账号|银行账号|Контакты|Contacts|联系方式|Тел\.?|Факс|Директор|SWIFT|IBAN|БИН|РНН|СТИР|ҚҚС|VAT|统一社会信用代码|税号|кБе|Х\/Р|МФО|БИК|Account number with the Correspondent Bank)\b/i.test(String(s||"").trim())}
 function extractAfterLabel(raw,labels){
   const lines=String(raw||"").split("\n").map(s=>s.trim()).filter(Boolean);
   for(let i=0;i<lines.length;i++){
@@ -132,16 +132,17 @@ function parseCustomerBlock(txt){
   let name=extractAfterLabel(raw,["Покупатель","Buyer","客户","买方","Продавец","Поставщик","Етказиб берувчи","Seller","Supplier","卖方","供方","单位名称","公司名称"]);
   if(!name)name=cleanField(lines.find(l=>!isCustomerLabelLine(l)&&!/реквизит|контакт|адрес|банк|swift|iban|бин|рнн|ндс|тел|факс|свидетельство/i.test(l))||"");
   name=stripPartyLabel(name).replace(/\s*·\s*(BUYER|SELLER|SUPPLIER)$/i,"");
-  const addr=extractAfterLabel(raw,["Адрес","Манзил","Address","地址及电话","地址"]);
+  const addr=extractAfterLabel(raw,["Юридический и почтовый адрес","Адрес","Манзил","Address","地址及电话","地址"]);
   const bin=matchField(raw,/БИН\s*[:：]?\s*([0-9]{6,})/i);
   const rnn=matchField(raw,/РНН\s*[:：]?\s*([0-9]{6,})/i);
   const stir=matchField(raw,/СТИР[^\n:：]*[:：]?\s*([0-9]{6,})/i);
   const cnTax=matchField(raw,/统一社会信用代码\s*[:：]?\s*([0-9A-Z]{10,})/i)||matchField(raw,/税号\s*[:：]?\s*([0-9A-Z]{10,})/i);
   const tax=bin||rnn||stir||cnTax;
   const swift=matchField(raw,/SWIFT\s*[:：]?\s*([A-Z0-9]+)/i);
-  const account=matchField(raw,/IBAN\s*[:：]?\s*([A-Z0-9]+)/i)||matchField(raw,/Х\/Р\s*[:：]?\s*([0-9A-Z]+)/i)||matchField(raw,/开户账号\s*[:：]?\s*([0-9A-Z]+)/i)||matchField(raw,/银行账号\s*[:：]?\s*([0-9A-Z]+)/i);
+  const account=matchField(raw,/IBAN(?:\s*\([^)]*\))?\s*[:：]?\s*([A-Z0-9]+)/i)||matchField(raw,/Х\/Р\s*[:：]?\s*([0-9A-Z]+)/i)||matchField(raw,/开户账号\s*[:：]?\s*([0-9A-Z]+)/i)||matchField(raw,/银行账号\s*[:：]?\s*([0-9A-Z]+)/i);
   const kbe=matchField(raw,/кБе\s*[:：]?\s*([0-9]+)/i);
   const mfo=matchField(raw,/МФО\s*[:：]?\s*([0-9]+)/i);
+  const bik=matchField(raw,/БИК\s*[:：]?\s*([A-Z0-9]+)/i);
   const corr=matchField(raw,/Account number with the Correspondent Bank\s*[:：]?\s*([A-Z0-9]+)/i)||matchField(raw,/корреспондент\w*\s*(?:счет|банк)[^:：]*[:：]?\s*([A-Z0-9]+)/i);
   const vat=matchField(raw,/(Свидетельство[^\n]+)/i)||matchField(raw,/ҚҚС[^\n:：]*[:：]?\s*([^\n]+)/i);
   const tel=matchField(raw,/^Тел\.?\s*[:：]?\s*([^\n]+)/im)||matchField(raw,/^Директор\s*[:：]?\s*([^\n]+)/im)||matchField(raw,/^电话\s*[:：]?\s*([^\n]+)/im);
@@ -150,8 +151,8 @@ function parseCustomerBlock(txt){
   const bankScope=bankStart>=0?lines.slice(bankStart+1):lines;
   const bankLine=bankScope.find(l=>/^(АО|AО|AO|Банк|Bank)(\s|«|")/i.test(l))
     ||bankScope.find(l=>/банк/i.test(l)&&!/реквизит/i.test(l))||"";
-  const bank=cleanField(bankLine||extractAfterLabel(raw,["Банк","Bank","银行","开户行"]));
-  return normalizeCustomer({name,country:/Узбекистан|Ўзбекистон|Самарқанд|СТИР|МФО|UZ/i.test(raw)?"UZ":/中国|新疆|阿克苏|统一社会信用代码|КНР|Китай|CN\b/i.test(raw)?"CN":"KZ",role,addr,tax,bank,account,swift,bik:mfo,kbe,corr,vat,tel,fax});
+  const bank=cleanField((bankLine||extractAfterLabel(raw,["Банк","Bank","银行","开户行"])).replace(/^(?:Банк|Bank|银行|开户行)\s*[:：]?\s*/i,""));
+  return normalizeCustomer({name,country:/Узбекистан|Ўзбекистон|Самарқанд|СТИР|МФО|UZ/i.test(raw)?"UZ":/中国|新疆|阿克苏|统一社会信用代码|КНР|Китай|CN\b/i.test(raw)?"CN":"KZ",role,addr,tax,bank,account,swift,bik:bik||mfo,kbe,corr,vat,tel,fax});
 }
 function parseCustomersText(txt){
   const raw=String(txt||"").trim();
@@ -327,7 +328,7 @@ function saveLibraryCustomers(){
   }else if(raw.includes("|")&&raw.split("\n").filter(Boolean).length>1){
     cfg.clients=rows;
     localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-    fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("客户资料库已整体保存："+rows.length+" 条");
+    fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已整体保存："+rows.length+" 条");
     return;
   }else{
     rows.forEach(c=>{
@@ -336,7 +337,7 @@ function saveLibraryCustomers(){
     });
   }
   cfg.clients=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("客户资料库已保存："+rows.length+" 条");
+  fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已保存："+rows.length+" 条");
 }
 function deleteLibraryCustomer(i){
   const cfg=loadCfg(),c=(cfg.clients||[])[i];if(!c)return;
