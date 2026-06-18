@@ -75,6 +75,30 @@ function normalizeProduct(p){
 }
 function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||"",p.gwUnit||"",p.nwUnit||"",p.pkg||"",p.elements||""].join("|")}
 function parseProductLine(l){return normalizeProduct(l.split("|").map(s=>s.trim()))}
+function parseProductBlock(txt){
+  const raw=String(txt||"").replace(/\r/g,"").trim();
+  if(!raw)return null;
+  if(raw.includes("|")&&!/\n/.test(raw))return parseProductLine(raw);
+  const pick=(labels)=>extractAfterLabel(raw,labels);
+  const name=pick(["品名","产品名称","货物名称","中文品名","Наименование товара","Наименование","Product name","Goods"])||cleanField(raw.split("\n").find(l=>!isCustomerLabelLine(l)&&!/HS|ТН ВЭД|数量|单价|规格|包装|申报|用途|材质|毛重|净重/i.test(l))||"");
+  const nameRu=pick(["俄文品名","外文品名","Наименование на русском","Russian name","Описание"]);
+  const hs=matchField(raw,/(?:HS|ТН\s*ВЭД|Код\s*ТН\s*ВЭД|编码|商品编码)\s*[:：]?\s*([0-9.]{4,})/i)||"6305.33";
+  const unit=pick(["单位","Ед.","Единица","Unit"])||"条";
+  const price=matchField(raw,/(?:单价|Цена|Price)\s*[:：]?\s*([0-9.,]+)/i);
+  const spec=pick(["规格","规格型号","参数","Spec","Specification","Размер"]);
+  const gwUnit=matchField(raw,/(?:单件毛重|毛重\/件|Gross.*unit|Брутто.*ед)\s*[:：]?\s*([0-9.,]+)/i);
+  const nwUnit=matchField(raw,/(?:单件净重|净重\/件|Net.*unit|Нетто.*ед)\s*[:：]?\s*([0-9.,]+)/i);
+  const pkg=pick(["包装","包装方式","Упаковка","Packaging"]);
+  const elements=pick(["申报要素","要素","材质用途","Declaration elements","Сведения"]);
+  return normalizeProduct({name,nameRu,hs,unit,price:numVal(price),spec,gwUnit,nwUnit,pkg,elements});
+}
+function parseProductsText(txt){
+  const raw=String(txt||"").trim();
+  if(!raw)return [];
+  if(raw.includes("|")&&raw.split("\n").every(l=>!l.trim()||l.includes("|")))return raw.split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
+  const blocks=raw.split(/\n\s*\n+(?=(?:品名|产品名称|货物名称|Наименование|Product|Goods)\s*[:：]?)/i).map(s=>s.trim()).filter(Boolean);
+  return blocks.map(parseProductBlock).filter(p=>p&&p.name);
+}
 function normRole(v){
   const s=String(v||"buyer").trim().toLowerCase();
   if(["seller","卖方","供方","exporter","supplier"].includes(s))return "seller";
@@ -317,7 +341,7 @@ function saveCurrentProducts(){
   cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
   fillCfgForm();drawItems();renderLibraryData();toast("已存入产品库："+rows.length+" 项");
 }
-let editingCustomerIndex=null;
+let editingCustomerIndex=null,editingProductIndex=null;
 function saveLibraryCustomers(){
   const el=$("libCustomersEdit");if(!el)return;
   const raw=el.value.trim(),rows=parseCustomersText(raw);
@@ -357,15 +381,34 @@ function applyLibraryCustomer(i,side){
   else{$("f_buyer").value=c.name;curTicket.buyerInfo=partyInfoFromCustomer(c);if(["KZ","UZ"].includes(c.country))$("f_country").value=c.country}
   render();go("p1");toast("已填入"+(side==="seller"?"卖方":"买方")+"："+c.name);
 }
+function deleteLibraryProduct(i){
+  const cfg=loadCfg(),p=(cfg.products||[])[i];if(!p)return;
+  if(!confirm("删除产品资料："+p.name+"？"))return;
+  cfg.products=(cfg.products||[]).filter((_,idx)=>idx!==i);
+  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();applyCfg();drawItems();renderLibraryData();render();toast("已删除产品："+p.name);
+}
+function editLibraryProduct(i){
+  const p=(loadCfg().products||[])[i],el=$("libProductsEdit");if(!p||!el)return;
+  editingProductIndex=i;el.value=productLine(p);el.focus();toast("已载入产品编辑区，修改后点保存产品资料");
+}
+function applyLibraryProduct(i){
+  const p=(loadCfg().products||[])[i];if(!p)return;
+  if(!items.length)items.push({name:"",hs:"6305.33",qty:1,price:0});
+  items[0]=Object.assign({},items[0],{name:p.name,nameRu:p.nameRu,hs:p.hs,unit:p.unit,price:numVal(p.price),spec:p.spec,gwUnit:p.gwUnit,nwUnit:p.nwUnit,pkg:p.pkg,elements:p.elements});
+  drawItems();render();go("p1");toast("已填入产品："+p.name);
+}
 function saveLibraryProducts(){
   const el=$("libProductsEdit");if(!el)return;
-  const rows=el.value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
+  const rows=parseProductsText(el.value);
   if(!rows.length){toast("请至少填写一条产品资料");return}
   const cfg=loadCfg(),list=(cfg.products||[]).slice();
-  rows.forEach(p=>{
-    const i=list.findIndex(x=>normKey(x.name)===normKey(p.name)||x.hs===p.hs&&normKey(x.spec)===normKey(p.spec));
-    if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
-  });
+  if(editingProductIndex!==null&&list[editingProductIndex]){
+    list[editingProductIndex]=rows[0];editingProductIndex=null;
+  }else rows.forEach(p=>{
+      const i=list.findIndex(x=>normKey(x.name)===normKey(p.name)||x.hs===p.hs&&normKey(x.spec)===normKey(p.spec));
+      if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
+    });
   cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
   fillCfgForm();applyCfg();drawItems();renderLibraryData();el.value="";render();toast("产品资料库已保存："+rows.length+" 条");
 }
@@ -819,7 +862,7 @@ function goLibrary(id){
 function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
   if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryCustomer(${i},'${(c.role||"buyer")==="seller"?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
-  if(pl)pl.innerHTML=(cfg.products||[]).map(p=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span></div>`).join("")||'<div class="empty">暂无产品资料</div>';
+  if(pl)pl.innerHTML=(cfg.products||[]).map((p,i)=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryProduct(${i})">填入货物明细</button><button class="mini" onclick="editLibraryProduct(${i})">编辑</button><button class="mini del" onclick="deleteLibraryProduct(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无产品资料</div>';
   if(hl){const a=allDocRecords();hl.innerHTML=a.length?a.map(docRecordLine).join(""):'<div class="empty">暂无历史文件</div>'}
 }
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
@@ -1159,7 +1202,7 @@ function seal(){
 }
 function docBrand(){
   const m=loadCompany().main;
-  return `<div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"><div class="brand-copy"><b>${esc(m.lat||m.name)} · ${esc(m.name)}</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(m.addr)}<br>Тел. ${esc(m.tel||DEF_COMPANY.main.tel)}</small></div></div>`;
+  return `<img class="doc-watermark" src="brand/dongda-logo-header.jpg?v=20260613-6" alt=""><div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"><div class="brand-copy"><b>${esc(m.lat||m.name)} · ${esc(m.name)}</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(m.addr)}<br>Тел. ${esc(m.tel||DEF_COMPANY.main.tel)}</small></div></div>`;
 }
 const TPL_CODE={inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
 function docFoot(id){return `<div class="foot">TPL ${TPL_CODE[id]||id} · ${today()} · ${curTicket?curTicket.no:""}</div>`}
@@ -1670,7 +1713,7 @@ function bindTemplateButtons(){
 
 Object.assign(window,{
   addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,confirmMasterInfo,copyContractItem,copyContractParams,
-  applyLibraryCustomer,copyTicket,cycleStatus,deleteDocRecord,deleteLibraryCustomer,delContractItem,delItem,delTicket,demoRecognize,editLibraryCustomer,exportBackup,
+  applyLibraryCustomer,applyLibraryProduct,copyTicket,cycleStatus,deleteDocRecord,deleteLibraryCustomer,deleteLibraryProduct,delContractItem,delItem,delTicket,demoRecognize,editLibraryCustomer,editLibraryProduct,exportBackup,
   editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
