@@ -1057,13 +1057,18 @@ function computeDash(){
 
 /* ================= 通用 ================= */
 function go(p){
-  if(p==="p5"){const pin=loadCfg().pin;
+  const target=p==="p2"?"p1":p;
+  if(target==="p5"){const pin=loadCfg().pin;
     if(pin&&!adminOk){const x=prompt("请输入管理密码");
       if(x!==pin){alert("密码错误，无权进入系统设置");return}adminOk=true;}}
-  document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("active",x.id===p));
-  document.querySelectorAll(".nav-item[data-p],.mnav .mi").forEach(s=>s.classList.toggle("active",s.dataset.p===p));
-  window.scrollTo({top:0});
-  if(p==="p2")drawDoc();if(p==="pd")computeDash();if(p==="p3"){renderArchive();refreshCloudArchive()}
+  document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("active",x.id===target));
+  document.querySelectorAll(".nav-item[data-p],.mnav .mi").forEach(s=>s.classList.toggle("active",s.dataset.p===target));
+  if(p==="p2"){
+    drawDoc();
+    const sec=$("docPreviewSection");
+    if(sec)setTimeout(()=>sec.scrollIntoView({behavior:"smooth",block:"start"}),60);
+  }else window.scrollTo({top:0});
+  if(target==="pd")computeDash();if(target==="p3"){renderArchive();refreshCloudArchive()}
 }
 let toastTimer=null;
 function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",3400)}
