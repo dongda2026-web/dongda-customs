@@ -216,6 +216,11 @@ function loadCfg(){try{const raw=JSON.parse(localStorage.getItem("dd_cfg")||"nul
   c.clients=healCustomerFragments((raw.clients&&raw.clients.length?raw.clients:d.clients).map(normalizeCustomer).filter(p=>p.name));
   return c;
 }catch(e){return cloneDefCfg()}}
+function saveCfgLocal(c,sync=true){
+  c._updatedAt=Date.now();
+  localStorage.setItem("dd_cfg",JSON.stringify(c));
+  if(sync)cloudSaveCfg(c);
+}
 function fillCfgForm(){const c=loadCfg();if(!$("c_prefix"))return;
   $("c_prefix").value=c.prefix;$("c_seal").value=c.seal;$("c_pin").value=c.pin;
   $("c_ports").value=c.ports.map(p=>p[0]+"="+p[1]).join("\n");
@@ -233,7 +238,7 @@ function saveCfg(){const c=loadCfg();
   c.clients=parseCustomersText($("c_clients").value);
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   if(!c.clients.length)c.clients=loadCfg().clients;
-  localStorage.setItem("dd_cfg",JSON.stringify(c));
+  saveCfgLocal(c);
   applyCfg();drawCustomerSelects();drawItems();render();renderLibraryData();toast("业务配置已保存，全系统已生效 ✓");}
 function resetCfg(){if(!confirm("恢复默认业务配置？"))return;localStorage.removeItem("dd_cfg");fillCfgForm();applyCfg();drawItems();render();toast("已恢复默认配置")}
 function applyCfg(){const c=loadCfg();
@@ -315,7 +320,7 @@ function upsertConfigList(key,item,match){
   const cfg=loadCfg(),list=(cfg[key]||[]).slice(),i=list.findIndex(x=>match(x,item));
   if(i>=0)list[i]=Object.assign({},list[i],item);else list.unshift(item);
   cfg[key]=list;
-  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();drawItems();render();renderLibraryData();
 }
 function saveCurrentCustomer(side){
@@ -334,12 +339,9 @@ function saveCurrentProducts(){
   const rows=(items||[]).map(productFromItem).filter(p=>p.name);
   if(!rows.length){toast("请先填写货物明细");return}
   const cfg=loadCfg(),list=(cfg.products||[]).slice();
-  rows.forEach(p=>{
-    const i=list.findIndex(x=>x.name===p.name&&x.hs===p.hs);
-    if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
-  });
-  cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();drawItems();renderLibraryData();toast("已存入产品库："+rows.length+" 项");
+  rows.forEach(p=>list.unshift(p));
+  cfg.products=list;saveCfgLocal(cfg);
+  fillCfgForm();drawItems();renderLibraryData();toast("已新增到产品库："+rows.length+" 项，并已同步");
 }
 let editingCustomerIndex=null,editingProductIndex=null;
 function saveLibraryCustomers(){
@@ -351,8 +353,8 @@ function saveLibraryCustomers(){
     list[editingCustomerIndex]=rows[0];editingCustomerIndex=null;
   }else if(raw.includes("|")&&raw.split("\n").filter(Boolean).length>1){
     cfg.clients=rows;
-    localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-    fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已整体保存："+rows.length+" 条");
+    saveCfgLocal(cfg);
+    fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已整体保存："+rows.length+" 条，并已同步");
     return;
   }else{
     rows.forEach(c=>{
@@ -360,14 +362,14 @@ function saveLibraryCustomers(){
       if(i>=0)list[i]=Object.assign({},list[i],c);else list.unshift(c);
     });
   }
-  cfg.clients=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已保存："+rows.length+" 条");
+  cfg.clients=list;saveCfgLocal(cfg);
+  fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已保存："+rows.length+" 条，并已同步");
 }
 function deleteLibraryCustomer(i){
   const cfg=loadCfg(),c=(cfg.clients||[])[i];if(!c)return;
   if(!confirm("删除客户资料："+c.name+"？"))return;
   cfg.clients=(cfg.clients||[]).filter((_,idx)=>idx!==i);
-  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("已删除客户："+c.name);
 }
 function editLibraryCustomer(i){
@@ -385,7 +387,7 @@ function deleteLibraryProduct(i){
   const cfg=loadCfg(),p=(cfg.products||[])[i];if(!p)return;
   if(!confirm("删除产品资料："+p.name+"？"))return;
   cfg.products=(cfg.products||[]).filter((_,idx)=>idx!==i);
-  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawItems();renderLibraryData();render();toast("已删除产品："+p.name);
 }
 function editLibraryProduct(i){
@@ -405,12 +407,9 @@ function saveLibraryProducts(){
   const cfg=loadCfg(),list=(cfg.products||[]).slice();
   if(editingProductIndex!==null&&list[editingProductIndex]){
     list[editingProductIndex]=rows[0];editingProductIndex=null;
-  }else rows.forEach(p=>{
-      const i=list.findIndex(x=>normKey(x.name)===normKey(p.name)||x.hs===p.hs&&normKey(x.spec)===normKey(p.spec));
-      if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
-    });
-  cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();applyCfg();drawItems();renderLibraryData();el.value="";render();toast("产品资料库已保存："+rows.length+" 条");
+  }else rows.forEach(p=>list.unshift(p));
+  cfg.products=list;saveCfgLocal(cfg);
+  fillCfgForm();applyCfg();drawItems();renderLibraryData();el.value="";render();toast("产品资料库已新增："+rows.length+" 条，并已同步");
 }
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
@@ -986,10 +985,20 @@ function contractDocHtml(){
   return `<div class="doc contract-doc">${docBrand()}<h1>Dongda Contract File</h1><div class="sub">${langName(contractLangLeft)} / ${langName(contractLangRight)} · ${t.id==="purchase"?"Purchase":"Sales"} · No. ${esc(no)} · ${esc(d.date||today())}</div>
     <div class="bilingual-doc">${contractPanelHtml(d,t,contractLangLeft)}${contractPanelHtml(d,t,contractLangRight)}</div>${seal()}<div class="foot">CONTRACT-${t.id.toUpperCase()} · ${today()} · ${esc(no)}</div></div>`;
 }
+function openContractPreviewWindow(html){
+  const w=window.open("","_blank");
+  if(!w){toast("浏览器阻止了独立预览窗口，请允许弹窗后再试");return false}
+  const styles=[...document.querySelectorAll("style,link[rel='stylesheet']")].map(x=>x.outerHTML).join("\n");
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>合同预览 · Dongda</title>${styles}<style>body{background:#E5ECE9;padding:18px}.doc{box-shadow:none;max-width:1120px}.preview-actions{position:sticky;top:0;z-index:20;display:flex;justify-content:flex-end;gap:10px;margin:0 auto 12px;max-width:1120px}.preview-actions button{border:1px solid #CFE0DA;background:#fff;border-radius:9px;padding:9px 14px;font-weight:800;cursor:pointer}.preview-actions .main{background:#0D5247;color:#fff;border-color:#0D5247}</style></head><body><div class="preview-actions"><button onclick="window.close()">关闭</button><button class="main" onclick="window.print()">导出 PDF</button></div>${html}</body></html>`);
+  w.document.close();
+  return true;
+}
 function previewContractTemplate(showToast=true){
   const p=$("contractPreview");if(!p)return;
-  p.innerHTML=contractDocHtml();
-  if(showToast)toast("合同预览已生成");
+  const html=contractDocHtml();
+  p.innerHTML=html;
+  if(showToast&&openContractPreviewWindow(html))toast("合同预览已在独立页面打开");
 }
 function exportContractTemplate(){
   const html=contractDocHtml(),t=contractTpl();
@@ -1620,6 +1629,23 @@ async function cloudSaveGeneratedDoc(record){
     if(r.ok)loadRemoteDocHistory();
   }catch(e){}
 }
+async function cloudSaveCfg(cfg){
+  if(!cfg)return;
+  try{await fetch(apiBase()+"/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cfg})})}catch(e){}
+}
+async function loadRemoteCfg(){
+  try{
+    const r=await fetch(apiBase()+"/api/config",{cache:"no-store"});
+    if(!r.ok)return;
+    const d=await r.json(),remote=d&&d.cfg;
+    if(!remote||typeof remote!=="object")return;
+    const local=loadCfg(),rt=+remote._updatedAt||0,lt=+local._updatedAt||0;
+    if(rt>=lt){
+      localStorage.setItem("dd_cfg",JSON.stringify(remote));
+      fillCfgForm();applyCfg();drawCustomerSelects();drawItems();renderLibraryData();render();
+    }
+  }catch(e){}
+}
 async function cloudUpdateGeneratedStatus(record){
   if(!record||!record.id)return;
   try{await fetch(apiBase()+"/api/generated/status",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:record.id,status:record.status||"review"})})}catch(e){}
@@ -1729,4 +1755,5 @@ drawCustomerSelects();
 bindTemplateButtons();
 renderArchive();
 computeDash();
+loadRemoteCfg();
 refreshCloudArchive();

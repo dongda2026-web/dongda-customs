@@ -1,4 +1,4 @@
-const CACHE_NAME = "dongda-customs-pwa-v20260618-data-library2";
+const CACHE_NAME = "dongda-customs-pwa-v20260618-library-sync-printfix";
 const APP_SHELL = [
   "/",
   "/index.html",

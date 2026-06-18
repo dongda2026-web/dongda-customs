@@ -139,6 +139,11 @@ async function ensureDb() {
       );
       create index if not exists generated_docs_created_idx on generated_docs(created_at desc);
       create index if not exists generated_docs_ticket_idx on generated_docs(ticket_no);
+      create table if not exists app_config (
+        key text primary key,
+        payload jsonb not null,
+        updated_at timestamptz not null default now()
+      );
     `);
     return p;
   })();
@@ -523,6 +528,36 @@ async function generatedDelete(req, res) {
   }
 }
 
+async function configGet(_, res) {
+  try {
+    const p = await ensureDb();
+    if (!p) return sendJson(res, 503, { error: "服务器未配置 DATABASE_URL" });
+    const r = await p.query("select payload, updated_at from app_config where key=$1", ["dd_cfg"]);
+    sendJson(res, 200, { ok: true, cfg: r.rowCount ? r.rows[0].payload : null, updated_at: r.rowCount ? r.rows[0].updated_at : null });
+  } catch (err) {
+    sendJson(res, 500, { error: "读取资料库配置失败：" + err.message });
+  }
+}
+
+async function configSave(req, res) {
+  try {
+    const body = await readJson(req);
+    const cfg = body && body.cfg;
+    if (!cfg || typeof cfg !== "object") return sendJson(res, 400, { error: "缺少 cfg" });
+    const p = await ensureDb();
+    if (!p) return sendJson(res, 503, { error: "服务器未配置 DATABASE_URL" });
+    await p.query(
+      `insert into app_config (key, payload, updated_at)
+       values ($1,$2,now())
+       on conflict (key) do update set payload=excluded.payload, updated_at=now()`,
+      ["dd_cfg", JSON.stringify(cfg)]
+    );
+    sendJson(res, 200, { ok: true });
+  } catch (err) {
+    sendJson(res, 500, { error: "保存资料库配置失败：" + err.message });
+  }
+}
+
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 http.createServer((req, res) => {
@@ -539,6 +574,8 @@ http.createServer((req, res) => {
   if (req.method === "GET" && pathname === "/api/generated/list") return generatedList(req, res);
   if (req.method === "POST" && pathname === "/api/generated/status") return generatedStatus(req, res);
   if (req.method === "POST" && pathname === "/api/generated/delete") return generatedDelete(req, res);
+  if (req.method === "GET" && pathname === "/api/config") return configGet(req, res);
+  if (req.method === "POST" && pathname === "/api/config") return configSave(req, res);
   if (req.method === "GET" || req.method === "HEAD") return serveStatic(req, res);
   sendText(res, 405, "Method not allowed");
 }).listen(PORT, HOST, () => console.log("东大制单工作台 · " + HOST + ":" + PORT + " · 识别通道 " + CHANNELS));
