@@ -47,7 +47,11 @@ const DEF_CFG={prefix:"DD",seal:"",pin:"",
     {name:"PP集装袋(吨袋) 90×90×110cm 四吊带",nameRu:"Биг-бэг полипропиленовый 90×90×110 см, 4 стропы",hs:"6305.32",unit:"条",price:3.2,spec:"90×90×110cm 四吊带"},
     {name:"PP集装袋(吨袋) 80×80×140cm 四吊带",nameRu:"Биг-бэг полипропиленовый 80×80×140 см, 4 стропы",hs:"6305.32",unit:"条",price:33,spec:"80×80×140cm 四吊带 内膜"}
   ],
-  clients:[["TOO «KazPack Trade»","KZ"],["OOO «Samarkand Agro»","UZ"]]};
+  clients:[
+    {name:"TOO «KazPack Trade»",country:"KZ",role:"buyer",addr:"Казахстан",tax:"",bank:"",account:"",swift:"",bik:"",tel:"",contact:""},
+    {name:"OOO «Samarkand Agro»",country:"UZ",role:"buyer",addr:"Узбекистан",tax:"",bank:"",account:"",swift:"",bik:"",tel:"",contact:""},
+    {name:"Aksu Xinghua Import and Export Trade Co., Ltd",country:"CN",role:"seller",addr:"新疆阿克苏地区阿克苏纺织工业城静湖社区纺织大道以西、华孚路南侧纺织发展大厦A座八层801-5室",tax:"91652900MAE7897NXT",bank:"中国银行新疆阿克苏地区分行",account:"107106450600",swift:"BKCHCNBJ760",bik:"",tel:"",contact:""}
+  ]};
 function cloneDefCfg(){return JSON.parse(JSON.stringify(DEF_CFG))}
 function normalizeProduct(p){
   if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||""};
@@ -55,10 +59,25 @@ function normalizeProduct(p){
 }
 function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||""].join("|")}
 function parseProductLine(l){return normalizeProduct(l.split("|").map(s=>s.trim()))}
+function normRole(v){
+  const s=String(v||"buyer").trim().toLowerCase();
+  if(["seller","卖方","供方","exporter","supplier"].includes(s))return "seller";
+  if(["both","双方","全部","all"].includes(s))return "both";
+  return "buyer";
+}
+function normalizeCustomer(p){
+  if(Array.isArray(p)){
+    return {name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||""};
+  }
+  return {name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||""};
+}
+function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||""].join("|")}
+function parseCustomerLine(l){return normalizeCustomer(l.split("|").map(s=>s.trim()))}
 function loadCfg(){try{const raw=JSON.parse(localStorage.getItem("dd_cfg")||"null"),d=cloneDefCfg();
   if(!raw||!raw.ports)return d;
   const c=Object.assign(d,raw);
   c.products=(raw.products&&raw.products.length?raw.products:d.products).map(normalizeProduct).filter(p=>p.name);
+  c.clients=(raw.clients&&raw.clients.length?raw.clients:d.clients).map(normalizeCustomer).filter(p=>p.name);
   return c;
 }catch(e){return cloneDefCfg()}}
 function fillCfgForm(){const c=loadCfg();if(!$("c_prefix"))return;
@@ -67,7 +86,7 @@ function fillCfgForm(){const c=loadCfg();if(!$("c_prefix"))return;
   $("c_terms").value=c.terms.join("\n");
   $("c_hs").value=c.hs.join("\n");
   if($("c_products"))$("c_products").value=c.products.map(productLine).join("\n");
-  $("c_clients").value=c.clients.map(p=>p[0]+"|"+p[1]).join("\n");}
+  $("c_clients").value=c.clients.map(customerLine).join("\n");}
 function saveCfg(){const c=loadCfg();
   c.prefix=($("c_prefix").value.trim()||"DD").toUpperCase();
   c.seal=$("c_seal").value.trim();c.pin=$("c_pin").value.trim();
@@ -75,10 +94,10 @@ function saveCfg(){const c=loadCfg();
   c.terms=$("c_terms").value.split("\n").map(s=>s.trim()).filter(Boolean);
   c.hs=$("c_hs").value.split("\n").map(s=>s.trim()).filter(Boolean);
   c.products=($("c_products")?$("c_products").value:"").split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
-  c.clients=$("c_clients").value.split("\n").map(l=>l.split("|").map(s=>s.trim())).filter(p=>p[0]).map(p=>[p[0],(p[1]||"KZ").toUpperCase()]);
+  c.clients=$("c_clients").value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseCustomerLine).filter(p=>p.name);
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   localStorage.setItem("dd_cfg",JSON.stringify(c));
-  applyCfg();drawItems();render();toast("业务配置已保存，全系统已生效 ✓");}
+  applyCfg();drawCustomerSelects();drawItems();render();toast("业务配置已保存，全系统已生效 ✓");}
 function resetCfg(){if(!confirm("恢复默认业务配置？"))return;localStorage.removeItem("dd_cfg");fillCfgForm();applyCfg();drawItems();render();toast("已恢复默认配置")}
 function applyCfg(){const c=loadCfg();
   // 口岸下拉
@@ -90,9 +109,45 @@ function applyCfg(){const c=loadCfg();
   terms.innerHTML=c.terms.map(t=>`<option>${t}</option>`).join("");
   if(tv&&[...terms.options].some(o=>o.value===tv))terms.value=tv;
   // 客户联想
-  const dl=$("clientList");if(dl)dl.innerHTML=c.clients.map(p=>`<option value="${p[0]}">`).join("");}
+  const dl=$("clientList");if(dl)dl.innerHTML=c.clients.map(p=>`<option value="${esc(p.name)}">`).join("");}
 function getHS(){return loadCfg().hs}
 function getProducts(){return loadCfg().products||[]}
+function getCustomers(role){const list=loadCfg().clients||[];return role?list.filter(c=>!c.role||c.role===role||c.role==="both"):list}
+function partyInfoFromCustomer(c){
+  return {name:c.name||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",lat:c.name||""};
+}
+function drawCustomerSelects(){
+  const fill=(id,role)=>{
+    const s=$(id);if(!s)return;
+    const old=s.value,list=getCustomers(role);
+    s.innerHTML=`<option value="">选择客户资料</option>`+list.map((c,i)=>`<option value="${i}">${esc(c.name)} · ${esc(c.country||"")}</option>`).join("");
+    if([...s.options].some(o=>o.value===old))s.value=old;
+  };
+  fill("sellerCustomerSelect","seller");fill("buyerCustomerSelect","buyer");
+  fill("contractSellerCustomer","seller");fill("contractBuyerCustomer","buyer");
+}
+function customerByRoleIndex(role,idx){return getCustomers(role)[+idx]}
+function applyCustomerToEntry(side,idx){
+  const c=customerByRoleIndex(side==="seller"?"seller":"buyer",idx);if(!c)return;
+  if(!curTicket)newTicket($("f_type").value||"export");
+  if(side==="seller"){
+    $("f_seller").value=c.name;
+    curTicket.sellerInfo=partyInfoFromCustomer(c);
+  }else{
+    $("f_buyer").value=c.name;
+    curTicket.buyerInfo=partyInfoFromCustomer(c);
+    if(["KZ","UZ"].includes(c.country))$("f_country").value=c.country;
+  }
+  render();toast("已载入"+(side==="seller"?"卖方":"买方")+"资料："+c.name);
+}
+function applyCustomerToContract(side,idx){
+  const c=customerByRoleIndex(side==="seller"?"seller":"buyer",idx);if(!c)return;
+  const map=side==="seller"?{seller:c.name,seller_addr:c.addr,seller_tax:c.tax,seller_bank:c.bank,seller_swift:c.swift,seller_account:c.account}:{buyer:c.name,buyer_addr:c.addr,buyer_tax:c.tax,buyer_bank:c.bank,buyer_iban:c.account,buyer_bik:c.bik};
+  Object.entries(map).forEach(([k,v])=>setContractField(k,v));
+  if(side==="buyer"&&["KZ","UZ"].includes(c.country))setContractField("country",c.country);
+  previewContractTemplate(false);
+  toast("已载入合同"+(side==="seller"?"卖方":"买方")+"资料："+c.name);
+}
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
   if(!confirm("再次确认：真的要清空全部数据？"))return;
@@ -371,6 +426,7 @@ function drawContractTemplates(){
   $("contractTplHint").textContent=t.name;
   syncTemplateLangSelects();
   drawContractBaseSources();
+  drawCustomerSelects();
   $("contractParamList").innerHTML=t.params.map(p=>`<span>${p[1]}</span>`).join("")+["产品名称","外文品名","规格/参数","HS","数量","单位","单价","毛重","净重","包装","申报要素"].map(x=>`<span>${x}</span>`).join("");
   if(fields.dataset.tpl!==t.id){
     fields.dataset.tpl=t.id;
@@ -402,9 +458,9 @@ function contractBaseOptions(){
 }
 function collectSafe(){
   const val=id=>$(id)?$(id).value:"";
-  const it=items[0]||{},c=loadCompany();
-  return {seller:val("f_seller"),seller_addr:c.ex.addr,seller_tax:c.ex.tax,seller_bank:c.ex.bank,seller_swift:c.ex.swift,seller_account:c.ex.acct,
-    buyer:val("f_buyer"),buyer_addr:c.im.addr,buyer_tax:c.im.bin,buyer_bank:c.im.bank,buyer_iban:c.im.iban,buyer_bik:c.im.bik,
+  const it=items[0]||{},c=loadCompany(),si=curTicket&&curTicket.sellerInfo||{},bi=curTicket&&curTicket.buyerInfo||{};
+  return {seller:val("f_seller"),seller_addr:si.addr||c.ex.addr,seller_tax:si.tax||c.ex.tax,seller_bank:si.bank||c.ex.bank,seller_swift:si.swift||c.ex.swift,seller_account:si.account||si.iban||c.ex.acct,
+    buyer:val("f_buyer"),buyer_addr:bi.addr||c.im.addr,buyer_tax:bi.bin||bi.tax||c.im.bin,buyer_bank:bi.bank||c.im.bank,buyer_iban:bi.iban||bi.account||c.im.iban,buyer_bik:bi.bik||c.im.bik,
     country:val("f_country"),contract:val("f_contract"),date:val("f_date"),terms:val("f_terms"),cur:val("f_cur"),pay:val("f_pay"),goods:it.name||"",hs:it.hs||"",qty:it.qty||"",price:it.price||"",pkg:val("f_pkg"),gw:val("f_gw"),nw:val("f_nw"),port:val("f_port"),trans:val("f_trans")};
 }
 function drawContractBaseSources(){
@@ -1258,7 +1314,7 @@ function bindTemplateButtons(){
 }
 
 Object.assign(window,{
-  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
+  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
   copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
   editItem,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
@@ -1271,6 +1327,7 @@ Object.assign(window,{
 fillApiForm();fillRatesForm();fillCfgForm();applyCfg();
 fillCompanyForm();
 newTicket("export");
+drawCustomerSelects();
 bindTemplateButtons();
 renderArchive();
 computeDash();

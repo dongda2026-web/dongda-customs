@@ -162,7 +162,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .contract-choice small{margin-top:6px;font-size:10px;font-weight:900;color:var(--orange);letter-spacing:.3px}
 .contract-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .contract-fields .wide{grid-column:span 3}
-.contract-tools{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:11px}
+.contract-tools{display:grid;grid-template-columns:1.2fr auto 1fr 1fr;gap:10px;align-items:end;margin-bottom:11px}
 .contract-preview{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;max-height:620px;overflow:auto;background:#F6FAF8;border-radius:10px}
 .contract-preview:empty{display:none}
 .compact-fields{max-height:250px;overflow:auto;padding-right:4px}
@@ -441,6 +441,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
           <option value="export">出口票（我方为卖方）</option>
           <option value="import">进口采购票（我方为买方）</option>
         </select></div>
+      <div class="field"><label>卖方资料库</label><select id="sellerCustomerSelect" onchange="applyCustomerToEntry('seller',this.value)"><option value="">选择客户资料</option></select></div>
+      <div class="field"><label>买方资料库</label><select id="buyerCustomerSelect" onchange="applyCustomerToEntry('buyer',this.value)"><option value="">选择客户资料</option></select></div>
       <div class="field"><label>卖方 Продавец</label><input id="f_seller" placeholder="公司名称" oninput="render()"></div>
       <div class="field"><label>买方 Покупатель</label><input id="f_buyer" list="clientList" placeholder="如 TOO «KazPack Trade»" oninput="render()"><datalist id="clientList"></datalist></div>
       <div class="field"><label>目的国</label>
@@ -565,6 +567,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
           <div class="contract-tools">
             <div class="field"><label>基础信息来源</label><select id="contractBaseSource" onchange="applyContractBaseSource()"></select></div>
             <button class="mini" id="btnContractBaseLoad" onclick="applyContractBaseSource()">载入</button>
+            <div class="field"><label>合同卖方资料</label><select id="contractSellerCustomer" onchange="applyCustomerToContract('seller',this.value)"><option value="">选择卖方</option></select></div>
+            <div class="field"><label>合同买方资料</label><select id="contractBuyerCustomer" onchange="applyCustomerToContract('buyer',this.value)"><option value="">选择买方</option></select></div>
           </div>
           <div class="lang-tools">
             <div class="field"><label>左侧语言</label><select id="contractLangLeft" onchange="setContractLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
@@ -724,7 +728,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <div class="field"><label>口岸库（每行一个：中文=俄文）</label><textarea id="c_ports" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
         <div class="field"><label>贸易条款库（每行一个）</label><textarea id="c_terms" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
         <div class="field"><label>HS编码库（每行一个）</label><textarea id="c_hs" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
-        <div class="field"><label>常用客户库（每行：名称|KZ或UZ，录入买方时自动联想）</label><textarea id="c_clients" rows="5" style="font-family:var(--mono);font-size:12.5px" placeholder="TOO «KazPack Trade»|KZ&#10;OOO «Samarkand Agro»|UZ"></textarea></div>
+        <div class="field"><label>客户基础信息库（每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人）</label><textarea id="c_clients" rows="6" style="font-family:var(--mono);font-size:12.5px" placeholder="TOO «KazPack Trade»|KZ|buyer|г. Алматы|BIN...|АО Банк|KZ...||BIK...|+7...|联系人&#10;Aksu Xinghua Import and Export Trade Co., Ltd|CN|seller|中国新疆|916...|中国银行|107...|BKCHCNBJ760|||"></textarea></div>
         <div class="field" style="grid-column:span 2"><label>产品库（每行：中文品名|俄文品名|HS|单位|默认单价|规格/参数）</label><textarea id="c_products" rows="6" style="font-family:var(--mono);font-size:12.5px" placeholder="PP编织袋 50kg 白色 55×95cm 复膜|Полипропиленовый мешок 50 кг|6305.33|条|0.22|50kg 白色 55×95cm"></textarea></div>
       </div>
       <div class="bar" style="margin-top:13px">
@@ -756,6 +760,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-product-library"></script>
+<script src="app.js?v=20260618-customer-library"></script>
 </body>
 </html>
