@@ -361,8 +361,13 @@ function saveLibraryProducts(){
   const el=$("libProductsEdit");if(!el)return;
   const rows=el.value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
   if(!rows.length){toast("请至少填写一条产品资料");return}
-  const cfg=loadCfg();cfg.products=rows;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();drawItems();renderLibraryData();render();toast("产品资料库已保存："+rows.length+" 条");
+  const cfg=loadCfg(),list=(cfg.products||[]).slice();
+  rows.forEach(p=>{
+    const i=list.findIndex(x=>normKey(x.name)===normKey(p.name)||x.hs===p.hs&&normKey(x.spec)===normKey(p.spec));
+    if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
+  });
+  cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();applyCfg();drawItems();renderLibraryData();el.value="";render();toast("产品资料库已保存："+rows.length+" 条");
 }
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
@@ -815,8 +820,6 @@ function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
   if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryCustomer(${i},'${(c.role||"buyer")==="seller"?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
   if(pl)pl.innerHTML=(cfg.products||[]).map(p=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span></div>`).join("")||'<div class="empty">暂无产品资料</div>';
-  const ce=$("libCustomersEdit");if(ce&&document.activeElement!==ce)ce.value=(cfg.clients||[]).map(customerLine).join("\n");
-  const pe=$("libProductsEdit");if(pe&&document.activeElement!==pe)pe.value=(cfg.products||[]).map(productLine).join("\n");
   if(hl){const a=allDocRecords();hl.innerHTML=a.length?a.map(docRecordLine).join(""):'<div class="empty">暂无历史文件</div>'}
 }
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}

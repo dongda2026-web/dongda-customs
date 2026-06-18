@@ -206,7 +206,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .chip small{display:block;font-size:10px;font-weight:500;opacity:.7}
 .chip.active{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 4px 12px rgba(13,82,71,.28)}
 .doc-wrap{background:#E5ECE9;border:1px solid var(--line);border-radius:16px;padding:18px;overflow-x:auto}
-.doc{background-color:#fff;background-image:linear-gradient(rgba(255,255,255,.72),rgba(255,255,255,.72)),url("brand/dongda-logo-header.jpg?v=20260613-6");background-repeat:no-repeat;background-position:center 54%;background-size:48%;max-width:920px;margin:0 auto;padding:26px 30px;font-family:var(--song);box-shadow:0 3px 18px rgba(13,40,35,.16);position:relative;min-height:560px;font-size:12px;line-height:1.55;color:#111}
+.doc{background-color:#fff;background-image:linear-gradient(rgba(255,255,255,.85),rgba(255,255,255,.85)),url("brand/dongda-logo-header.jpg?v=20260613-6");background-repeat:no-repeat;background-position:center 54%;background-size:48%;max-width:920px;margin:0 auto;padding:26px 30px;font-family:var(--song);box-shadow:0 3px 18px rgba(13,40,35,.16);position:relative;min-height:560px;font-size:12px;line-height:1.55;color:#111}
 .doc-brand{display:flex;align-items:center;justify-content:space-between;gap:18px;border-bottom:2px solid #163C57;padding-bottom:10px;margin-bottom:16px;font-family:var(--sans)}
 .doc-brand img{width:132px;height:auto;display:block;object-fit:contain;flex:none}
 .doc-brand .brand-copy{text-align:right;line-height:1.45;color:#163C57;font-weight:700;max-width:430px}
@@ -264,8 +264,13 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   #printArea,#printArea *{visibility:visible}
   html,body{background:#fff}
   #printArea{display:block;position:absolute;left:0;top:0;width:100%;overflow:visible}
-  #printArea .doc{box-shadow:none;max-width:none;width:100%;min-height:auto;break-after:auto;page-break-after:auto;box-sizing:border-box;padding:6mm 7mm;background-size:36%;font-size:11px;line-height:1.42}
+  #printArea .doc{box-shadow:none;max-width:none;width:100%;min-height:auto;break-after:auto;page-break-after:auto;box-sizing:border-box;padding:6mm 7mm 35mm;background-size:44%;background-position:center 50%;font-size:11px;line-height:1.42}
   #printArea .doc:not(:last-child){break-after:page;page-break-after:always}
+  #printArea .doc:not(.contract-doc) .seal-area{position:absolute;right:7mm;bottom:8mm;margin:0;width:56mm;break-before:avoid;page-break-before:avoid;break-inside:avoid;page-break-inside:avoid}
+  #printArea .doc:not(.contract-doc) .seal-box{width:50mm;min-height:34mm;font-size:8.5px}
+  #printArea .doc:not(.contract-doc) .seal-line{margin-top:20mm;padding-top:4px}
+  #printArea .doc:not(.contract-doc) .seal-meta{font-size:7.5px}
+  #printArea .doc:not(.contract-doc) .seal{width:28mm;height:28mm;right:7mm}
   #printArea .contract-doc{width:100%}
   #printArea .contract-doc .doc-brand{padding-bottom:6px;margin-bottom:8px}
   #printArea .contract-doc .doc-brand img{width:108px}
@@ -814,6 +819,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-parse-upgrade4"></script>
+<script src="app.js?v=20260618-export-polish1"></script>
 </body>
 </html>
