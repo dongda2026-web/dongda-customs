@@ -42,13 +42,31 @@ const DEF_CFG={prefix:"DD",seal:"",pin:"",
   ports:[["霍尔果斯","Хоргос"],["阿拉山口","Алашанькоу"],["巴克图","Бакту"],["伊尔克什坦","Иркештам"]],
   terms:["CPT Алматы","CPT Астана","DAP Ташкент","DAP Самарканд","FCA 霍尔果斯","FCA 阿拉山口","EXW 工厂","CIF"],
   hs:["6305.33","6305.32","6305.39","3923.21","3923.29"],
+  products:[
+    {name:"PP编织袋 50kg 白色 55×95cm 复膜",nameRu:"Полипропиленовый мешок 50 кг, белый, 55×95 см, ламинированный",hs:"6305.33",unit:"条",price:0.22,spec:"50kg 白色 55×95cm 复膜"},
+    {name:"PP集装袋(吨袋) 90×90×110cm 四吊带",nameRu:"Биг-бэг полипропиленовый 90×90×110 см, 4 стропы",hs:"6305.32",unit:"条",price:3.2,spec:"90×90×110cm 四吊带"},
+    {name:"PP集装袋(吨袋) 80×80×140cm 四吊带",nameRu:"Биг-бэг полипропиленовый 80×80×140 см, 4 стропы",hs:"6305.32",unit:"条",price:33,spec:"80×80×140cm 四吊带 内膜"}
+  ],
   clients:[["TOO «KazPack Trade»","KZ"],["OOO «Samarkand Agro»","UZ"]]};
-function loadCfg(){try{const c=JSON.parse(localStorage.getItem("dd_cfg")||"null");return c&&c.ports?c:JSON.parse(JSON.stringify(DEF_CFG))}catch(e){return JSON.parse(JSON.stringify(DEF_CFG))}}
+function cloneDefCfg(){return JSON.parse(JSON.stringify(DEF_CFG))}
+function normalizeProduct(p){
+  if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||""};
+  return {name:p&&p.name||"",nameRu:p&&p.nameRu||"",hs:p&&p.hs||"6305.33",unit:p&&p.unit||"条",price:numVal(p&&p.price),spec:p&&p.spec||""};
+}
+function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||""].join("|")}
+function parseProductLine(l){return normalizeProduct(l.split("|").map(s=>s.trim()))}
+function loadCfg(){try{const raw=JSON.parse(localStorage.getItem("dd_cfg")||"null"),d=cloneDefCfg();
+  if(!raw||!raw.ports)return d;
+  const c=Object.assign(d,raw);
+  c.products=(raw.products&&raw.products.length?raw.products:d.products).map(normalizeProduct).filter(p=>p.name);
+  return c;
+}catch(e){return cloneDefCfg()}}
 function fillCfgForm(){const c=loadCfg();if(!$("c_prefix"))return;
   $("c_prefix").value=c.prefix;$("c_seal").value=c.seal;$("c_pin").value=c.pin;
   $("c_ports").value=c.ports.map(p=>p[0]+"="+p[1]).join("\n");
   $("c_terms").value=c.terms.join("\n");
   $("c_hs").value=c.hs.join("\n");
+  if($("c_products"))$("c_products").value=c.products.map(productLine).join("\n");
   $("c_clients").value=c.clients.map(p=>p[0]+"|"+p[1]).join("\n");}
 function saveCfg(){const c=loadCfg();
   c.prefix=($("c_prefix").value.trim()||"DD").toUpperCase();
@@ -56,6 +74,7 @@ function saveCfg(){const c=loadCfg();
   c.ports=$("c_ports").value.split("\n").map(l=>l.split("=").map(s=>s.trim())).filter(p=>p[0]).map(p=>[p[0],p[1]||p[0]]);
   c.terms=$("c_terms").value.split("\n").map(s=>s.trim()).filter(Boolean);
   c.hs=$("c_hs").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  c.products=($("c_products")?$("c_products").value:"").split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
   c.clients=$("c_clients").value.split("\n").map(l=>l.split("|").map(s=>s.trim())).filter(p=>p[0]).map(p=>[p[0],(p[1]||"KZ").toUpperCase()]);
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   localStorage.setItem("dd_cfg",JSON.stringify(c));
@@ -73,6 +92,7 @@ function applyCfg(){const c=loadCfg();
   // 客户联想
   const dl=$("clientList");if(dl)dl.innerHTML=c.clients.map(p=>`<option value="${p[0]}">`).join("");}
 function getHS(){return loadCfg().hs}
+function getProducts(){return loadCfg().products||[]}
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
   if(!confirm("再次确认：真的要清空全部数据？"))return;
@@ -133,10 +153,23 @@ function itemAmount(it){return numVal(it&&it.qty)*numVal(it&&it.price)}
 function lineAmount(i){const it=items[i]||{};return numVal(it.qty)*numVal(it.price)}
 function updateItemAmount(i){const el=$("itemAmt"+i);if(el)el.textContent=fmt(lineAmount(i))}
 function editItem(i,k,v){if(!items[i])return;items[i][k]=k==="qty"||k==="price"?numVal(v):v;updateItemAmount(i);render()}
+function productIndexOfItem(it){
+  const list=getProducts();
+  return list.findIndex(p=>p.name===it.name&&p.hs===it.hs);
+}
+function applyProductToItem(i,idx){
+  const p=getProducts()[+idx];if(!p||!items[i])return;
+  const oldQty=numVal(items[i].qty)||1;
+  items[i]=Object.assign({},items[i],{name:p.name,nameRu:p.nameRu||"",hs:p.hs||"6305.33",unit:p.unit||"条",price:numVal(p.price),spec:p.spec||"",qty:oldQty});
+  drawItems();render();toast("已套用产品："+p.name);
+}
 function drawItems(){
   const tb=document.querySelector("#itemsTbl tbody");tb.innerHTML="";
+  const products=getProducts();
   items.forEach((it,i)=>{
+    const pi=productIndexOfItem(it);
     tb.insertAdjacentHTML("beforeend",`<tr>
+      <td style="min-width:150px"><select onchange="applyProductToItem(${i},this.value)"><option value="">选择产品</option>${products.map((p,j)=>`<option value="${j}" ${j===pi?"selected":""}>${esc(p.name)}</option>`).join("")}</select></td>
       <td style="min-width:190px"><input value="${esc(it.name)}" placeholder="品名/规格(中文)" oninput="editItem(${i},'name',this.value)">
       <input value="${esc(it.nameRu||'')}" placeholder="Наименование (俄文·哈乌单证用)" style="margin-top:5px" oninput="editItem(${i},'nameRu',this.value)"></td>
       <td style="width:110px"><select onchange="editItem(${i},'hs',this.value)">${getHS().map(h=>`<option ${h===it.hs?"selected":""}>${h}</option>`).join("")}</select></td>
@@ -147,7 +180,7 @@ function drawItems(){
   });
 }
 function delItem(i){items.splice(i,1);if(!items.length)items.push({name:"",nameRu:"",hs:"6305.33",qty:0,price:0});drawItems();render()}
-function addRow(){items.push({name:"PP集装袋(吨袋) 90×90×110cm 四吊带",hs:"6305.32",qty:1000,price:3.2});drawItems();render()}
+function addRow(){const p=getProducts()[0];items.push(p?{name:p.name,nameRu:p.nameRu,hs:p.hs,unit:p.unit,price:numVal(p.price),spec:p.spec,qty:1}:{name:"PP集装袋(吨袋) 90×90×110cm 四吊带",hs:"6305.32",qty:1000,price:3.2});drawItems();render()}
 function total(){return items.reduce((s,it)=>s+numVal(it.qty)*numVal(it.price),0)}
 function esc(s){return String(s||"").replace(/"/g,"&quot;").replace(/</g,"&lt;")}
 function hs6(h){const d=String(h||"").replace(/\D/g,"");return d.length>=6?d.slice(0,4)+"."+d.slice(4,6):"6305.33"}
@@ -1225,7 +1258,7 @@ function bindTemplateButtons(){
 }
 
 Object.assign(window,{
-  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyExtract,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
+  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
   copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
   editItem,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,

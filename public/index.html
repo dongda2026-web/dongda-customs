@@ -472,7 +472,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="card-h"><span class="tag"></span><h3>货物明细</h3><span class="ru">Спецификация товара</span></div>
     <div class="card-b" style="overflow-x:auto">
       <table class="items" id="itemsTbl">
-        <thead><tr><th>品名 / 规格</th><th>HS编码</th><th>数量</th><th>单价</th><th class="num">金额</th><th></th></tr></thead>
+        <thead><tr><th>产品库</th><th>品名 / 规格</th><th>HS编码</th><th>数量</th><th>单价</th><th class="num">金额</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
       <button class="add-row" onclick="addRow()">＋ 添加一行</button>
@@ -725,6 +725,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <div class="field"><label>贸易条款库（每行一个）</label><textarea id="c_terms" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
         <div class="field"><label>HS编码库（每行一个）</label><textarea id="c_hs" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
         <div class="field"><label>常用客户库（每行：名称|KZ或UZ，录入买方时自动联想）</label><textarea id="c_clients" rows="5" style="font-family:var(--mono);font-size:12.5px" placeholder="TOO «KazPack Trade»|KZ&#10;OOO «Samarkand Agro»|UZ"></textarea></div>
+        <div class="field" style="grid-column:span 2"><label>产品库（每行：中文品名|俄文品名|HS|单位|默认单价|规格/参数）</label><textarea id="c_products" rows="6" style="font-family:var(--mono);font-size:12.5px" placeholder="PP编织袋 50kg 白色 55×95cm 复膜|Полипропиленовый мешок 50 кг|6305.33|条|0.22|50kg 白色 55×95cm"></textarea></div>
       </div>
       <div class="bar" style="margin-top:13px">
         <button class="btn btn-ink" onclick="saveCfg()">保存业务配置</button>
@@ -755,6 +756,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-line-conditions"></script>
+<script src="app.js?v=20260618-product-library"></script>
 </body>
 </html>
