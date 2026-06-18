@@ -209,6 +209,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .doc .seal-area.pos-left{justify-content:flex-start}
 .doc .seal-area.pos-center{justify-content:center}
 .doc .seal-area.pos-right{justify-content:flex-end}
+.doc-note{margin-top:10px;border:1px solid #C8D6D1;background:#F7FAF9;padding:7px 9px;font-size:11.5px;line-height:1.55;color:#23423B}
 .doc .seal-box{width:52mm;min-height:38mm;position:relative;text-align:center;font-family:var(--sans);font-size:11px;color:#333}
 .doc .seal-line{border-top:1px solid #777;padding-top:7px;margin-top:23mm;font-weight:700}
 .doc .seal-meta{font-size:10px;color:#666;margin-top:3px;line-height:1.35}
@@ -528,6 +529,10 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <button class="btn btn-ink" onclick="printDoc(false)">🖨 导出当前单证 PDF</button>
         <button class="btn btn-ghost" onclick="printDoc(true)">导出全部已选单证</button>
       </div>
+      <div class="bar" style="margin-bottom:13px;align-items:flex-start">
+        <div class="field" style="min-width:210px;flex:none"><label>单独修改的表格</label><select id="docCondSel" onchange="loadDocCondition(this.value)"></select></div>
+        <div class="field" style="flex:1"><label>该表格单独条件 / 备注（只影响所选表格）</label><textarea id="docCondText" rows="2" placeholder="例如：本装箱单按客户要求显示托盘数；CMR车牌待装车后补充；报关草单以报关行最终录入为准。" oninput="saveDocCondition()"></textarea></div>
+      </div>
       <div id="docLangHint" style="font-size:12px;font-weight:700;color:var(--steel);margin:-6px 0 12px"></div>
       <div class="doc-wrap"><div id="docArea"></div></div>
     </div>
@@ -750,6 +755,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-entry-preview"></script>
+<script src="app.js?v=20260618-line-conditions"></script>
 </body>
 </html>

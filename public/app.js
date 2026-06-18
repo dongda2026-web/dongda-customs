@@ -106,7 +106,7 @@ function saveRates(){const r=loadRates();
 function rateStale(){const r=loadRates();return (Date.now()-new Date(r.checked))/864e5>60}
 
 /* ================= 票据状态 ================= */
-let items=[],tplState={},curTicket=null,curDoc="inv";
+let items=[],tplState={},docConditions={},curTicket=null,curDoc="inv";
 function ticketNo(){const d=today().replace(/-/g,""),px=loadCfg().prefix;const n=tickets().filter(t=>t.no&&t.no.includes(d)).length+1;return px+"-"+d+"-"+String(n).padStart(2,"0")}
 function newTicket(type){
   const c=loadCompany();type=type||"export";
@@ -115,7 +115,7 @@ function newTicket(type){
     buyerInfo:type==="import"?{name:c.im.name,addr:c.im.addr,bin:c.im.bin,bank:c.im.bank,iban:c.im.iban,bik:c.im.bik}:{},
     created:Date.now()};
   items=[{name:"PP编织袋 50kg 白色 55×95cm 复膜",hs:"6305.33",qty:10000,price:0.22}];
-  tplState={};
+  tplState={};docConditions={};
   $("f_type").value=type;$("f_contract").value="";$("f_date").value=today();
   $("f_cur").value=type==="import"?"CNY":"USD";$("f_pay").value=type==="import"?"货到付款":"T/T 30%预付 70%发货前";
   $("f_truck").value="";$("f_gw").value="";$("f_nw").value="";$("f_pkg").value="";
@@ -128,22 +128,27 @@ function onTypeChange(){if(curTicket)curTicket.type=$("f_type").value;applyTypeN
 
 /* ================= 货物明细 ================= */
 /* HS编码库改由配置中心提供：getHS() */
+function numVal(v){return +(String(v||"").replace(/,/g,"").trim())||0}
+function itemAmount(it){return numVal(it&&it.qty)*numVal(it&&it.price)}
+function lineAmount(i){const it=items[i]||{};return numVal(it.qty)*numVal(it.price)}
+function updateItemAmount(i){const el=$("itemAmt"+i);if(el)el.textContent=fmt(lineAmount(i))}
+function editItem(i,k,v){if(!items[i])return;items[i][k]=k==="qty"||k==="price"?numVal(v):v;updateItemAmount(i);render()}
 function drawItems(){
   const tb=document.querySelector("#itemsTbl tbody");tb.innerHTML="";
   items.forEach((it,i)=>{
     tb.insertAdjacentHTML("beforeend",`<tr>
-      <td style="min-width:190px"><input value="${esc(it.name)}" placeholder="品名/规格(中文)" oninput="items[${i}].name=this.value;render()">
-      <input value="${esc(it.nameRu||'')}" placeholder="Наименование (俄文·哈乌单证用)" style="margin-top:5px" oninput="items[${i}].nameRu=this.value;render()"></td>
-      <td style="width:110px"><select onchange="items[${i}].hs=this.value;render()">${getHS().map(h=>`<option ${h===it.hs?"selected":""}>${h}</option>`).join("")}</select></td>
-      <td style="width:100px"><input class="num" inputmode="numeric" value="${it.qty}" oninput="items[${i}].qty=+this.value||0;render()"></td>
-      <td style="width:90px"><input class="num" inputmode="decimal" value="${it.price}" oninput="items[${i}].price=+this.value||0;render()"></td>
-      <td class="num"><b>${fmt(it.qty*it.price)}</b></td>
+      <td style="min-width:190px"><input value="${esc(it.name)}" placeholder="品名/规格(中文)" oninput="editItem(${i},'name',this.value)">
+      <input value="${esc(it.nameRu||'')}" placeholder="Наименование (俄文·哈乌单证用)" style="margin-top:5px" oninput="editItem(${i},'nameRu',this.value)"></td>
+      <td style="width:110px"><select onchange="editItem(${i},'hs',this.value)">${getHS().map(h=>`<option ${h===it.hs?"selected":""}>${h}</option>`).join("")}</select></td>
+      <td style="width:100px"><input class="num" inputmode="numeric" value="${it.qty}" oninput="editItem(${i},'qty',this.value)"></td>
+      <td style="width:90px"><input class="num" inputmode="decimal" value="${it.price}" oninput="editItem(${i},'price',this.value)"></td>
+      <td class="num"><b id="itemAmt${i}">${fmt(lineAmount(i))}</b></td>
       <td style="width:30px;text-align:center;color:#bbb;cursor:pointer" onclick="delItem(${i})">✕</td></tr>`);
   });
 }
 function delItem(i){items.splice(i,1);if(!items.length)items.push({name:"",nameRu:"",hs:"6305.33",qty:0,price:0});drawItems();render()}
 function addRow(){items.push({name:"PP集装袋(吨袋) 90×90×110cm 四吊带",hs:"6305.32",qty:1000,price:3.2});drawItems();render()}
-function total(){return items.reduce((s,it)=>s+it.qty*it.price,0)}
+function total(){return items.reduce((s,it)=>s+numVal(it.qty)*numVal(it.price),0)}
 function esc(s){return String(s||"").replace(/"/g,"&quot;").replace(/</g,"&lt;")}
 function hs6(h){const d=String(h||"").replace(/\D/g,"");return d.length>=6?d.slice(0,4)+"."+d.slice(4,6):"6305.33"}
 function dutyFor(country,hs){const x=HS_DUTIES[hs6(hs)];return x?(country==="KZ"?x.kzDuty:x.uzDuty):loadRates()[country==="KZ"?"kz":"uz"].duty}
@@ -151,7 +156,7 @@ function hsInfo(h){return HS_DUTIES[hs6(h)]||{cn:"需人工核对",ru:"Пров�
 function taxCalc(country,amount,hs){const R=loadRates(),dutyRate=dutyFor(country,hs),vatRate=country==="KZ"?R.kz.vat:R.uz.vat;
   const duty=amount*dutyRate/100,vat=(amount+duty)*vatRate/100;
   return{dutyRate,vatRate,duty,vat,total:duty+vat,basis:(country==="KZ"?R.kz.dutyBasis+"；"+R.kz.vatBasis:R.uz.dutyBasis+"；"+R.uz.vatBasis)}}
-function taxTotals(country){return items.reduce((s,it)=>{const c=taxCalc(country,it.qty*it.price,it.hs);s.duty+=c.duty;s.vat+=c.vat;s.total+=c.total;s.rates.add(c.dutyRate+"%");return s},{duty:0,vat:0,total:0,rates:new Set()})}
+function taxTotals(country){return items.reduce((s,it)=>{const c=taxCalc(country,itemAmount(it),it.hs);s.duty+=c.duty;s.vat+=c.vat;s.total+=c.total;s.rates.add(c.dutyRate+"%");return s},{duty:0,vat:0,total:0,rates:new Set()})}
 
 /* ================= 模版选择 ================= */
 const TPLS={
@@ -523,12 +528,12 @@ function lineSpecByLang(it,lang){
 }
 function contractGoodsRows(lines,lang,m,cur){
   return lines.map((it,i)=>{
-    const amt=(+it.qty||0)*(+it.price||0),spec=lineSpecByLang(it,lang);
-    return `<tr><td>${i+1}</td><td>${esc(lineNameByLang(it,lang))}${spec?`<br><small>${esc(spec)}</small>`:""}</td><td class="num">${esc(it.hs)}</td><td class="num">${esc(it.qty)} ${esc(it.unit||"")}</td><td class="num">${fmt(it.price)}</td><td class="num">${fmt(amt)}</td></tr>`;
+    const amt=itemAmount(it),spec=lineSpecByLang(it,lang);
+    return `<tr><td>${i+1}</td><td>${esc(lineNameByLang(it,lang))}${spec?`<br><small>${esc(spec)}</small>`:""}</td><td class="num">${esc(it.hs)}</td><td class="num">${esc(it.qty)} ${esc(it.unit||"")}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(amt)}</td></tr>`;
   }).join("");
 }
 function contractPanelHtml(d,t,lang){
-  const m=ML[lang]||ML.cn,lines=contractLineData(),amount=lines.reduce((s,it)=>s+(+it.qty||0)*(+it.price||0),0),title=t.id==="purchase"?m.purchase:m.sale;
+  const m=ML[lang]||ML.cn,lines=contractLineData(),amount=lines.reduce((s,it)=>s+itemAmount(it),0),title=t.id==="purchase"?m.purchase:m.sale;
   const dest=d.country==="UZ"?(lang==="cn"?"乌兹别克斯坦":lang==="ru"?"Узбекистан":lang==="kk"?"Өзбекстан":"Uzbekistan"):(lang==="cn"?"哈萨克斯坦":lang==="ru"?"Казахстан":lang==="kk"?"Қазақстан":"Kazakhstan");
   const v={place:trValue("place",d.place,lang),seller:trValue("seller",d.seller,lang),seller_addr:trValue("seller_addr",d.seller_addr,lang),seller_bank:trValue("bank",d.seller_bank,lang),buyer:trValue("buyer",d.buyer,lang),buyer_addr:trValue("buyer_addr",d.buyer_addr,lang),buyer_bank:trValue("bank",d.buyer_bank,lang),goods:trValue("goods",d.goods,lang),pkg:trValue("pkg",d.pkg,lang),port:trValue("port",d.port,lang),trans:trValue("trans",d.trans,lang),pay:trValue("pay",d.pay,lang),law:trValue("law",d.law,lang),delivery:trClause("delivery",d.delivery,lang),quality:trClause("quality",d.quality,lang),pack_clause:trClause("pack_clause",d.pack_clause,lang),acceptance:trClause("acceptance",d.acceptance,lang),breach:trClause("breach",d.breach,lang),dispute:trClause("dispute",d.dispute,lang)};
   return `<section class="lang-page"><div class="lang-tag">${esc(m.name)}</div><h2>${esc(title)}</h2><p style="text-align:center">${esc(m.sub)}</p>
@@ -702,8 +707,28 @@ function drawTabs(){
   const list=selectedTpls().map(t=>t.id);
   if(!list.includes(curDoc))curDoc=list[0]||"inv";
   tabs.innerHTML=list.map(id=>`<div class="chip ${id===curDoc?"active":""}" onclick="pickDoc('${id}')">${DOC_META[id][0]}<small>${DOC_META[id][1]}</small></div>`).join("");
+  drawDocConditionOptions();
 }
-function pickDoc(d){curDoc=d;drawTabs();syncLangSel();drawDoc()}
+function pickDoc(d){curDoc=d;drawTabs();syncLangSel();loadDocCondition(d);drawDoc()}
+function drawDocConditionOptions(){
+  const s=$("docCondSel");if(!s)return;
+  const list=selectedTpls().map(t=>t.id);
+  if(!list.includes(curDoc))curDoc=list[0]||"inv";
+  s.innerHTML=list.map(id=>`<option value="${id}" ${id===curDoc?"selected":""}>${DOC_META[id]?DOC_META[id][0]:id}</option>`).join("");
+  loadDocCondition(curDoc);
+}
+function loadDocCondition(id){
+  if(id)curDoc=id;
+  const s=$("docCondSel"),t=$("docCondText");
+  if(s&&s.value!==curDoc)s.value=curDoc;
+  if(t)t.value=docConditions[curDoc]||"";
+}
+function saveDocCondition(){
+  const s=$("docCondSel"),t=$("docCondText");if(!s||!t)return;
+  docConditions[s.value]=t.value.trim();
+  curDoc=s.value;
+  drawTabs();drawDoc();
+}
 /* 单证语言：inv/pkl 可选 ru/en/cn；cmr/bro 锁俄文(官方)；dec/ysys/co 锁中文(官方) */
 const DOC_LANGS={inv:["ru","en","cn","kk"],pkl:["ru","en","cn","kk"],cmr:["ru"],bro:["ru"],broker:["ru"],dec:["cn"],ysys:["cn"],co:["cn"],origin:["cn"],tax:["cn"],check:["cn"]};
 let docLang="ru",prefLang="ru"; // prefLang=用户偏好，docLang=当前单证生效语言
@@ -740,13 +765,18 @@ function docBrand(){
 }
 const TPL_CODE={inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
 function docFoot(id){return `<div class="foot">TPL ${TPL_CODE[id]||id} · ${today()} · ${curTicket?curTicket.no:""}</div>`}
+function docConditionBlock(id){
+  const note=(docConditions&&docConditions[id]||"").trim();
+  return note?`<div class="doc-note"><b>单独条件 / Special note:</b> ${esc(note)}</div>`:"";
+}
+function withDocCondition(html,id){return html?html.replace(/<\/div>$/,docConditionBlock(id)+"</div>"):html}
 function gv(){return{t:total(),seller:$("f_seller").value,buyer:$("f_buyer").value,contract:$("f_contract").value,terms:$("f_terms").value,
   cur:$("f_cur").value,gw:$("f_gw").value||"—",nw:$("f_nw").value||"—",pkg:$("f_pkg").value||"—",truck:$("f_truck").value||"—",
   port:$("f_port").value,date:$("f_date").value||today(),pay:$("f_pay").value,country:$("f_country").value,
   si:curTicket?curTicket.sellerInfo||{}:{},bi:curTicket?curTicket.buyerInfo||{}:{},no:curTicket?curTicket.no:"—"}}
 const PORT_RU={"霍尔果斯":"Хоргос","阿拉山口":"Алашанькоу","巴克图":"Бакту","伊尔克什坦":"Иркештам"};
 const TRANS_RU={"公路卡航（中欧卡车）":"автомобильный","铁路集装箱":"железнодорожный","公铁联运":"мультимодальный"};
-function rowsRu(){return items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(ruName(it))}${it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${(+it.qty).toLocaleString()}</td><td>шт.</td><td class="num">${fmt(it.price)}</td><td class="num">${fmt(it.qty*it.price)}</td></tr>`).join("")}
+function rowsRu(){return items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(ruName(it))}${it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>шт.</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
 function docHtml(id){
   const v=gv();const portRu=portRuOf(v.port);
   const headRu=`<div class="meta"><span>Контракт № ${esc(v.contract)}</span><span>Дата: ${v.date}</span><span>Инвойс № ${v.no}</span></div>`;
@@ -758,7 +788,7 @@ function docHtml(id){
   const hint=s=>(docLang==="ru"&&(id==="inv"||id==="pkl"))?cn(s):"";
   const headT=`<div class="meta"><span>${T.contract} ${esc(v.contract)}</span><span>${T.date}: ${v.date}</span><span>${T.invno} ${v.no}</span></div>`;
   const tblT=`<table><tr><th>№</th><th>${T.name} ${hint("品名")}</th><th>${T.hs}</th><th>${T.qty}</th><th>${T.unit}</th><th>${T.price}</th><th>${T.amount}, ${v.cur}</th></tr>
-   ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${(+it.qty).toLocaleString()}</td><td>${T.unitv}</td><td class="num">${fmt(it.price)}</td><td class="num">${fmt(it.qty*it.price)}</td></tr>`).join("")}
+   ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${T.unitv}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
    <tr><td colspan="6" style="text-align:right"><b>${T.total}</b></td><td class="num"><b>${fmt(v.t)}</b></td></tr></table>`;
   D.inv=`<div class="doc">${docBrand()}<h1>${T.inv}</h1><div class="sub">${T.inv2} ${hint("商业发票")}</div>${headT}
     <div class="row2"><div><b>${T.seller} ${hint("卖方")}:</b><br>${esc(docLang==="cn"?v.seller:(v.si.lat||v.seller))}${docLang==="ru"&&v.si.lat?cn("<br>"+v.seller):""}${v.si.bank?"<br>"+T.bank+": "+esc(docLang==="cn"?v.si.bank:(v.si.bankLat||trBank(v.si.bank)))+(v.si.swift?", SWIFT: "+esc(v.si.swift):""):""}</div>
@@ -767,7 +797,7 @@ function docHtml(id){
     <div class="row2"><span>${T.gross} ${hint("毛重")}: ${esc(v.gw)} ${T.kg}</span><span>${T.net} ${hint("净重")}: ${esc(v.nw)} ${T.kg}</span><span>${T.places} ${hint("件数")}: ${esc(v.pkg)}</span></div>${seal()}${docFoot(id)}</div>`;
   D.pkl=`<div class="doc">${docBrand()}<h1>${T.pkl}</h1><div class="sub">${T.pkl2} ${hint("装箱单")}</div>${headT}
     <table><tr><th>№</th><th>${T.name} ${hint("品名")}</th><th>${T.hs}</th><th>${T.qty}, ${T.unitv}</th><th>${T.gross}, ${T.kg}</th><th>${T.net}, ${T.kg}</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${(+it.qty).toLocaleString()}</td><td class="num">${i===0?esc(v.gw):"—"}</td><td class="num">${i===0?esc(v.nw):"—"}</td></tr>`).join("")}
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td class="num">${i===0?esc(v.gw):"—"}</td><td class="num">${i===0?esc(v.nw):"—"}</td></tr>`).join("")}
     <tr><td colspan="3" style="text-align:right"><b>${T.total}</b></td><td class="num"><b>${esc(v.pkg)}</b></td><td class="num"><b>${esc(v.gw)}</b></td><td class="num"><b>${esc(v.nw)}</b></td></tr></table>
     <p style="font-size:12px">${T.veh} ${hint("车辆")}: ${esc(v.truck)}　${T.port} ${hint("口岸")}: ${docLang==="cn"?esc(v.port):portRu}</p>${seal()}${docFoot(id)}</div>`;
   D.cmr=`<div class="doc">${docBrand()}<h1>МЕЖДУНАРОДНАЯ ТОВАРНО-ТРАНСПОРТНАЯ НАКЛАДНАЯ (CMR)</h1><div class="sub">КДПГ / CMR ${cn("国际公路运输单")}</div>
@@ -806,7 +836,7 @@ function docHtml(id){
     <tr><th>Просим проверить</th><td>10-значный код ТН ВЭД; таможенную стоимость; наличие сертификата происхождения; ограничения/сертификацию; расчет пошлины и НДС.</td></tr>
     <tr><th>Приложения</th><td>Контракт; инвойс; упаковочный лист; CMR; CO/сведения о происхождении; банковские реквизиты; фото/описание товара.</td></tr></table>
     ${tblRu}${seal()}${docFoot(id)}</div>`;
-  const taxRows=items.map((it,i)=>{const amount=it.qty*it.price,k=taxCalc("KZ",amount,it.hs),u=taxCalc("UZ",amount,it.hs),info=hsInfo(it.hs);
+  const taxRows=items.map((it,i)=>{const amount=itemAmount(it),k=taxCalc("KZ",amount,it.hs),u=taxCalc("UZ",amount,it.hs),info=hsInfo(it.hs);
     return `<tr><td>${i+1}</td><td>${esc(it.hs)}</td><td>${esc(info.cn)}</td><td class="num">${v.cur} ${fmt(amount)}</td><td class="num">${k.dutyRate}% / ${fmt(k.duty)}</td><td class="num">${fmt(k.vat)}</td><td class="num">${u.dutyRate}% / ${fmt(u.duty)}</td><td class="num">${fmt(u.vat)}</td></tr>`}).join("");
   const kt=taxTotals("KZ"),ut=taxTotals("UZ");
   D.tax=`<div class="doc">${docBrand()}<h1>进口税费测算表</h1><div class="sub">KZ / UZ Customs Duty & VAT · 合规库 ${RATE_VERSION}</div>
@@ -835,7 +865,7 @@ function docHtml(id){
     <tr><th>贸易国(地区)</th><td>${v.country==="KZ"?"哈萨克斯坦":"乌兹别克斯坦"}</td><th>币制</th><td>${v.cur}</td></tr>
     <tr><th>运抵国(地区)</th><td>${v.country==="KZ"?"哈萨克斯坦":"乌兹别克斯坦"}</td><th>监管方式</th><td>一般贸易</td></tr></table>
     <table><tr><th>项号</th><th>商品编号</th><th>商品名称及规格型号</th><th>成交数量及单位</th><th>总价</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td class="num">${esc(it.hs).replace(".","")}00</td><td>${esc(it.name)}</td><td class="num">${(+it.qty).toLocaleString()} 条</td><td class="num">${fmt(it.qty*it.price)}</td></tr>`).join("")}</table>
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td class="num">${esc(it.hs).replace(".","")}00</td><td>${esc(it.name)}</td><td class="num">${numVal(it.qty).toLocaleString()} 条</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}</table>
     <p style="font-size:12px;color:#444">毛重(千克) ${esc(v.gw)}　净重(千克) ${esc(v.nw)}　件数 ${esc(v.pkg)}　申报日期 ${v.date}</p>${seal()}${docFoot(id)}</div>`;
   D.ysys=`<div class="doc">${docBrand()}<h1>申 报 要 素 表</h1><div class="sub">编织袋 / 吨袋 · 供报关行规范申报</div>
     <div class="meta"><span>合同号 ${esc(v.contract)}</span><span>日期 ${v.date}</span><span>单证号 ${v.no}</span></div>
@@ -854,7 +884,7 @@ function docHtml(id){
     <tr><th>唛头及包装件号</th><td>N/M</td></tr>
     <tr><th>原产地标准</th><td>中国完全获得 / 实质性改变（按签证机构要求填报）</td></tr></table>
     <table><tr><th>项号</th><th>商品名称及规格</th><th>HS编码</th><th>数量</th><th>发票金额</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(it.name)}</td><td class="num">${esc(it.hs)}</td><td class="num">${(+it.qty).toLocaleString()} 条</td><td class="num">${v.cur} ${fmt(it.qty*it.price)}</td></tr>`).join("")}</table>${seal()}${docFoot(id)}</div>`;
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(it.name)}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()} 条</td><td class="num">${v.cur} ${fmt(itemAmount(it))}</td></tr>`).join("")}</table>${seal()}${docFoot(id)}</div>`;
   D.origin=`<div class="doc">${docBrand()}<h1>原产地/非优惠原产地声明资料</h1><div class="sub">用于客户、报关代理、贸促会/签证机构核对</div>
     <div class="meta"><span>合同号 ${esc(v.contract)}</span><span>目的国 ${v.country==="KZ"?"哈萨克斯坦":"乌兹别克斯坦"}</span><span>日期 ${v.date}</span></div>
     <table><tr><th style="width:150px">出口商/生产商</th><td>${esc(v.seller)}</td></tr>
@@ -866,7 +896,7 @@ function docHtml(id){
     <table><tr><th>项号</th><th>商品</th><th>HS</th><th>原产地依据</th><th>备注</th></tr>
     ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(it.name)}</td><td class="num">${esc(it.hs)}</td><td>中国生产/加工，材质与用途符合申报要素</td><td>${esc(hsInfo(it.hs).note)}</td></tr>`).join("")}</table>
     <p style="font-size:12px;color:#444">本页不是正式CO证书；正式证书须由有权签证机构签发或按目的国规则提交。</p>${seal()}${docFoot(id)}</div>`;
-  return D[id]||"";
+  return withDocCondition(D[id]||"",id);
 }
 function drawDoc(){syncLangSel();const a=$("docArea");if(a)a.innerHTML=docHtml(curDoc)}
 function printDoc(all){
@@ -969,7 +999,7 @@ function openArchiveFile(id){window.open(apiBase()+"/api/archive/file/"+encodeUR
 function collect(){return{type:$("f_type").value,seller:$("f_seller").value,buyer:$("f_buyer").value,country:$("f_country").value,
   contract:$("f_contract").value,date:$("f_date").value,terms:$("f_terms").value,cur:$("f_cur").value,pay:$("f_pay").value,
   trans:$("f_trans").value,port:$("f_port").value,truck:$("f_truck").value,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value,
-  items:JSON.parse(JSON.stringify(items)),tpls:Object.assign({},tplState)}}
+  items:JSON.parse(JSON.stringify(items)),tpls:Object.assign({},tplState),docConditions:Object.assign({},docConditions)}}
 function saveTicket(){
   if(!curTicket)newTicket();
   Object.assign(curTicket,{data:collect(),total:total(),updated:Date.now()});
@@ -980,13 +1010,13 @@ function saveTicket(){
 }
 function loadTicket(id){
   const t=tickets().find(x=>x.id===id);if(!t)return;
-  curTicket=t;const d=t.data||{};items=d.items||[];tplState=d.tpls||{};
+  curTicket=t;const d=t.data||{};items=d.items||[];tplState=d.tpls||{};docConditions=d.docConditions||{};
   $("f_type").value=d.type||"export";$("f_seller").value=d.seller||"";$("f_buyer").value=d.buyer||"";
   $("f_country").value=d.country||"KZ";$("f_contract").value=d.contract||"";$("f_date").value=d.date||today();
   setSelectOrAdd($("f_terms"),d.terms||"CPT Алматы");$("f_cur").value=d.cur||"USD";$("f_pay").value=d.pay||"";
   $("f_trans").value=d.trans||"公路卡航（中欧卡车）";$("f_port").value=d.port||"霍尔果斯";$("f_truck").value=d.truck||"";
   $("f_gw").value=d.gw||"";$("f_nw").value=d.nw||"";$("f_pkg").value=d.pkg||"";
-  drawItems();render();go("p1");toast("已载入 "+t.no);
+  drawItems();render();go("p1");loadDocCondition(curDoc);toast("已载入 "+t.no);
 }
 function copyTicket(id){
   loadTicket(id);
@@ -1197,9 +1227,9 @@ function bindTemplateButtons(){
 Object.assign(window,{
   addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyExtract,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
   copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
-  exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
+  editItem,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
-  openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,
+  loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
   previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
