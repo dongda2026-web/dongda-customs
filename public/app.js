@@ -243,15 +243,20 @@ function syncAutoWeights(){
   if(nw&&($("f_nw").dataset.auto==="1"||!$("f_nw").value)){$("f_nw").value=fmt(nw);$("f_nw").dataset.auto="1"}
 }
 function editItem(i,k,v){if(!items[i])return;items[i][k]=k==="qty"||k==="price"?numVal(v):v;updateItemAmount(i);if(k==="qty")syncAutoWeights();render()}
+function normKey(s){return String(s||"").toLowerCase().replace(/[\s　,，.。()（）·\-_/\\]+/g,"")}
 function productIndexOfItem(it){
-  const list=getProducts();
-  return list.findIndex(p=>p.name===it.name&&p.hs===it.hs);
+  const list=getProducts(),name=normKey(it.name),spec=normKey(it.spec),hs=String(it.hs||"");
+  let i=list.findIndex(p=>p.name===it.name&&p.hs===it.hs);
+  if(i>=0)return i;
+  i=list.findIndex(p=>String(p.hs||"")===hs&&(normKey(p.name)===name||normKey(p.spec)===spec));
+  if(i>=0)return i;
+  return list.findIndex(p=>String(p.hs||"")===hs&&(name.includes(normKey(p.name))||normKey(p.name).includes(name)||spec&&normKey(p.spec).includes(spec)));
 }
 function applyProductToItem(i,idx){
   const p=getProducts()[+idx];if(!p||!items[i])return;
   const oldQty=numVal(items[i].qty)||1;
   items[i]=Object.assign({},items[i],{name:p.name,nameRu:p.nameRu||"",hs:p.hs||"6305.33",unit:p.unit||"条",price:numVal(p.price),spec:p.spec||"",gwUnit:p.gwUnit||"",nwUnit:p.nwUnit||"",pkg:p.pkg||"",elements:p.elements||"",qty:oldQty});
-  if(p.pkg&&!$("f_pkg").value)$("f_pkg").value=p.pkg;
+  if(p.pkg)$("f_pkg").value=p.pkg;
   if(p.gwUnit&&(!$("f_gw").value||$("f_gw").dataset.auto==="1")){$("f_gw").value=fmt(numVal(p.gwUnit)*oldQty);$("f_gw").dataset.auto="1"}
   if(p.nwUnit&&(!$("f_nw").value||$("f_nw").dataset.auto==="1")){$("f_nw").value=fmt(numVal(p.nwUnit)*oldQty);$("f_nw").dataset.auto="1"}
   drawItems();render();toast("已套用产品："+p.name);
@@ -874,7 +879,12 @@ const BANK_TR=[["中国银行","BANK OF CHINA"],["中国工商银行","ICBC"],["
 function trBank(s){if(!s||!hasCJK(s))return s;let r=s;BANK_TR.forEach(([a,b])=>r=r.split(a).join(b));
   r=r.replace(/[\u4e00-\u9fff]+/g,"").replace(/\s+/g," ").trim();return r||"Bank (see SWIFT)"}
 function trPay(s){if(docLang==="cn"||!s)return s;let r=s;(PAY_TR[docLang]||[]).forEach(([a,b])=>r=r.split(a).join(b));return r}
-function gName(it){return docLang==="cn"?it.name:(it.nameRu&&it.nameRu.trim()?it.nameRu:it.name)}
+function itemSpecText(it){return [it.spec,it.elements].filter(Boolean).join("; ")}
+function gName(it){
+  const base=docLang==="cn"?it.name:(it.nameRu&&it.nameRu.trim()?it.nameRu:it.name);
+  const spec=docLang==="cn"?itemSpecText(it):(it.nameRu&&hasCJK(itemSpecText(it))?"":itemSpecText(it));
+  return [base,spec].filter(Boolean).join(" · ");
+}
 function syncLangSel(){const s=$("docLangSel"),h=$("docLangHint");if(!s)return;
   const langs=DOC_LANGS[curDoc]||["ru"];
   docLang=langs.includes(prefLang)?prefLang:langs[0];
@@ -903,7 +913,10 @@ function gv(){return{t:total(),seller:$("f_seller").value,buyer:$("f_buyer").val
   si:curTicket?curTicket.sellerInfo||{}:{},bi:curTicket?curTicket.buyerInfo||{}:{},no:curTicket?curTicket.no:"—"}}
 const PORT_RU={"霍尔果斯":"Хоргос","阿拉山口":"Алашанькоу","巴克图":"Бакту","伊尔克什坦":"Иркештам"};
 const TRANS_RU={"公路卡航（中欧卡车）":"автомобильный","铁路集装箱":"железнодорожный","公铁联运":"мультимодальный"};
-function rowsRu(){return items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(ruName(it))}${it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>шт.</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
+function docUnit(it,T){return docLang==="cn"?(it.unit||T.unitv):(it.unit&&it.unit!=="条"?it.unit:T.unitv)}
+function itemGross(it,v,i){const g=numVal(it.gwUnit)*numVal(it.qty);return g?fmt(g):(i===0?esc(v.gw):"—")}
+function itemNet(it,v,i){const n=numVal(it.nwUnit)*numVal(it.qty);return n?fmt(n):(i===0?esc(v.nw):"—")}
+function rowsRu(){return items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${esc(it.unit&&it.unit!=="条"?it.unit:"шт.")}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
 function docHtml(id){
   const v=gv();const portRu=portRuOf(v.port);
   const headRu=`<div class="meta"><span>Контракт № ${esc(v.contract)}</span><span>Дата: ${v.date}</span><span>Инвойс № ${v.no}</span></div>`;
@@ -915,7 +928,7 @@ function docHtml(id){
   const hint=s=>(docLang==="ru"&&(id==="inv"||id==="pkl"))?cn(s):"";
   const headT=`<div class="meta"><span>${T.contract} ${esc(v.contract)}</span><span>${T.date}: ${v.date}</span><span>${T.invno} ${v.no}</span></div>`;
   const tblT=`<table><tr><th>№</th><th>${T.name} ${hint("品名")}</th><th>${T.hs}</th><th>${T.qty}</th><th>${T.unit}</th><th>${T.price}</th><th>${T.amount}, ${v.cur}</th></tr>
-   ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${T.unitv}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
+   ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${esc(docUnit(it,T))}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
    <tr><td colspan="6" style="text-align:right"><b>${T.total}</b></td><td class="num"><b>${fmt(v.t)}</b></td></tr></table>`;
   D.inv=`<div class="doc">${docBrand()}<h1>${T.inv}</h1><div class="sub">${T.inv2} ${hint("商业发票")}</div>${headT}
     <div class="row2"><div><b>${T.seller} ${hint("卖方")}:</b><br>${esc(docLang==="cn"?v.seller:(v.si.lat||v.seller))}${docLang==="ru"&&v.si.lat?cn("<br>"+v.seller):""}${v.si.bank?"<br>"+T.bank+": "+esc(docLang==="cn"?v.si.bank:(v.si.bankLat||trBank(v.si.bank)))+(v.si.swift?", SWIFT: "+esc(v.si.swift):""):""}</div>
@@ -924,7 +937,7 @@ function docHtml(id){
     <div class="row2"><span>${T.gross} ${hint("毛重")}: ${esc(v.gw)} ${T.kg}</span><span>${T.net} ${hint("净重")}: ${esc(v.nw)} ${T.kg}</span><span>${T.places} ${hint("件数")}: ${esc(v.pkg)}</span></div>${seal()}${docFoot(id)}</div>`;
   D.pkl=`<div class="doc">${docBrand()}<h1>${T.pkl}</h1><div class="sub">${T.pkl2} ${hint("装箱单")}</div>${headT}
     <table><tr><th>№</th><th>${T.name} ${hint("品名")}</th><th>${T.hs}</th><th>${T.qty}, ${T.unitv}</th><th>${T.gross}, ${T.kg}</th><th>${T.net}, ${T.kg}</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td class="num">${i===0?esc(v.gw):"—"}</td><td class="num">${i===0?esc(v.nw):"—"}</td></tr>`).join("")}
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()} ${esc(docUnit(it,T))}</td><td class="num">${itemGross(it,v,i)}</td><td class="num">${itemNet(it,v,i)}</td></tr>`).join("")}
     <tr><td colspan="3" style="text-align:right"><b>${T.total}</b></td><td class="num"><b>${esc(v.pkg)}</b></td><td class="num"><b>${esc(v.gw)}</b></td><td class="num"><b>${esc(v.nw)}</b></td></tr></table>
     <p style="font-size:12px">${T.veh} ${hint("车辆")}: ${esc(v.truck)}　${T.port} ${hint("口岸")}: ${docLang==="cn"?esc(v.port):portRu}</p>${seal()}${docFoot(id)}</div>`;
   D.cmr=`<div class="doc">${docBrand()}<h1>МЕЖДУНАРОДНАЯ ТОВАРНО-ТРАНСПОРТНАЯ НАКЛАДНАЯ (CMR)</h1><div class="sub">КДПГ / CMR ${cn("国际公路运输单")}</div>
@@ -992,15 +1005,15 @@ function docHtml(id){
     <tr><th>贸易国(地区)</th><td>${v.country==="KZ"?"哈萨克斯坦":"乌兹别克斯坦"}</td><th>币制</th><td>${v.cur}</td></tr>
     <tr><th>运抵国(地区)</th><td>${v.country==="KZ"?"哈萨克斯坦":"乌兹别克斯坦"}</td><th>监管方式</th><td>一般贸易</td></tr></table>
     <table><tr><th>项号</th><th>商品编号</th><th>商品名称及规格型号</th><th>成交数量及单位</th><th>总价</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td class="num">${esc(it.hs).replace(".","")}00</td><td>${esc(it.name)}</td><td class="num">${numVal(it.qty).toLocaleString()} 条</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}</table>
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td class="num">${esc(it.hs).replace(".","")}00</td><td>${esc(gName(it))}</td><td class="num">${numVal(it.qty).toLocaleString()} ${esc(it.unit||"条")}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}</table>
     <p style="font-size:12px;color:#444">毛重(千克) ${esc(v.gw)}　净重(千克) ${esc(v.nw)}　件数 ${esc(v.pkg)}　申报日期 ${v.date}</p>${seal()}${docFoot(id)}</div>`;
   D.ysys=`<div class="doc">${docBrand()}<h1>申 报 要 素 表</h1><div class="sub">编织袋 / 吨袋 · 供报关行规范申报</div>
     <div class="meta"><span>合同号 ${esc(v.contract)}</span><span>日期 ${v.date}</span><span>单证号 ${v.no}</span></div>
     ${items.map((it,i)=>`<table><tr><th colspan="2">项 ${i+1}：${esc(it.name)}（商品编号 ${esc(it.hs).replace(".","")}00）</th></tr>
-    <tr><th style="width:130px">品名</th><td>${esc(it.name.split(" ")[0])}</td></tr>
-    <tr><th>用途</th><td>包装用</td></tr>
-    <tr><th>材质</th><td>聚丙烯（PP）塑料扁条编织</td></tr>
-    <tr><th>规格型号</th><td>${esc(it.name)}</td></tr>
+    <tr><th style="width:130px">品名</th><td>${esc(it.name.split(" ")[0]||it.name)}</td></tr>
+    <tr><th>用途</th><td>${esc(it.elements||"包装用")}</td></tr>
+    <tr><th>材质</th><td>${esc(it.elements&&it.elements.includes("PP")?"聚丙烯（PP）塑料扁条编织":"按产品资料库申报要素核对")}</td></tr>
+    <tr><th>规格型号</th><td>${esc([it.spec,it.name].filter(Boolean).join(" · "))}</td></tr>
     <tr><th>品牌(中文或外文名称)</th><td>无品牌</td></tr>
     <tr><th>GTIN / CAS</th><td>无</td></tr></table>`).join("")}${seal()}${docFoot(id)}</div>`;
   D.co=`<div class="doc">${docBrand()}<h1>原产地证书（CO）申请资料整理表</h1><div class="sub">供向签证机构申领使用</div>
@@ -1011,7 +1024,7 @@ function docHtml(id){
     <tr><th>唛头及包装件号</th><td>N/M</td></tr>
     <tr><th>原产地标准</th><td>中国完全获得 / 实质性改变（按签证机构要求填报）</td></tr></table>
     <table><tr><th>项号</th><th>商品名称及规格</th><th>HS编码</th><th>数量</th><th>发票金额</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(it.name)}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()} 条</td><td class="num">${v.cur} ${fmt(itemAmount(it))}</td></tr>`).join("")}</table>${seal()}${docFoot(id)}</div>`;
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()} ${esc(it.unit||"条")}</td><td class="num">${v.cur} ${fmt(itemAmount(it))}</td></tr>`).join("")}</table>${seal()}${docFoot(id)}</div>`;
   D.origin=`<div class="doc">${docBrand()}<h1>原产地/非优惠原产地声明资料</h1><div class="sub">用于客户、报关代理、贸促会/签证机构核对</div>
     <div class="meta"><span>合同号 ${esc(v.contract)}</span><span>目的国 ${v.country==="KZ"?"哈萨克斯坦":"乌兹别克斯坦"}</span><span>日期 ${v.date}</span></div>
     <table><tr><th style="width:150px">出口商/生产商</th><td>${esc(v.seller)}</td></tr>
@@ -1021,7 +1034,7 @@ function docHtml(id){
     <tr><th>随附文件</th><td>合同、商业发票、装箱单、CMR、生产/采购证明、必要时附照片和材质说明</td></tr>
     <tr><th>合规提示</th><td>${v.country==="UZ"?"对乌出口建议每票随附CO并让брокер确认是否涉及额外关税或原产地审查。":"对哈出口仍应留存原产地资料，供海关估价、监管或优惠审查时提交。"}</td></tr></table>
     <table><tr><th>项号</th><th>商品</th><th>HS</th><th>原产地依据</th><th>备注</th></tr>
-    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(it.name)}</td><td class="num">${esc(it.hs)}</td><td>中国生产/加工，材质与用途符合申报要素</td><td>${esc(hsInfo(it.hs).note)}</td></tr>`).join("")}</table>
+    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}</td><td class="num">${esc(it.hs)}</td><td>${esc(it.elements||"中国生产/加工，材质与用途符合申报要素")}</td><td>${esc(hsInfo(it.hs).note)}</td></tr>`).join("")}</table>
     <p style="font-size:12px;color:#444">本页不是正式CO证书；正式证书须由有权签证机构签发或按目的国规则提交。</p>${seal()}${docFoot(id)}</div>`;
   return withDocCondition(D[id]||"",id);
 }
