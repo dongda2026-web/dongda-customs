@@ -739,27 +739,17 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     </div>
   </div>
   <div class="card">
-    <div class="card-h"><span class="tag"></span><h3>出口卖方（中国公司）</h3></div>
+    <div class="card-h"><span class="tag"></span><h3>主体公司（唯一我方，可买可卖）</h3><span class="ru">票型为出口/销售时进入卖方；票型为进口/采购时进入买方</span></div>
     <div class="card-b grid g2">
-      <div class="field"><label>公司名称（中文）</label><input id="c_ex_name"></div>
-      <div class="field"><label>公司名称（拉丁/英文）</label><input id="c_ex_lat"></div>
-      <div class="field" style="grid-column:span 2"><label>公司地址</label><input id="c_ex_addr"></div>
-      <div class="field"><label>开户行</label><input id="c_ex_bank"></div>
-      <div class="field"><label>SWIFT</label><input id="c_ex_swift"></div>
-      <div class="field"><label>银行账号</label><input id="c_ex_acct"></div>
-      <div class="field"><label>统一社会信用代码</label><input id="c_ex_tax"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-h"><span class="tag"></span><h3>进口买方（哈国东大）</h3></div>
-    <div class="card-b grid g2">
-      <div class="field"><label>公司名称</label><input id="c_im_name"></div>
-      <div class="field"><label>地址</label><input id="c_im_addr"></div>
-      <div class="field"><label>电话</label><input id="c_im_tel"></div>
-      <div class="field"><label>BIN</label><input id="c_im_bin"></div>
-      <div class="field"><label>开户行</label><input id="c_im_bank"></div>
-      <div class="field"><label>IBAN</label><input id="c_im_iban"></div>
-      <div class="field"><label>БИК</label><input id="c_im_bik"></div>
+      <div class="field"><label>公司法定名称</label><input id="c_main_name"></div>
+      <div class="field"><label>抬头简称 / 英文名</label><input id="c_main_lat"></div>
+      <div class="field" style="grid-column:span 2"><label>注册地址</label><input id="c_main_addr"></div>
+      <div class="field"><label>电话</label><input id="c_main_tel"></div>
+      <div class="field"><label>BIN / 税号</label><input id="c_main_bin"></div>
+      <div class="field"><label>开户行</label><input id="c_main_bank"></div>
+      <div class="field"><label>IBAN / 银行账号</label><input id="c_main_iban"></div>
+      <div class="field"><label>SWIFT</label><input id="c_main_swift"></div>
+      <div class="field"><label>БИК</label><input id="c_main_bik"></div>
     </div>
   </div>
   <div class="card">
@@ -824,6 +814,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-client-logic3"></script>
+<script src="app.js?v=20260618-single-principal2"></script>
 </body>
 </html>

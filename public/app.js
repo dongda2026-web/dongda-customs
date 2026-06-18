@@ -20,22 +20,38 @@ const HS_NOTE="合规库核验日期："+RATE_VERSION+"\n\n"+Object.entries(HS_D
 
 /* ================= 基础资料 ================= */
 const DEF_COMPANY={
-  ex:{name:"新疆立天东大贸易有限公司",lat:"Xinjiang Litian Dongda Trade Co., Ltd",addr:"中国新疆",bank:"",swift:"",acct:"",tax:""},
-  im:{name:"Частная компания Dongda Ltd.",addr:"г. Астана, ул. Сауран 3/1, оф.783",tel:"7 707 5590188",bin:"250840901034",bank:"АО «Банк ЦентрКредит»",iban:"KZ198562203148814317",bik:"KCJBKZKX"}
+  main:{name:"Частная компания Dongda Ltd.",lat:"Dongda Ltd.",addr:"г. Астана, ул. Сауран 3/1, оф.783",tel:"7 707 5590188",bin:"250840901034",tax:"250840901034",bank:"АО «Банк ЦентрКредит»",iban:"KZ198562203148814317",account:"KZ198562203148814317",swift:"",bik:"KCJBKZKX"}
 };
-function loadCompany(){try{const raw=JSON.parse(localStorage.getItem("dd_company")||"{}"),c={ex:Object.assign({},DEF_COMPANY.ex,raw.ex||{}),im:Object.assign({},DEF_COMPANY.im,raw.im||{})};
-  if(!c.im.tel)c.im.tel=DEF_COMPANY.im.tel;
-  if(/Mangilik|Мангилик|55\/17/i.test(c.im.addr||""))c.im.addr=DEF_COMPANY.im.addr;
-  return c;
-}catch(e){return DEF_COMPANY}}
-function fillCompanyForm(){const c=loadCompany();
-  ["name","lat","addr","bank","swift","acct","tax"].forEach(k=>{const el=$("c_ex_"+k);if(el)el.value=c.ex[k]||""});
-  ["name","addr","tel","bin","bank","iban","bik"].forEach(k=>{const el=$("c_im_"+k);if(el)el.value=c.im[k]||""});}
-function saveCompany(){const c={ex:{},im:{}};
-  ["name","lat","addr","bank","swift","acct","tax"].forEach(k=>{const el=$("c_ex_"+k);c.ex[k]=el?el.value.trim():""});
-  ["name","addr","tel","bin","bank","iban","bik"].forEach(k=>{const el=$("c_im_"+k);c.im[k]=el?el.value.trim():""});
-  if(!c.im.tel)c.im.tel=DEF_COMPANY.im.tel;
-  localStorage.setItem("dd_company",JSON.stringify(c));toast("基础资料已保存 ✓");}
+function normalizeCompany(raw){
+  raw=raw||{};
+  const legacy=raw.main||raw.im||raw.ex||{};
+  const main=Object.assign({},DEF_COMPANY.main,legacy);
+  if(!main.lat)main.lat=main.name;
+  if(!main.tel)main.tel=DEF_COMPANY.main.tel;
+  if(/Mangilik|Мангилик|55\/17/i.test(main.addr||""))main.addr=DEF_COMPANY.main.addr;
+  main.bin=main.bin||main.tax||"";
+  main.tax=main.tax||main.bin||"";
+  main.iban=main.iban||main.account||main.acct||"";
+  main.account=main.account||main.iban||main.acct||"";
+  main.acct=main.account;
+  return {main,ex:main,im:main};
+}
+function loadCompany(){try{return normalizeCompany(JSON.parse(localStorage.getItem("dd_company")||"{}"));}catch(e){return normalizeCompany({})}}
+function companyPartyInfo(c){const m=(c&&c.main)||loadCompany().main;return {name:m.name,lat:m.lat||m.name,addr:m.addr,tel:m.tel,bin:m.bin,tax:m.tax||m.bin,bank:m.bank,swift:m.swift,account:m.account||m.iban,iban:m.iban||m.account,bik:m.bik,kbe:m.kbe,corr:m.corr}}
+function fillVal(id,v){const el=$(id);if(el)el.value=v||""}
+function fillCompanyForm(){const m=loadCompany().main;
+  ["name","lat","addr","tel","bin","tax","bank","iban","account","swift","bik"].forEach(k=>fillVal("c_main_"+k,m[k]||""));
+  ["name","lat","addr","bank","swift","acct","tax"].forEach(k=>fillVal("c_ex_"+k,m[k==="acct"?"account":k]||""));
+  ["name","addr","tel","bin","bank","iban","bik"].forEach(k=>fillVal("c_im_"+k,m[k]||""));}
+function saveCompany(){const main={};
+  ["name","lat","addr","tel","bin","tax","bank","iban","account","swift","bik"].forEach(k=>{const el=$("c_main_"+k);if(el)main[k]=el.value.trim()});
+  if(!Object.keys(main).length){
+    ["name","addr","tel","bin","bank","iban","bik"].forEach(k=>{const el=$("c_im_"+k);if(el)main[k]=el.value.trim()});
+    ["lat","swift","tax"].forEach(k=>{const el=$("c_ex_"+k);if(el&&!main[k])main[k]=el.value.trim()});
+    const acct=$("c_ex_acct");if(acct&&!main.account)main.account=acct.value.trim();
+  }
+  const c=normalizeCompany({main});
+  localStorage.setItem("dd_company",JSON.stringify({main:c.main}));toast("主体公司资料已保存 ✓");}
 
 /* ================= 业务配置中心 ================= */
 const DEF_CFG={prefix:"DD",seal:"",pin:"",
@@ -163,7 +179,7 @@ function getHS(){return loadCfg().hs}
 function getProducts(){return loadCfg().products||[]}
 function getCustomers(role){const list=loadCfg().clients||[];return role?list.filter(c=>!c.role||c.role===role||c.role==="both"):list}
 function partyInfoFromCustomer(c){
-  return {name:c.name||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",lat:c.name||""};
+  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",lat:c.name||""};
 }
 function drawCustomerSelects(){
   const fill=(id,role)=>{
@@ -316,10 +332,10 @@ function rateStale(){const r=loadRates();return (Date.now()-new Date(r.checked))
 let items=[],tplState={},docConditions={},docOverrides={},curTicket=null,curDoc="inv";
 function ticketNo(){const d=today().replace(/-/g,""),px=loadCfg().prefix;const n=tickets().filter(t=>t.no&&t.no.includes(d)).length+1;return px+"-"+d+"-"+String(n).padStart(2,"0")}
 function newTicket(type){
-  const c=loadCompany();type=type||"export";
+  const c=loadCompany(),main=companyPartyInfo(c);type=type||"export";
   curTicket={id:Date.now(),no:ticketNo(),type,status:"doc",warnings:[],
-    sellerInfo:type==="export"?{name:c.ex.name,lat:c.ex.lat,bank:c.ex.bank,swift:c.ex.swift,account:c.ex.acct}:{},
-    buyerInfo:type==="import"?{name:c.im.name,addr:c.im.addr,bin:c.im.bin,bank:c.im.bank,iban:c.im.iban,bik:c.im.bik}:{},
+    sellerInfo:type==="export"?Object.assign({},main):{},
+    buyerInfo:type==="import"?Object.assign({},main):{},
     masterConfirmed:false,masterSnapshot:null,created:Date.now()};
   items=[{name:"PP编织袋 50kg 白色 55×95cm 复膜",hs:"6305.33",qty:10000,price:0.22}];
   tplState={};docConditions={};docOverrides={};
@@ -328,18 +344,18 @@ function newTicket(type){
   $("f_truck").value="";$("f_gw").value="";$("f_nw").value="";$("f_pkg").value="";
   applyTypeNames();drawItems();render();
 }
-function companySellerInfo(c){return {name:c.ex.name,lat:c.ex.lat||c.ex.name,addr:c.ex.addr,bank:c.ex.bank,swift:c.ex.swift,account:c.ex.acct,tax:c.ex.tax}}
-function companyBuyerInfo(c){return {name:c.im.name,addr:c.im.addr,tel:c.im.tel,bin:c.im.bin,tax:c.im.bin,bank:c.im.bank,iban:c.im.iban,account:c.im.iban,bik:c.im.bik}}
+function companySellerInfo(c){return companyPartyInfo(c)}
+function companyBuyerInfo(c){return companyPartyInfo(c)}
 function applyTypeNames(){const c=loadCompany(),t=$("f_type").value;
   if(!curTicket)return;
   if(t==="export"){
-    $("f_seller").value=c.ex.name;
+    $("f_seller").value=c.main.name;
     curTicket.sellerInfo=companySellerInfo(c);
-    if(!$("f_buyer").value)$("f_buyer").value="";
+    if($("f_buyer").value===c.main.name)$("f_buyer").value="";
   }else{
-    $("f_buyer").value=c.im.name;
+    $("f_buyer").value=c.main.name;
     curTicket.buyerInfo=companyBuyerInfo(c);
-    if(!$("f_seller").value)$("f_seller").value="";
+    if($("f_seller").value===c.main.name)$("f_seller").value="";
   }}
 function onTypeChange(){if(curTicket)curTicket.type=$("f_type").value;applyTypeNames();render()}
 function confirmMasterInfo(){
@@ -479,12 +495,12 @@ const CONTRACT_TPLS=[
       ["seller_bank","供方开户行","中国银行新疆阿克苏地区分行","开户行名称"],
       ["seller_swift","供方 SWIFT","BKCHCNBJ760","银行 SWIFT"],
       ["seller_account","供方银行账号","107106450600","银行账号"],
-      ["buyer","需方 / 买方",DEF_COMPANY.im.name,"哈国 Dongda Ltd."],
-      ["buyer_addr","需方地址",DEF_COMPANY.im.addr,"公司注册地址"],
-      ["buyer_tax","需方税号/BIN",DEF_COMPANY.im.bin,"BIN / Tax ID"],
-      ["buyer_bank","需方开户行",DEF_COMPANY.im.bank,"银行名称"],
-      ["buyer_iban","需方 IBAN",DEF_COMPANY.im.iban,"IBAN"],
-      ["buyer_bik","需方 BIK",DEF_COMPANY.im.bik,"BIK"],
+      ["buyer","需方 / 买方",DEF_COMPANY.main.name,"主体公司名称"],
+      ["buyer_addr","需方地址",DEF_COMPANY.main.addr,"公司注册地址"],
+      ["buyer_tax","需方税号/BIN",DEF_COMPANY.main.bin,"BIN / Tax ID"],
+      ["buyer_bank","需方开户行",DEF_COMPANY.main.bank,"银行名称"],
+      ["buyer_iban","需方 IBAN",DEF_COMPANY.main.iban,"IBAN"],
+      ["buyer_bik","需方 BIK",DEF_COMPANY.main.bik,"BIK"],
       ["country","目的国","KZ","KZ 或 UZ"],
       ["terms","交货条款","CPT Астана","Incoterms + 目的地"],
       ["delivery","交货期限","2026年7月15日前","交货日期/期限"],
@@ -506,17 +522,17 @@ const CONTRACT_TPLS=[
       ["law","适用法律","中华人民共和国法律","适用法律"],
       ["dispute","争议解决","协商不成，提交卖方所在地有管辖权人民法院诉讼解决。","争议条款"]
     ]},
-  {id:"sale",type:"export",name:"货物销售合同",sub:"中国公司为卖方 · 客户为买方",hint:"销售模板：适合中方向哈萨克斯坦/乌兹别克斯坦客户出口销售。",
+  {id:"sale",type:"export",name:"货物销售合同",sub:"主体公司为卖方 · 客户为买方",hint:"销售模板：适合主体公司向哈萨克斯坦/乌兹别克斯坦客户销售。",
     params:[
       ["contract","合同编号","DD-SALE-"+today().replace(/-/g,""),"Contract No."],
       ["place","签约地点","中国·新疆","签约地点"],
       ["date","签订日期",today(),"YYYY-MM-DD"],
-      ["seller","卖方",DEF_COMPANY.ex.name,"中国出口公司"],
-      ["seller_addr","卖方地址",DEF_COMPANY.ex.addr,"营业执照地址"],
-      ["seller_tax","卖方税号/统一社会信用代码",DEF_COMPANY.ex.tax,"统一社会信用代码"],
-      ["seller_bank","卖方开户行",DEF_COMPANY.ex.bank,"开户行名称"],
-      ["seller_swift","卖方 SWIFT",DEF_COMPANY.ex.swift,"银行 SWIFT"],
-      ["seller_account","卖方银行账号",DEF_COMPANY.ex.acct,"银行账号"],
+      ["seller","卖方",DEF_COMPANY.main.name,"主体公司名称"],
+      ["seller_addr","卖方地址",DEF_COMPANY.main.addr,"注册地址"],
+      ["seller_tax","卖方税号/BIN",DEF_COMPANY.main.bin,"BIN / Tax ID"],
+      ["seller_bank","卖方开户行",DEF_COMPANY.main.bank,"开户行名称"],
+      ["seller_swift","卖方 SWIFT",DEF_COMPANY.main.swift,"银行 SWIFT"],
+      ["seller_account","卖方银行账号/IBAN",DEF_COMPANY.main.iban,"银行账号/IBAN"],
       ["buyer","买方","TOO «KazPack Trade»","境外客户名称"],
       ["buyer_addr","买方地址","","注册地址"],
       ["buyer_tax","买方税号/BIN","","BIN / Tax ID"],
@@ -626,21 +642,31 @@ function contractParamData(){
   const d={};contractTpl().params.forEach(p=>{const el=$("ct_"+p[0]);d[p[0]]=el?el.value.trim():p[2]});return d;
 }
 function contractLineData(){ensureContractLines();return contractLines.map(makeContractLine).filter(x=>x.name||x.hs||x.qty||x.price)}
+function contractPartyData(prefix,p){
+  return prefix==="seller"
+    ?{seller:p.name,seller_addr:p.addr,seller_tax:p.tax||p.bin,seller_bank:p.bank,seller_swift:p.swift,seller_account:p.account||p.iban}
+    :{buyer:p.name,buyer_addr:p.addr,buyer_tax:p.bin||p.tax,buyer_bank:p.bank,buyer_iban:p.iban||p.account,buyer_bik:p.bik};
+}
+function firstCustomerData(role){
+  const c=(getCustomers(role)||[])[0];
+  return c?partyInfoFromCustomer(c):{};
+}
 function contractBaseOptions(){
-  const c=loadCompany(),cur=collectSafe();
+  const c=loadCompany(),main=companyPartyInfo(c),cur=collectSafe(),seller=firstCustomerData("seller"),buyer=firstCustomerData("buyer");
   return [
     {id:"tpl",name:"按当前合同模板默认值",data:null},
-    {id:"purchase",name:"采购默认：Dongda Ltd. 买方 / 中国供应商卖方",data:{buyer:c.im.name,buyer_addr:c.im.addr,buyer_tax:c.im.bin,buyer_bank:c.im.bank,buyer_iban:c.im.iban,buyer_bik:c.im.bik,country:"KZ",cur:"CNY",terms:"CPT Астана",pay:"货到付款",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"}},
-    {id:"sale",name:"销售默认：立天东大卖方 / 境外客户买方",data:{seller:c.ex.name,seller_addr:c.ex.addr,seller_tax:c.ex.tax,seller_bank:c.ex.bank,seller_swift:c.ex.swift,seller_account:c.ex.acct,buyer:"TOO «KazPack Trade»",country:"KZ",cur:"USD",terms:"CPT Алматы",pay:"T/T 30%预付 70%发货前",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"}},
-    {id:"company",name:"公司资料：使用基础资料中的进出口公司信息",data:{seller:c.ex.name,seller_addr:c.ex.addr,seller_tax:c.ex.tax,seller_bank:c.ex.bank,seller_swift:c.ex.swift,seller_account:c.ex.acct,buyer:c.im.name,buyer_addr:c.im.addr,buyer_tax:c.im.bin,buyer_bank:c.im.bank,buyer_iban:c.im.iban,buyer_bik:c.im.bik,country:"KZ",cur:contractTplId==="purchase"?"CNY":"USD"}},
+    {id:"purchase",name:"采购默认：主体公司买方 / 资料库供应商卖方",data:Object.assign({},contractPartyData("buyer",main),contractPartyData("seller",seller),{country:"KZ",cur:"CNY",terms:"CPT Астана",pay:"货到付款",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"})},
+    {id:"sale",name:"销售默认：主体公司卖方 / 资料库客户买方",data:Object.assign({},contractPartyData("seller",main),contractPartyData("buyer",buyer),{country:buyer.country||"KZ",cur:"USD",terms:"CPT Алматы",pay:"T/T 30%预付 70%发货前",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"})},
+    {id:"company",name:"主体公司资料：按合同类型自动放入买方或卖方",data:Object.assign({},contractTplId==="purchase"?contractPartyData("buyer",main):contractPartyData("seller",main),{country:"KZ",cur:contractTplId==="purchase"?"CNY":"USD"})},
     {id:"current",name:"当前录入数据：从核对录入页读取",data:cur}
   ];
 }
 function collectSafe(){
   const val=id=>$(id)?$(id).value:"";
-  const it=items[0]||{},c=loadCompany(),si=curTicket&&curTicket.sellerInfo||{},bi=curTicket&&curTicket.buyerInfo||{};
-  return {seller:val("f_seller"),seller_addr:si.addr||c.ex.addr,seller_tax:si.tax||c.ex.tax,seller_bank:si.bank||c.ex.bank,seller_swift:si.swift||c.ex.swift,seller_account:si.account||si.iban||c.ex.acct,
-    buyer:val("f_buyer"),buyer_addr:bi.addr||c.im.addr,buyer_tax:bi.bin||bi.tax||c.im.bin,buyer_bank:bi.bank||c.im.bank,buyer_iban:bi.iban||bi.account||c.im.iban,buyer_bik:bi.bik||c.im.bik,
+  const it=items[0]||{},main=companyPartyInfo(loadCompany()),si=curTicket&&curTicket.sellerInfo||{},bi=curTicket&&curTicket.buyerInfo||{},type=val("f_type")||curTicket&&curTicket.type||"export";
+  const sellerFallback=type==="export"?main:{},buyerFallback=type==="import"?main:{};
+  return {seller:val("f_seller"),seller_addr:si.addr||sellerFallback.addr,seller_tax:si.tax||si.bin||sellerFallback.tax,seller_bank:si.bank||sellerFallback.bank,seller_swift:si.swift||sellerFallback.swift,seller_account:si.account||si.iban||sellerFallback.account,
+    buyer:val("f_buyer"),buyer_addr:bi.addr||buyerFallback.addr,buyer_tax:bi.bin||bi.tax||buyerFallback.bin,buyer_bank:bi.bank||buyerFallback.bank,buyer_iban:bi.iban||bi.account||buyerFallback.iban,buyer_bik:bi.bik||buyerFallback.bik,
     country:val("f_country"),contract:val("f_contract"),date:val("f_date"),terms:val("f_terms"),cur:val("f_cur"),pay:val("f_pay"),goods:it.name||"",hs:it.hs||"",qty:it.qty||"",price:it.price||"",pkg:val("f_pkg"),gw:val("f_gw"),nw:val("f_nw"),port:val("f_port"),trans:val("f_trans")};
 }
 function drawContractBaseSources(){
@@ -1061,8 +1087,8 @@ function seal(){
   return `<div class="seal-area pos-${sealPosition}"><div class="seal-box"><div class="seal"><img src="brand/dongda-seal.png?v=20260613-6" alt="Dongda Ltd official seal"></div><div class="seal-line">Dongda Ltd.</div><div class="seal-meta">Подпись / печать<br>Signature / company seal</div></div></div>`;
 }
 function docBrand(){
-  const c=loadCompany();
-  return `<div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Litian Dongda Ltd logo"><div class="brand-copy"><b>Litian Dongda Ltd · Dongda Ltd.</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(c.im.addr)}<br>Тел. ${esc(c.im.tel||DEF_COMPANY.im.tel)}</small></div></div>`;
+  const m=loadCompany().main;
+  return `<div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"><div class="brand-copy"><b>${esc(m.lat||m.name)} · ${esc(m.name)}</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(m.addr)}<br>Тел. ${esc(m.tel||DEF_COMPANY.main.tel)}</small></div></div>`;
 }
 const TPL_CODE={inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
 function docFoot(id){return `<div class="foot">TPL ${TPL_CODE[id]||id} · ${today()} · ${curTicket?curTicket.no:""}</div>`}
