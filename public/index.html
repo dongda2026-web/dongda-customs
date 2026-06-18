@@ -185,6 +185,15 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .param-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
 .param-list span{font-size:11px;font-weight:800;color:var(--green);background:#E7F1ED;border:1px solid #CDE1D9;border-radius:15px;padding:4px 8px}
 .rate-basis{font-size:11px;font-weight:600;color:var(--steel);margin-top:9px;line-height:1.6;border-top:1px dashed var(--line);padding-top:8px}
+.library-tabs{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 14px}
+.library-tabs button{border:1.5px solid var(--line);background:#fff;color:var(--steel);border-radius:18px;padding:9px 15px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--sans)}
+.library-tabs button.active{background:var(--green);border-color:var(--green);color:#fff}
+.lib-section{display:none}
+.lib-section.active{display:block}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.lib-item{border:1px solid var(--line);border-radius:10px;background:#fff;padding:13px;min-width:0}
+.lib-item b{display:block;font-size:13px;margin-bottom:5px;color:var(--ink)}
+.lib-item span{display:block;font-size:12px;color:var(--steel);font-weight:600;line-height:1.55;overflow-wrap:anywhere}
 
 .doc-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .chip{padding:9px 16px;border-radius:24px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:var(--steel);user-select:none;transition:.15s}
@@ -350,7 +359,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <div class="mi" data-p="p0" onclick="go('p0')">合同识别</div>
   <div class="mi" data-p="p1" onclick="go('p1')">核对录入</div>
   <div class="mi" data-p="p3" onclick="go('p3')">历史档案</div>
-  <div class="mi" data-p="p4" onclick="go('p4')">模版库</div>
+  <div class="mi" data-p="p4" onclick="go('p4')">资料库</div>
   <div class="mi" data-p="p5" onclick="go('p5')">基础资料</div>
 </div>
 
@@ -363,7 +372,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <div class="nav-item" data-p="p1" onclick="go('p1')"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5Z"/></svg></span>核对录入</div>
   <div class="nav-cap">管理</div>
   <div class="nav-item" data-p="p3" onclick="go('p3')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4.5" rx="1"/><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5"/><line x1="10" y1="13" x2="14" y2="13"/></svg></span>历史档案</div>
-  <div class="nav-item" data-p="p4" onclick="go('p4')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="3.6" height="16" rx="0.8"/><rect x="10" y="4" width="3.6" height="16" rx="0.8"/><path d="M16.2 5.2l3.4 1-4 14.6-3.4-1Z"/></svg></span>模版库</div>
+  <div class="nav-item" data-p="p4" onclick="go('p4')"><span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="3.6" height="16" rx="0.8"/><rect x="10" y="4" width="3.6" height="16" rx="0.8"/><path d="M16.2 5.2l3.4 1-4 14.6-3.4-1Z"/></svg></span>资料库</div>
   <div class="nav-item" data-p="p5" onclick="go('p5')"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.2 12c0-.4 0-.8-.1-1.2l2-1.5-1.9-3.3-2.3 1a7 7 0 0 0-2.1-1.2L14.4 3H9.6l-.4 2.8a7 7 0 0 0-2.1 1.2l-2.3-1L2.9 9.3l2 1.5a7.4 7.4 0 0 0 0 2.4l-2 1.5 1.9 3.3 2.3-1a7 7 0 0 0 2.1 1.2l.4 2.8h4.8l.4-2.8a7 7 0 0 0 2.1-1.2l2.3 1 1.9-3.3-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg></span>基础资料</div>
   <div class="sp"></div>
   <div class="user"><div class="av">大</div><div><b>大 · 管理员</b><span>东大 Astana / 新疆</span></div></div>
@@ -442,7 +451,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 
 <!-- ============ 核对录入 ============ -->
 <div class="panel" id="p1">
-  <div class="pagehead"><div><h2>核对录入</h2><p>核对识别数据 / 手工录入，补充运输信息后出单证</p></div><div class="sp"></div><div class="bill-no">本票 <b id="curNo">—</b></div></div>
+  <div class="pagehead"><div><h2>核对录入</h2><p>先确认主票据信息，再逐份控制合同、发票、装箱单、申报资料</p></div><div class="sp"></div><div class="bill-no" id="masterStatus">主信息未确认</div><button class="mini" onclick="confirmMasterInfo()">确认主信息</button><div class="bill-no">本票 <b id="curNo">—</b></div></div>
 
   <div class="card">
     <div class="card-h"><span class="tag"></span><h3>票型与双方</h3><span class="ru">Стороны сделки</span></div>
@@ -476,7 +485,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 
   <div class="card">
-    <div class="card-h"><span class="tag"></span><h3>单证模版选择</h3><span class="ru">按目的国自动匹配 · 可勾选增减</span><span style="flex:1"></span><span class="tpl-cnt" id="tplCnt"></span></div>
+    <div class="card-h"><span class="tag"></span><h3>单证模板选择</h3><span class="ru">按目的国自动匹配 · 可勾选增减</span><span style="flex:1"></span><span class="tpl-cnt" id="tplCnt"></span></div>
     <div class="card-b">
       <div class="tpl-verify" id="tplVerify"></div>
       <div class="tpls" id="tplGrid"></div>
@@ -551,6 +560,14 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <div class="field" style="min-width:210px;flex:none"><label>单独修改的表格</label><select id="docCondSel" onchange="loadDocCondition(this.value)"></select></div>
         <div class="field" style="flex:1"><label>该表格单独条件 / 备注（只影响所选表格）</label><textarea id="docCondText" rows="2" placeholder="例如：本装箱单按客户要求显示托盘数；CMR车牌待装车后补充；报关草单以报关行最终录入为准。" oninput="saveDocCondition()"></textarea></div>
       </div>
+      <div class="grid g3" style="margin-bottom:13px">
+        <div class="field"><label>本文件合同号覆盖</label><input id="docO_contract" placeholder="留空=使用主票据合同号" oninput="saveDocOverride()"></div>
+        <div class="field"><label>本文件日期覆盖</label><input id="docO_date" placeholder="留空=使用主票据日期" oninput="saveDocOverride()"></div>
+        <div class="field"><label>本文件单证号覆盖</label><input id="docO_no" placeholder="留空=使用本票号" oninput="saveDocOverride()"></div>
+        <div class="field"><label>本文件包装/件数覆盖</label><input id="docO_pkg" placeholder="仅影响当前文件" oninput="saveDocOverride()"></div>
+        <div class="field"><label>本文件毛重覆盖</label><input id="docO_gw" placeholder="kg，仅影响当前文件" oninput="saveDocOverride()"></div>
+        <div class="field"><label>本文件净重覆盖</label><input id="docO_nw" placeholder="kg，仅影响当前文件" oninput="saveDocOverride()"></div>
+      </div>
       <div id="docLangHint" style="font-size:12px;font-weight:700;color:var(--steel);margin:-6px 0 12px"></div>
       <div class="doc-wrap"><div id="docArea"></div></div>
     </div>
@@ -569,12 +586,20 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 </div>
 
-<!-- ============ 海关模版库 ============ -->
+<!-- ============ 资料库 ============ -->
 <div class="panel" id="p4">
-  <div class="pagehead"><div><h2>模版库</h2><p>合同模版、海关单证和运输资料统一维护，按参数自动制单</p></div></div>
+  <div class="pagehead"><div><h2>资料库</h2><p>模板、客户、产品、历史文件分库管理；主票据确定后，每份文件仍可单独控制</p></div></div>
+  <div class="library-tabs">
+    <button class="active" data-lib="templates" onclick="goLibrary('templates')">模板资料</button>
+    <button data-lib="customers" onclick="goLibrary('customers')">客户资料</button>
+    <button data-lib="products" onclick="goLibrary('products')">产品资料</button>
+    <button data-lib="history" onclick="goLibrary('history')">历史文件</button>
+  </div>
+
+  <div class="lib-section active" id="lib_templates">
 
   <div class="card">
-    <div class="card-h"><span class="tag"></span><h3>合同模版</h3><span class="ru">采购 / 销售 · 按参数提取关键数据并带入制单</span><span style="flex:1"></span><span class="tpl-cnt" id="contractTplHint"></span></div>
+    <div class="card-h"><span class="tag"></span><h3>合同模板</h3><span class="ru">采购 / 销售 · 按参数提取关键数据并带入制单</span><span style="flex:1"></span><span class="tpl-cnt" id="contractTplHint"></span></div>
     <div class="card-b">
       <div class="contract-panel">
         <div class="contract-menu" id="contractTplMenu"></div>
@@ -619,7 +644,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 
   <div class="card">
-    <div class="card-h"><span class="tag" style="background:var(--orange)"></span><h3>表单模版</h3><span class="ru">发票 / 装箱单 / 报关资料 · 左侧单独选择</span><span style="flex:1"></span><span class="tpl-cnt" id="formTplHint"></span></div>
+    <div class="card-h"><span class="tag" style="background:var(--orange)"></span><h3>表单模板</h3><span class="ru">发票 / 装箱单 / 报关资料 · 左侧单独选择</span><span style="flex:1"></span><span class="tpl-cnt" id="formTplHint"></span></div>
     <div class="card-b">
       <div class="contract-panel">
         <div class="contract-menu" id="formTplMenu"></div>
@@ -668,6 +693,19 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="card-b" style="padding:0">
       <div class="archive-item"><div class="a-main"><div class="t">商业发票 Инвойс · 装箱单 · CMR 运输单</div><div class="d">国际通行格式，中俄双语，自动从订单数据生成</div></div><span class="status s-done">已内置</span><button class="mini" onclick="go('p2')">预览</button></div>
     </div>
+  </div>
+  </div>
+
+  <div class="lib-section" id="lib_customers">
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 可从核对录入页存档</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div></div></div>
+  </div>
+
+  <div class="lib-section" id="lib_products">
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>产品资料</h3><span class="ru">品名 / HS / 单价 / 包装 / 申报要素</span></div><div class="card-b"><div class="lib-grid" id="libProductList"></div></div></div>
+  </div>
+
+  <div class="lib-section" id="lib_history">
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>历史文件</h3><span class="ru">生成文件 / 上传原件 / 审核归档</span></div><div class="card-b" style="padding:0"><div id="libHistoryList"></div></div></div>
   </div>
 </div>
 
@@ -776,6 +814,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-form-sync"></script>
+<script src="app.js?v=20260618-data-library2"></script>
 </body>
 </html>

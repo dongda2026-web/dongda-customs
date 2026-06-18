@@ -97,7 +97,7 @@ function saveCfg(){const c=loadCfg();
   c.clients=$("c_clients").value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseCustomerLine).filter(p=>p.name);
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   localStorage.setItem("dd_cfg",JSON.stringify(c));
-  applyCfg();drawCustomerSelects();drawItems();render();toast("业务配置已保存，全系统已生效 ✓");}
+  applyCfg();drawCustomerSelects();drawItems();render();renderLibraryData();toast("业务配置已保存，全系统已生效 ✓");}
 function resetCfg(){if(!confirm("恢复默认业务配置？"))return;localStorage.removeItem("dd_cfg");fillCfgForm();applyCfg();drawItems();render();toast("已恢复默认配置")}
 function applyCfg(){const c=loadCfg();
   // 口岸下拉
@@ -153,7 +153,7 @@ function upsertConfigList(key,item,match){
   if(i>=0)list[i]=Object.assign({},list[i],item);else list.unshift(item);
   cfg[key]=list;
   localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();applyCfg();drawCustomerSelects();drawItems();render();
+  fillCfgForm();applyCfg();drawCustomerSelects();drawItems();render();renderLibraryData();
 }
 function saveCurrentCustomer(side){
   if(!curTicket)newTicket($("f_type").value||"export");
@@ -176,7 +176,7 @@ function saveCurrentProducts(){
     if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
   });
   cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
-  fillCfgForm();drawItems();toast("已存入产品库："+rows.length+" 项");
+  fillCfgForm();drawItems();renderLibraryData();toast("已存入产品库："+rows.length+" 项");
 }
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
@@ -211,16 +211,16 @@ function saveRates(){const r=loadRates();
 function rateStale(){const r=loadRates();return (Date.now()-new Date(r.checked))/864e5>60}
 
 /* ================= 票据状态 ================= */
-let items=[],tplState={},docConditions={},curTicket=null,curDoc="inv";
+let items=[],tplState={},docConditions={},docOverrides={},curTicket=null,curDoc="inv";
 function ticketNo(){const d=today().replace(/-/g,""),px=loadCfg().prefix;const n=tickets().filter(t=>t.no&&t.no.includes(d)).length+1;return px+"-"+d+"-"+String(n).padStart(2,"0")}
 function newTicket(type){
   const c=loadCompany();type=type||"export";
   curTicket={id:Date.now(),no:ticketNo(),type,status:"doc",warnings:[],
     sellerInfo:type==="export"?{name:c.ex.name,lat:c.ex.lat,bank:c.ex.bank,swift:c.ex.swift,account:c.ex.acct}:{},
     buyerInfo:type==="import"?{name:c.im.name,addr:c.im.addr,bin:c.im.bin,bank:c.im.bank,iban:c.im.iban,bik:c.im.bik}:{},
-    created:Date.now()};
+    masterConfirmed:false,masterSnapshot:null,created:Date.now()};
   items=[{name:"PP编织袋 50kg 白色 55×95cm 复膜",hs:"6305.33",qty:10000,price:0.22}];
-  tplState={};docConditions={};
+  tplState={};docConditions={};docOverrides={};
   $("f_type").value=type;$("f_contract").value="";$("f_date").value=today();
   $("f_cur").value=type==="import"?"CNY":"USD";$("f_pay").value=type==="import"?"货到付款":"T/T 30%预付 70%发货前";
   $("f_truck").value="";$("f_gw").value="";$("f_nw").value="";$("f_pkg").value="";
@@ -230,6 +230,20 @@ function applyTypeNames(){const c=loadCompany(),t=$("f_type").value;
   if(t==="export"){$("f_seller").value=c.ex.name;if(!$("f_buyer").value)$("f_buyer").value="";}
   else{$("f_buyer").value=c.im.name;if(!$("f_seller").value)$("f_seller").value="";}}
 function onTypeChange(){if(curTicket)curTicket.type=$("f_type").value;applyTypeNames();render()}
+function confirmMasterInfo(){
+  if(!curTicket)newTicket($("f_type").value||"export");
+  curTicket.masterConfirmed=true;
+  curTicket.masterSnapshot=collect();
+  curTicket.updated=Date.now();
+  saveTicket();
+  updateMasterStatus();
+  toast("主信息已确认；现在可对每份文件做独立控制");
+}
+function updateMasterStatus(){
+  const el=$("masterStatus");if(!el)return;
+  el.textContent=curTicket&&curTicket.masterConfirmed?"主信息已确认":"主信息未确认";
+  el.style.color=curTicket&&curTicket.masterConfirmed?"var(--ok)":"var(--warn)";
+}
 
 /* ================= 货物明细 ================= */
 /* HS编码库改由配置中心提供：getHS() */
@@ -289,7 +303,7 @@ function taxCalc(country,amount,hs){const R=loadRates(),dutyRate=dutyFor(country
   return{dutyRate,vatRate,duty,vat,total:duty+vat,basis:(country==="KZ"?R.kz.dutyBasis+"；"+R.kz.vatBasis:R.uz.dutyBasis+"；"+R.uz.vatBasis)}}
 function taxTotals(country){return items.reduce((s,it)=>{const c=taxCalc(country,itemAmount(it),it.hs);s.duty+=c.duty;s.vat+=c.vat;s.total+=c.total;s.rates.add(c.dutyRate+"%");return s},{duty:0,vat:0,total:0,rates:new Set()})}
 
-/* ================= 模版选择 ================= */
+/* ================= 模板选择 ================= */
 const TPLS={
   common:[
     {id:"inv",t:"商业发票 Инвойс",d:"中俄双语国际通行格式",ver:"双语版 v3 · 现行有效",must:true},
@@ -314,7 +328,7 @@ function tplList(){
 }
 function drawTpls(){
   const g=$("tplGrid");if(!g)return;
-  $("tplVerify").innerHTML="🛡 模版库版本核验："+today()+" 已与官方发布比对（海关总署公告 / ЕАЭС Решение №257 / Lex.uz）· 全部为现行有效格式";
+  $("tplVerify").innerHTML="🛡 模板库版本核验："+today()+" 已与官方发布比对（海关总署公告 / ЕАЭС Решение №257 / Lex.uz）· 全部为现行有效格式";
   const list=tplList();
   list.forEach(t=>{if(!(t.id in tplState))tplState[t.id]=t.must||t.on!==false});
   g.innerHTML=list.map(t=>{
@@ -329,9 +343,9 @@ function drawTpls(){
 function tplToggle(id,must){if(must)return;tplState[id]=!tplState[id];drawTpls();drawTabs()}
 function selectedTpls(){return tplList().filter(t=>t.must||tplState[t.id])}
 
-/* ================= 合同模版参数 ================= */
+/* ================= 合同模板参数 ================= */
 const CONTRACT_TPLS=[
-  {id:"purchase",type:"import",name:"货物采购合同",sub:"按上传的采购合同版式拟定 · 我方 Dongda Ltd. 为买方",hint:"采购模版：适合哈国东大向中国供应商采购，自动生成进口采购票。",
+  {id:"purchase",type:"import",name:"货物采购合同",sub:"按上传的采购合同版式拟定 · 我方 Dongda Ltd. 为买方",hint:"采购模板：适合哈国东大向中国供应商采购，自动生成进口采购票。",
     params:[
       ["contract","合同编号","DD-PUR-"+today().replace(/-/g,""),"合同首页编号 / Contract No."],
       ["place","签约地点","中国·新疆·阿克苏","签约地点"],
@@ -369,7 +383,7 @@ const CONTRACT_TPLS=[
       ["law","适用法律","中华人民共和国法律","适用法律"],
       ["dispute","争议解决","协商不成，提交卖方所在地有管辖权人民法院诉讼解决。","争议条款"]
     ]},
-  {id:"sale",type:"export",name:"货物销售合同",sub:"中国公司为卖方 · 客户为买方",hint:"销售模版：适合中方向哈萨克斯坦/乌兹别克斯坦客户出口销售。",
+  {id:"sale",type:"export",name:"货物销售合同",sub:"中国公司为卖方 · 客户为买方",hint:"销售模板：适合中方向哈萨克斯坦/乌兹别克斯坦客户出口销售。",
     params:[
       ["contract","合同编号","DD-SALE-"+today().replace(/-/g,""),"Contract No."],
       ["place","签约地点","中国·新疆","签约地点"],
@@ -465,7 +479,7 @@ function drawContractTemplates(){
   menu.querySelectorAll("[data-contract-id]").forEach(el=>el.onclick=e=>{e.preventDefault();e.stopPropagation();selectContractTemplate(el.dataset.contractId)});
   const t=contractTpl();
   const body=$("contractTplBody");if(body)body.style.display=contractTplCollapsed?"none":"block";
-  $("contractTplVerify").innerHTML="🛡 合同模版参数：可从原合同/扫描件提取后填写；采购模版已按用户提供的货物采购合同用途拟定。";
+  $("contractTplVerify").innerHTML="🛡 合同模板参数：可从原合同/扫描件提取后填写；采购模板已按用户提供的货物采购合同用途拟定。";
   $("contractTplHint").textContent=t.name;
   syncTemplateLangSelects();
   drawContractBaseSources();
@@ -492,7 +506,7 @@ function contractLineData(){ensureContractLines();return contractLines.map(makeC
 function contractBaseOptions(){
   const c=loadCompany(),cur=collectSafe();
   return [
-    {id:"tpl",name:"按当前合同模版默认值",data:null},
+    {id:"tpl",name:"按当前合同模板默认值",data:null},
     {id:"purchase",name:"采购默认：Dongda Ltd. 买方 / 中国供应商卖方",data:{buyer:c.im.name,buyer_addr:c.im.addr,buyer_tax:c.im.bin,buyer_bank:c.im.bank,buyer_iban:c.im.iban,buyer_bik:c.im.bik,country:"KZ",cur:"CNY",terms:"CPT Астана",pay:"货到付款",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"}},
     {id:"sale",name:"销售默认：立天东大卖方 / 境外客户买方",data:{seller:c.ex.name,seller_addr:c.ex.addr,seller_tax:c.ex.tax,seller_bank:c.ex.bank,seller_swift:c.ex.swift,seller_account:c.ex.acct,buyer:"TOO «KazPack Trade»",country:"KZ",cur:"USD",terms:"CPT Алматы",pay:"T/T 30%预付 70%发货前",port:"霍尔果斯",trans:"公路卡航（中欧卡车）"}},
     {id:"company",name:"公司资料：使用基础资料中的进出口公司信息",data:{seller:c.ex.name,seller_addr:c.ex.addr,seller_tax:c.ex.tax,seller_bank:c.ex.bank,seller_swift:c.ex.swift,seller_account:c.ex.acct,buyer:c.im.name,buyer_addr:c.im.addr,buyer_tax:c.im.bin,buyer_bank:c.im.bank,buyer_iban:c.im.iban,buyer_bik:c.im.bik,country:"KZ",cur:contractTplId==="purchase"?"CNY":"USD"}},
@@ -519,7 +533,7 @@ function applyContractBaseSource(){
   Object.entries(opt.data).forEach(([k,v])=>setContractField(k,v));
   if(opt.id==="current")syncContractItemsFromEntry();
   previewContractTemplate(false);
-  toast("基础信息已载入合同模版");
+  toast("基础信息已载入合同模板");
 }
 function applyContractTemplate(){
   const t=contractTpl(),d=contractParamData();
@@ -550,7 +564,7 @@ function copyContractParams(){
   else alert(txt);
 }
 
-/* ================= 表单模版左侧选择 ================= */
+/* ================= 表单模板左侧选择 ================= */
 const FORM_TPLS=[
   {id:"inv",group:"商务",name:"商业发票",desc:"中俄/英文可切换，合同号、买卖方、金额、条款自动带入"},
   {id:"pkl",group:"商务",name:"装箱单",desc:"货物、件数、毛重、净重、包装信息自动生成"},
@@ -571,6 +585,19 @@ const FORM_DESC={
   kk:{inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."}
 };
 let formTplId="inv";
+let currentLib="templates";
+function goLibrary(id){
+  currentLib=id||"templates";
+  document.querySelectorAll(".library-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.lib===currentLib));
+  document.querySelectorAll(".lib-section").forEach(s=>s.classList.toggle("active",s.id==="lib_"+currentLib));
+  renderLibraryData();
+}
+function renderLibraryData(){
+  const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
+  if(cl)cl.innerHTML=(cfg.clients||[]).map(c=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.country||"")} · ${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · 银行: ${esc(c.bank||"—")}</span><span>账号/IBAN: ${esc(c.account||"—")} · SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")}</span></div>`).join("")||'<div class="empty">暂无客户资料</div>';
+  if(pl)pl.innerHTML=(cfg.products||[]).map(p=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span></div>`).join("")||'<div class="empty">暂无产品资料</div>';
+  if(hl){const a=allDocRecords();hl.innerHTML=a.length?a.map(docRecordLine).join(""):'<div class="empty">暂无历史文件</div>'}
+}
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
 function drawFormTemplateLibrary(){
   const menu=$("formTplMenu"),detail=$("formTplDetail");if(!menu||!detail)return;
@@ -580,7 +607,7 @@ function drawFormTemplateLibrary(){
   const body=$("formTplBody");if(body)body.style.display=formTplCollapsed?"none":"block";
   syncTemplateLangSelects();
   $("formTplHint").textContent=t.name;
-  $("formTplVerify").innerHTML="🛡 表单模版可单独选择；语言说明按左右栏显示，正式单证仍以目的国/海关要求的语言为准。";
+  $("formTplVerify").innerHTML="🛡 表单模板可单独选择；语言说明按左右栏显示，正式单证仍以目的国/海关要求的语言为准。";
   const selected=!!tplState[t.id]||!!(tplList().find(x=>x.id===t.id)&&tplList().find(x=>x.id===t.id).must);
   const panel=lang=>`<section class="lang-page"><div class="lang-tag">${esc(langName(lang))}</div><h2>${esc(t.name)}</h2><p>${esc((FORM_DESC[lang]&&FORM_DESC[lang][t.id])||t.desc)}</p><table><tr><th>Template</th><td>${esc(meta[0])}</td></tr><tr><th>Code</th><td>${esc(TPL_CODE[t.id]||t.id)}</td></tr><tr><th>Status</th><td>${selected?"Selected":"Optional"}</td></tr></table></section>`;
   detail.innerHTML=`<div style="padding:12px"><div class="bilingual-doc">${panel(formLangLeft)}${panel(formLangRight)}</div></div>`;
@@ -593,11 +620,11 @@ function selectFormTemplate(id){
 function applyFormTemplate(){
   const t=formTpl(),langs=DOC_LANGS[t.id]||["ru"];
   prefLang=langs.includes(formLangRight)?formLangRight:langs.includes(formLangLeft)?formLangLeft:langs[0];
-  go("p2");pickDoc(t.id);toast("已打开表单模版："+t.name+" · "+langName(prefLang));
+  go("p2");pickDoc(t.id);toast("已打开表单模板："+t.name+" · "+langName(prefLang));
 }
 function toggleFormTemplate(){
   const t=formTpl(),def=tplList().find(x=>x.id===t.id);
-  if(def&&def.must){toast("该表单为当前票型必选模版");return}
+  if(def&&def.must){toast("该表单为当前票型必选模板");return}
   tplState[t.id]=!tplState[t.id];
   drawTpls();drawTabs();drawFormTemplateLibrary();
   toast((tplState[t.id]?"已加入":"已移出")+"当前出单："+t.name);
@@ -719,6 +746,7 @@ function render(){
   $("kz_cif").textContent=cur+" "+fmt(t);$("kz_duty").textContent=cur+" "+fmt(kzD);$("kz_vat").textContent=cur+" "+fmt(kzV);$("kz_total").textContent=cur+" "+fmt(kzD+kzV);
   $("uz_cif").textContent=cur+" "+fmt(t);$("uz_duty").textContent=cur+" "+fmt(uzD);$("uz_vat").textContent=cur+" "+fmt(uzV);$("uz_total").textContent=cur+" "+fmt(uzD+uzV);
   if(curTicket){$("curNo").textContent=curTicket.no;$("curNo2").textContent=curTicket.no}
+  updateMasterStatus();
   drawTpls();drawContractTemplates();drawFormTemplateLibrary();drawTabs();drawDoc();
 }
 
@@ -851,15 +879,23 @@ function drawDocConditionOptions(){
 }
 function loadDocCondition(id){
   if(id)curDoc=id;
-  const s=$("docCondSel"),t=$("docCondText");
+  const s=$("docCondSel"),t=$("docCondText"),o=docOverrides[curDoc]||{};
   if(s&&s.value!==curDoc)s.value=curDoc;
   if(t)t.value=docConditions[curDoc]||"";
+  ["contract","date","no","pkg","gw","nw"].forEach(k=>{const el=$("docO_"+k);if(el)el.value=o[k]||""});
 }
 function saveDocCondition(){
   const s=$("docCondSel"),t=$("docCondText");if(!s||!t)return;
   docConditions[s.value]=t.value.trim();
   curDoc=s.value;
   drawTabs();drawDoc();
+}
+function saveDocOverride(){
+  const s=$("docCondSel");if(s)curDoc=s.value;
+  const o=docOverrides[curDoc]||{};
+  ["contract","date","no","pkg","gw","nw"].forEach(k=>{const el=$("docO_"+k);if(el)o[k]=el.value.trim()});
+  docOverrides[curDoc]=o;
+  drawDoc();
 }
 /* 单证语言：inv/pkl 可选 ru/en/cn；cmr/bro 锁俄文(官方)；dec/ysys/co 锁中文(官方) */
 const DOC_LANGS={inv:["ru","en","cn","kk"],pkl:["ru","en","cn","kk"],cmr:["ru"],bro:["ru"],broker:["ru"],dec:["cn"],ysys:["cn"],co:["cn"],origin:["cn"],tax:["cn"],check:["cn"]};
@@ -907,10 +943,11 @@ function docConditionBlock(id){
   return note?`<div class="doc-note"><b>单独条件 / Special note:</b> ${esc(note)}</div>`:"";
 }
 function withDocCondition(html,id){return html?html.replace(/<\/div>$/,docConditionBlock(id)+"</div>"):html}
-function gv(){return{t:total(),seller:$("f_seller").value,buyer:$("f_buyer").value,contract:$("f_contract").value,terms:$("f_terms").value,
-  cur:$("f_cur").value,gw:$("f_gw").value||"—",nw:$("f_nw").value||"—",pkg:$("f_pkg").value||"—",truck:$("f_truck").value||"—",
-  port:$("f_port").value,date:$("f_date").value||today(),pay:$("f_pay").value,country:$("f_country").value,
-  si:curTicket?curTicket.sellerInfo||{}:{},bi:curTicket?curTicket.buyerInfo||{}:{},no:curTicket?curTicket.no:"—"}}
+function gv(id){const o=docOverrides[id||curDoc]||{};
+  return{t:total(),seller:$("f_seller").value,buyer:$("f_buyer").value,contract:o.contract||$("f_contract").value,terms:$("f_terms").value,
+  cur:$("f_cur").value,gw:o.gw||$("f_gw").value||"—",nw:o.nw||$("f_nw").value||"—",pkg:o.pkg||$("f_pkg").value||"—",truck:$("f_truck").value||"—",
+  port:$("f_port").value,date:o.date||$("f_date").value||today(),pay:$("f_pay").value,country:$("f_country").value,
+  si:curTicket?curTicket.sellerInfo||{}:{},bi:curTicket?curTicket.buyerInfo||{}:{},no:o.no||(curTicket?curTicket.no:"—")}}
 const PORT_RU={"霍尔果斯":"Хоргос","阿拉山口":"Алашанькоу","巴克图":"Бакту","伊尔克什坦":"Иркештам"};
 const TRANS_RU={"公路卡航（中欧卡车）":"автомобильный","铁路集装箱":"железнодорожный","公铁联运":"мультимодальный"};
 function docUnit(it,T){return docLang==="cn"?(it.unit||T.unitv):(it.unit&&it.unit!=="条"?it.unit:T.unitv)}
@@ -918,7 +955,7 @@ function itemGross(it,v,i){const g=numVal(it.gwUnit)*numVal(it.qty);return g?fmt
 function itemNet(it,v,i){const n=numVal(it.nwUnit)*numVal(it.qty);return n?fmt(n):(i===0?esc(v.nw):"—")}
 function rowsRu(){return items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${esc(it.unit&&it.unit!=="条"?it.unit:"шт.")}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
 function docHtml(id){
-  const v=gv();const portRu=portRuOf(v.port);
+  const v=gv(id);const portRu=portRuOf(v.port);
   const headRu=`<div class="meta"><span>Контракт № ${esc(v.contract)}</span><span>Дата: ${v.date}</span><span>Инвойс № ${v.no}</span></div>`;
   const tblRu=`<table><tr><th>№</th><th>Наименование товара ${cn("品名")}</th><th>Код ТН ВЭД ${cn("HS")}</th><th>Кол-во ${cn("数量")}</th><th>Ед.</th><th>Цена ${cn("单价")}</th><th>Сумма, ${v.cur}</th></tr>${rowsRu()}
    <tr><td colspan="6" style="text-align:right"><b>ИТОГО ${cn("合计")}</b></td><td class="num"><b>${fmt(v.t)}</b></td></tr></table>`;
@@ -1109,6 +1146,7 @@ function renderDocHistory(){
   const a=allDocRecords();
   if(!a.length){el.innerHTML='<div class="empty"><div class="big">📄</div>还没有生成/上传记录 · 导出合同、单证或上传原件后会自动出现在这里</div>';return}
   el.innerHTML=a.map(docRecordLine).join("");
+  renderLibraryData();
 }
 function updateDocRecord(id,fn){
   id=String(id);
@@ -1139,7 +1177,7 @@ function openArchiveFile(id){window.open(apiBase()+"/api/archive/file/"+encodeUR
 function collect(){return{type:$("f_type").value,seller:$("f_seller").value,buyer:$("f_buyer").value,country:$("f_country").value,
   contract:$("f_contract").value,date:$("f_date").value,terms:$("f_terms").value,cur:$("f_cur").value,pay:$("f_pay").value,
   trans:$("f_trans").value,port:$("f_port").value,truck:$("f_truck").value,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value,
-  items:JSON.parse(JSON.stringify(items)),tpls:Object.assign({},tplState),docConditions:Object.assign({},docConditions)}}
+  items:JSON.parse(JSON.stringify(items)),tpls:Object.assign({},tplState),docConditions:Object.assign({},docConditions),docOverrides:Object.assign({},docOverrides)}}
 function saveTicket(){
   if(!curTicket)newTicket();
   Object.assign(curTicket,{data:collect(),total:total(),updated:Date.now()});
@@ -1150,7 +1188,7 @@ function saveTicket(){
 }
 function loadTicket(id){
   const t=tickets().find(x=>x.id===id);if(!t)return;
-  curTicket=t;const d=t.data||{};items=d.items||[];tplState=d.tpls||{};docConditions=d.docConditions||{};
+  curTicket=t;const d=t.data||{};items=d.items||[];tplState=d.tpls||{};docConditions=d.docConditions||{};docOverrides=d.docOverrides||{};
   $("f_type").value=d.type||"export";$("f_seller").value=d.seller||"";$("f_buyer").value=d.buyer||"";
   $("f_country").value=d.country||"KZ";$("f_contract").value=d.contract||"";$("f_date").value=d.date||today();
   setSelectOrAdd($("f_terms"),d.terms||"CPT Алматы");$("f_cur").value=d.cur||"USD";$("f_pay").value=d.pay||"";
@@ -1160,7 +1198,7 @@ function loadTicket(id){
 }
 function copyTicket(id){
   loadTicket(id);
-  curTicket=Object.assign({},curTicket,{id:Date.now(),no:ticketNo(),status:"doc",created:Date.now()});
+  curTicket=Object.assign({},curTicket,{id:Date.now(),no:ticketNo(),status:"doc",masterConfirmed:false,masterSnapshot:null,created:Date.now()});
   $("f_date").value=today();render();toast("已复制翻单 → 新票 "+curTicket.no+"，改数量后保存");
 }
 function delTicket(id){if(!confirm("确定删除该票？"))return;setTickets(tickets().filter(t=>t.id!==id));renderArchive();computeDash()}
@@ -1238,7 +1276,7 @@ function go(p){
     const sec=$("docPreviewSection");
     if(sec)setTimeout(()=>sec.scrollIntoView({behavior:"smooth",block:"start"}),60);
   }else window.scrollTo({top:0});
-  if(target==="pd")computeDash();if(target==="p3"){renderArchive();refreshCloudArchive()}
+  if(target==="pd")computeDash();if(target==="p3"){renderArchive();refreshCloudArchive()}if(target==="p4"){goLibrary(currentLib);refreshCloudArchive()}
 }
 let toastTimer=null;
 function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",3400)}
@@ -1365,13 +1403,13 @@ function bindTemplateButtons(){
 }
 
 Object.assign(window,{
-  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,copyContractItem,copyContractParams,
+  addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,confirmMasterInfo,copyContractItem,copyContractParams,
   copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
   editItem,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveRates,saveTicket,selectContractTemplate,
-  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
+  previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveRates,saveTicket,selectContractTemplate,
+  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
 });
 
 /* ================= 初始化 ================= */
