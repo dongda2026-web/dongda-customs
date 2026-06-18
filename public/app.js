@@ -40,7 +40,7 @@ function saveCompany(){const c={ex:{},im:{}};
 /* ================= 业务配置中心 ================= */
 const DEF_CFG={prefix:"DD",seal:"",pin:"",
   ports:[["霍尔果斯","Хоргос"],["阿拉山口","Алашанькоу"],["巴克图","Бакту"],["伊尔克什坦","Иркештам"]],
-  terms:["CPT Алматы","CPT Астана","DAP Ташкент","DAP Самарканд","FCA 霍尔果斯","FCA 阿拉山口","EXW 工厂","CIF"],
+  terms:["无","CPT Алматы","CPT Астана","DAP Ташкент","DAP Самарканд","FCA 霍尔果斯","FCA 阿拉山口","EXW 工厂","CIF"],
   hs:["6305.33","6305.32","6305.39","3923.21","3923.29"],
   products:[
     {name:"PP编织袋 50kg 白色 55×95cm 复膜",nameRu:"Полипропиленовый мешок 50 кг, белый, 55×95 см, ламинированный",hs:"6305.33",unit:"条",price:0.22,spec:"50kg 白色 55×95cm 复膜",gwUnit:"",nwUnit:"",pkg:"编织袋包装",elements:"材质PP；包装用；无品牌"},
@@ -76,6 +76,7 @@ function parseCustomerLine(l){return normalizeCustomer(l.split("|").map(s=>s.tri
 function loadCfg(){try{const raw=JSON.parse(localStorage.getItem("dd_cfg")||"null"),d=cloneDefCfg();
   if(!raw||!raw.ports)return d;
   const c=Object.assign(d,raw);
+  if(!c.terms.includes("无"))c.terms=["无"].concat(c.terms);
   c.products=(raw.products&&raw.products.length?raw.products:d.products).map(normalizeProduct).filter(p=>p.name);
   c.clients=(raw.clients&&raw.clients.length?raw.clients:d.clients).map(normalizeCustomer).filter(p=>p.name);
   return c;
@@ -105,8 +106,8 @@ function applyCfg(){const c=loadCfg();
   port.innerHTML=c.ports.map(p=>`<option>${p[0]}</option>`).join("");
   if([...port.options].some(o=>o.value===pv))port.value=pv;
   // 条款下拉
-  const terms=$("f_terms"),tv=terms.value;
-  terms.innerHTML=c.terms.map(t=>`<option>${t}</option>`).join("");
+  const terms=$("f_terms"),tv=terms.value==="无"?"":terms.value;
+  terms.innerHTML=c.terms.map(t=>`<option value="${t==="无"?"":esc(t)}">${esc(t)}</option>`).join("");
   if(tv&&[...terms.options].some(o=>o.value===tv))terms.value=tv;
   // 客户联想
   const dl=$("clientList");if(dl)dl.innerHTML=c.clients.map(p=>`<option value="${esc(p.name)}">`).join("");}
@@ -139,6 +140,12 @@ function applyCustomerToEntry(side,idx){
     if(["KZ","UZ"].includes(c.country))$("f_country").value=c.country;
   }
   render();toast("已载入"+(side==="seller"?"卖方":"买方")+"资料："+c.name);
+}
+function editPartyName(side,value){
+  if(!curTicket)newTicket($("f_type").value||"export");
+  const key=side==="seller"?"sellerInfo":"buyerInfo";
+  curTicket[key]=Object.assign({},curTicket[key]||{},side==="seller"?{name:value,lat:value}:{name:value});
+  render();
 }
 function applyCustomerToContract(side,idx){
   const c=customerByRoleIndex(side==="seller"?"seller":"buyer",idx);if(!c)return;
@@ -177,6 +184,20 @@ function saveCurrentProducts(){
   });
   cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
   fillCfgForm();drawItems();renderLibraryData();toast("已存入产品库："+rows.length+" 项");
+}
+function saveLibraryCustomers(){
+  const el=$("libCustomersEdit");if(!el)return;
+  const rows=el.value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseCustomerLine).filter(c=>c.name);
+  if(!rows.length){toast("请至少填写一条客户资料");return}
+  const cfg=loadCfg();cfg.clients=rows;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("客户资料库已保存："+rows.length+" 条");
+}
+function saveLibraryProducts(){
+  const el=$("libProductsEdit");if(!el)return;
+  const rows=el.value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
+  if(!rows.length){toast("请至少填写一条产品资料");return}
+  const cfg=loadCfg();cfg.products=rows;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();drawItems();renderLibraryData();render();toast("产品资料库已保存："+rows.length+" 条");
 }
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
@@ -226,9 +247,19 @@ function newTicket(type){
   $("f_truck").value="";$("f_gw").value="";$("f_nw").value="";$("f_pkg").value="";
   applyTypeNames();drawItems();render();
 }
+function companySellerInfo(c){return {name:c.ex.name,lat:c.ex.lat||c.ex.name,addr:c.ex.addr,bank:c.ex.bank,swift:c.ex.swift,account:c.ex.acct,tax:c.ex.tax}}
+function companyBuyerInfo(c){return {name:c.im.name,addr:c.im.addr,tel:c.im.tel,bin:c.im.bin,tax:c.im.bin,bank:c.im.bank,iban:c.im.iban,account:c.im.iban,bik:c.im.bik}}
 function applyTypeNames(){const c=loadCompany(),t=$("f_type").value;
-  if(t==="export"){$("f_seller").value=c.ex.name;if(!$("f_buyer").value)$("f_buyer").value="";}
-  else{$("f_buyer").value=c.im.name;if(!$("f_seller").value)$("f_seller").value="";}}
+  if(!curTicket)return;
+  if(t==="export"){
+    $("f_seller").value=c.ex.name;
+    curTicket.sellerInfo=companySellerInfo(c);
+    if(!$("f_buyer").value)$("f_buyer").value="";
+  }else{
+    $("f_buyer").value=c.im.name;
+    curTicket.buyerInfo=companyBuyerInfo(c);
+    if(!$("f_seller").value)$("f_seller").value="";
+  }}
 function onTypeChange(){if(curTicket)curTicket.type=$("f_type").value;applyTypeNames();render()}
 function confirmMasterInfo(){
   if(!curTicket)newTicket($("f_type").value||"export");
@@ -327,11 +358,20 @@ function tplList(){
     .concat(TPLS[$("f_country").value]||[]);
 }
 function drawTpls(){
-  const g=$("tplGrid");if(!g)return;
+  const sel=$("tplSelect"),chips=$("tplSelectedList"),legacy=$("tplGrid");if(!sel&&!legacy)return;
   $("tplVerify").innerHTML="🛡 模板库版本核验："+today()+" 已与官方发布比对（海关总署公告 / ЕАЭС Решение №257 / Lex.uz）· 全部为现行有效格式";
   const list=tplList();
   list.forEach(t=>{if(!(t.id in tplState))tplState[t.id]=t.must||t.on!==false});
-  g.innerHTML=list.map(t=>{
+  if(sel){
+    const old=sel.value||curDoc;
+    sel.innerHTML=list.map(t=>`<option value="${t.id}">${esc(t.t)} · ${esc(t.d)}</option>`).join("");
+    sel.value=list.some(t=>t.id===old)?old:list[0].id;
+  }
+  if(chips)chips.innerHTML=list.map(t=>{
+    const on=t.must||tplState[t.id];
+    return `<button type="button" class="tpl-chip ${on?"on":""} ${t.must?"must":""}" onclick="tplToggle('${t.id}',${!!t.must})"><span class="dot"></span>${esc(t.t)}</button>`;
+  }).join("");
+  if(legacy)legacy.innerHTML=list.map(t=>{
     const on=t.must||tplState[t.id];
     return `<div class="tpl ${on?"on":""} ${t.must?"must":""}" onclick="tplToggle('${t.id}',${!!t.must})">
       <div class="ck">${on?"✓":""}</div>
@@ -341,6 +381,8 @@ function drawTpls(){
   $("tplCnt").textContent="将生成 "+selectedTpls().length+" 种单证";
 }
 function tplToggle(id,must){if(must)return;tplState[id]=!tplState[id];drawTpls();drawTabs()}
+function setTplFromSelect(id){if(!id)return;curDoc=id;drawTabs();drawDoc();loadDocCondition(id)}
+function toggleCurrentTpl(){const id=$("tplSelect")&&$("tplSelect").value;if(!id)return;const t=tplList().find(x=>x.id===id);tplToggle(id,!!(t&&t.must))}
 function selectedTpls(){return tplList().filter(t=>t.must||tplState[t.id])}
 
 /* ================= 合同模板参数 ================= */
@@ -544,8 +586,8 @@ function applyContractTemplate(){
   $("f_country").value=(d.country||"KZ").toUpperCase()==="UZ"?"UZ":"KZ";
   $("f_contract").value=d.contract||"";
   $("f_date").value=d.date||today();
-  setSelectOrAdd($("f_terms"),d.terms||"CPT Алматы");
-  $("f_cur").value=d.cur||"USD";
+  setSelectOrAdd($("f_terms"),d.terms!==undefined?d.terms:"CPT Алматы");
+  $("f_cur").value=d.cur!==undefined?d.cur:"USD";
   $("f_pay").value=d.pay||"";
   $("f_trans").value=d.trans||"公路卡航（中欧卡车）";
   setSelectOrAdd($("f_port"),d.port||"霍尔果斯");
@@ -555,6 +597,8 @@ function applyContractTemplate(){
   ensureContractLines();
   items=contractLines.map(x=>({name:x.name||"",nameRu:x.nameRu||"",spec:x.spec||"",hs:x.hs||"6305.33",unit:x.unit||"条",qty:+x.qty||0,price:+x.price||0,pkg:x.pkg||"",elements:x.elements||""}));
   curTicket.type=t.type;
+  editPartyName("seller",$("f_seller").value);
+  editPartyName("buyer",$("f_buyer").value);
   drawItems();render();go("p1");toast("已套用"+t.name+"参数，可继续核对保存");
 }
 function copyContractParams(){
@@ -596,6 +640,8 @@ function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
   if(cl)cl.innerHTML=(cfg.clients||[]).map(c=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.country||"")} · ${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · 银行: ${esc(c.bank||"—")}</span><span>账号/IBAN: ${esc(c.account||"—")} · SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")}</span></div>`).join("")||'<div class="empty">暂无客户资料</div>';
   if(pl)pl.innerHTML=(cfg.products||[]).map(p=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span></div>`).join("")||'<div class="empty">暂无产品资料</div>';
+  const ce=$("libCustomersEdit");if(ce&&document.activeElement!==ce)ce.value=(cfg.clients||[]).map(customerLine).join("\n");
+  const pe=$("libProductsEdit");if(pe&&document.activeElement!==pe)pe.value=(cfg.products||[]).map(productLine).join("\n");
   if(hl){const a=allDocRecords();hl.innerHTML=a.length?a.map(docRecordLine).join(""):'<div class="empty">暂无历史文件</div>'}
 }
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
@@ -735,7 +781,7 @@ function exportContractTemplate(){
 function render(){
   const t=total(),R=loadRates();
   const kz=taxTotals("KZ"),uz=taxTotals("UZ"),kzD=kz.duty,kzV=kz.vat,uzD=uz.duty,uzV=uz.vat;
-  const cur=$("f_cur").value;
+  const cur=$("f_cur").value,curLabel=cur||"—";
   $("kz_head").textContent="哈萨克斯坦（关税"+[...kz.rates].join("/")+" · НДС "+R.kz.vat+"%）";
   $("uz_head").textContent="乌兹别克斯坦（关税需10位码核验 · НДС "+R.uz.vat+"%）";
   $("kz_duty_l").textContent="进口关税 "+[...kz.rates].join("/");$("kz_vat_l").textContent="增值税 НДС "+R.kz.vat+"%";
@@ -743,8 +789,8 @@ function render(){
   $("kz_basis").innerHTML="依据："+R.kz.dutyBasis+"；"+R.kz.vatBasis;
   $("uz_basis").innerHTML="依据："+R.uz.dutyBasis+"；"+R.uz.vatBasis;
   $("rateStamp").textContent=(rateStale()?"⚠ 税率核验已超60天":"🛡 税率核验 "+R.checked);
-  $("kz_cif").textContent=cur+" "+fmt(t);$("kz_duty").textContent=cur+" "+fmt(kzD);$("kz_vat").textContent=cur+" "+fmt(kzV);$("kz_total").textContent=cur+" "+fmt(kzD+kzV);
-  $("uz_cif").textContent=cur+" "+fmt(t);$("uz_duty").textContent=cur+" "+fmt(uzD);$("uz_vat").textContent=cur+" "+fmt(uzV);$("uz_total").textContent=cur+" "+fmt(uzD+uzV);
+  $("kz_cif").textContent=curLabel+" "+fmt(t);$("kz_duty").textContent=curLabel+" "+fmt(kzD);$("kz_vat").textContent=curLabel+" "+fmt(kzV);$("kz_total").textContent=curLabel+" "+fmt(kzD+kzV);
+  $("uz_cif").textContent=curLabel+" "+fmt(t);$("uz_duty").textContent=curLabel+" "+fmt(uzD);$("uz_vat").textContent=curLabel+" "+fmt(uzV);$("uz_total").textContent=curLabel+" "+fmt(uzD+uzV);
   if(curTicket){$("curNo").textContent=curTicket.no;$("curNo2").textContent=curTicket.no}
   updateMasterStatus();
   drawTpls();drawContractTemplates();drawFormTemplateLibrary();drawTabs();drawDoc();
@@ -840,7 +886,7 @@ function applyExtract(){
   $("f_seller").value=res.seller.name||"";$("f_buyer").value=res.buyer.name||"";
   if(res.destination_country==="UZ")$("f_country").value="UZ";else $("f_country").value="KZ";
   $("f_contract").value=res.contract_no||"";
-  $("f_cur").value=["USD","CNY","RUB","EUR"].includes(res.currency)?res.currency:"USD";
+  $("f_cur").value=["USD","CNY","RUB","EUR","KZT"].includes(res.currency)?res.currency:"USD";
   if(res.terms)setSelectOrAdd($("f_terms"),res.terms);
   $("f_pay").value=res.payment||"";
   items=(res.goods||[]).map(g=>{
@@ -853,7 +899,8 @@ function applyExtract(){
 }
 function normHs(h){const d=String(h||"").replace(/\D/g,"");return d.length>=6?d.slice(0,4)+"."+d.slice(4,6):(h||"6305.33")}
 function setSelectOrAdd(sel,val){
-  if(!sel||!val)return;
+  if(!sel)return;
+  if(val===""||val===null||val===undefined){sel.value="";return}
   if(![...sel.options].some(o=>o.value===val||o.text===val)){const o=document.createElement("option");o.text=val;sel.add(o)}
   sel.value=val;
 }
@@ -943,11 +990,19 @@ function docConditionBlock(id){
   return note?`<div class="doc-note"><b>单独条件 / Special note:</b> ${esc(note)}</div>`:"";
 }
 function withDocCondition(html,id){return html?html.replace(/<\/div>$/,docConditionBlock(id)+"</div>"):html}
-function gv(id){const o=docOverrides[id||curDoc]||{};
-  return{t:total(),seller:$("f_seller").value,buyer:$("f_buyer").value,contract:o.contract||$("f_contract").value,terms:$("f_terms").value,
+function partyViewInfo(side,name){
+  const raw=curTicket?(side==="seller"?curTicket.sellerInfo:curTicket.buyerInfo)||{}:{};
+  const current=String(name||"").trim();
+  const rawNames=[raw.name,raw.lat].filter(Boolean).map(x=>String(x).trim());
+  const stale=current&&rawNames.length&&!rawNames.includes(current);
+  if(stale)return Object.assign({},raw,side==="seller"?{name:current,lat:current,bank:"",swift:"",account:"",tax:""}:{name:current,addr:"",bank:"",iban:"",account:"",bik:"",bin:"",tax:""});
+  return Object.assign({},raw,{name:raw.name||current,lat:raw.lat||current});
+}
+function gv(id){const o=docOverrides[id||curDoc]||{},seller=$("f_seller").value,buyer=$("f_buyer").value;
+  return{t:total(),seller,buyer,contract:o.contract||$("f_contract").value,terms:$("f_terms").value||"—",
   cur:$("f_cur").value,gw:o.gw||$("f_gw").value||"—",nw:o.nw||$("f_nw").value||"—",pkg:o.pkg||$("f_pkg").value||"—",truck:$("f_truck").value||"—",
   port:$("f_port").value,date:o.date||$("f_date").value||today(),pay:$("f_pay").value,country:$("f_country").value,
-  si:curTicket?curTicket.sellerInfo||{}:{},bi:curTicket?curTicket.buyerInfo||{}:{},no:o.no||(curTicket?curTicket.no:"—")}}
+  si:partyViewInfo("seller",seller),bi:partyViewInfo("buyer",buyer),no:o.no||(curTicket?curTicket.no:"—")}}
 const PORT_RU={"霍尔果斯":"Хоргос","阿拉山口":"Алашанькоу","巴克图":"Бакту","伊尔克什坦":"Иркештам"};
 const TRANS_RU={"公路卡航（中欧卡车）":"автомобильный","铁路集装箱":"железнодорожный","公铁联运":"мультимодальный"};
 function docUnit(it,T){return docLang==="cn"?(it.unit||T.unitv):(it.unit&&it.unit!=="条"?it.unit:T.unitv)}
@@ -1191,7 +1246,7 @@ function loadTicket(id){
   curTicket=t;const d=t.data||{};items=d.items||[];tplState=d.tpls||{};docConditions=d.docConditions||{};docOverrides=d.docOverrides||{};
   $("f_type").value=d.type||"export";$("f_seller").value=d.seller||"";$("f_buyer").value=d.buyer||"";
   $("f_country").value=d.country||"KZ";$("f_contract").value=d.contract||"";$("f_date").value=d.date||today();
-  setSelectOrAdd($("f_terms"),d.terms||"CPT Алматы");$("f_cur").value=d.cur||"USD";$("f_pay").value=d.pay||"";
+  setSelectOrAdd($("f_terms"),d.terms!==undefined?d.terms:"CPT Алматы");$("f_cur").value=d.cur!==undefined?d.cur:"USD";$("f_pay").value=d.pay||"";
   $("f_trans").value=d.trans||"公路卡航（中欧卡车）";$("f_port").value=d.port||"霍尔果斯";$("f_truck").value=d.truck||"";
   $("f_gw").value=d.gw||"";$("f_nw").value=d.nw||"";$("f_pkg").value=d.pkg||"";
   drawItems();render();go("p1");loadDocCondition(curDoc);toast("已载入 "+t.no);
@@ -1405,11 +1460,11 @@ function bindTemplateButtons(){
 Object.assign(window,{
   addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,confirmMasterInfo,copyContractItem,copyContractParams,
   copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
-  editItem,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
+  editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveRates,saveTicket,selectContractTemplate,
-  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
+  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,saveLibraryProducts,saveRates,saveTicket,selectContractTemplate,
+  selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,setTplFromSelect,startRecognize,syncContractItemsFromEntry,testApi,toggleCurrentTpl,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
 });
 
 /* ================= 初始化 ================= */

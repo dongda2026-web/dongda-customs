@@ -153,6 +153,12 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 .tpl .ver{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--ok);background:#E2F3EA;border-radius:8px;padding:2px 8px;margin-top:6px;margin-right:4px}
 .tpl .ver.req{color:var(--orange);background:#FBEBDD}
 .tpl-cnt{font-size:13px;font-weight:800;color:var(--green)}
+.tpl-compact{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.tpl-chip{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);border-radius:999px;background:#FBFDFC;padding:7px 10px;font-size:12px;font-weight:800;color:var(--ink);cursor:pointer}
+.tpl-chip.on{border-color:var(--teal);background:var(--teal-soft);color:var(--green)}
+.tpl-chip.must:after{content:"必选";font-size:10px;color:var(--orange);background:#FBEBDD;border-radius:999px;padding:1px 6px}
+.tpl-chip .dot{width:8px;height:8px;border-radius:50%;background:#BFD4CD}
+.tpl-chip.on .dot{background:var(--teal)}
 .contract-panel{display:grid;grid-template-columns:1fr;gap:12px}
 .contract-menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:9px}
 .contract-choice{border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;background:#FBFDFC;cursor:pointer;transition:.15s;min-height:74px;display:flex;flex-direction:column;justify-content:center}
@@ -463,8 +469,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         </select></div>
       <div class="field"><label>卖方资料库</label><select id="sellerCustomerSelect" onchange="applyCustomerToEntry('seller',this.value)"><option value="">选择客户资料</option></select></div>
       <div class="field"><label>买方资料库</label><select id="buyerCustomerSelect" onchange="applyCustomerToEntry('buyer',this.value)"><option value="">选择客户资料</option></select></div>
-      <div class="field"><label>卖方 Продавец</label><input id="f_seller" placeholder="公司名称" oninput="render()"></div>
-      <div class="field"><label>买方 Покупатель</label><input id="f_buyer" list="clientList" placeholder="如 TOO «KazPack Trade»" oninput="render()"><datalist id="clientList"></datalist></div>
+      <div class="field"><label>卖方 Продавец</label><input id="f_seller" placeholder="公司名称" oninput="editPartyName('seller',this.value)"></div>
+      <div class="field"><label>买方 Покупатель</label><input id="f_buyer" list="clientList" placeholder="如 TOO «KazPack Trade»" oninput="editPartyName('buyer',this.value)"><datalist id="clientList"></datalist></div>
       <div class="field"><label>资料存档</label><button class="mini" type="button" onclick="saveCurrentCustomer('seller')">存当前卖方</button></div>
       <div class="field"><label>资料存档</label><button class="mini" type="button" onclick="saveCurrentCustomer('buyer')">存当前买方</button></div>
       <div class="field"><label>目的国</label>
@@ -476,19 +482,23 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
       <div class="field"><label>单证日期</label><input id="f_date" type="date" oninput="render()"></div>
       <div class="field"><label>贸易条款 Incoterms</label>
         <select id="f_terms" onchange="render()">
-          <option>CPT Алматы</option><option>CPT Астана</option><option>DAP Ташкент</option><option>DAP Самарканд</option><option>FCA 霍尔果斯</option><option>FCA 阿拉山口</option><option>EXW 工厂</option><option>CIF</option>
+          <option value="">无</option><option>CPT Алматы</option><option>CPT Астана</option><option>DAP Ташкент</option><option>DAP Самарканд</option><option>FCA 霍尔果斯</option><option>FCA 阿拉山口</option><option>EXW 工厂</option><option>CIF</option>
         </select></div>
       <div class="field"><label>币种</label>
-        <select id="f_cur" onchange="render()"><option>USD</option><option>CNY</option><option>RUB</option><option>EUR</option></select></div>
+        <select id="f_cur" onchange="render()"><option value="">无</option><option>USD</option><option>CNY</option><option>RUB</option><option>EUR</option><option value="KZT">KZT 坚戈</option></select></div>
       <div class="field"><label>付款方式</label><input id="f_pay" value="T/T 30%预付 70%发货前" oninput="render()"></div>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-h"><span class="tag"></span><h3>单证模板选择</h3><span class="ru">按目的国自动匹配 · 可勾选增减</span><span style="flex:1"></span><span class="tpl-cnt" id="tplCnt"></span></div>
+    <div class="card-h"><span class="tag"></span><h3>单证模板选择</h3><span class="ru">下拉选择当前文件 · 可加入/移出生成清单</span><span style="flex:1"></span><span class="tpl-cnt" id="tplCnt"></span></div>
     <div class="card-b">
       <div class="tpl-verify" id="tplVerify"></div>
-      <div class="tpls" id="tplGrid"></div>
+      <div class="grid g3">
+        <div class="field" style="grid-column:span 2"><label>当前模板 / 单证文件</label><select id="tplSelect" onchange="setTplFromSelect(this.value)"></select></div>
+        <div class="field"><label>清单控制</label><button class="mini" type="button" onclick="toggleCurrentTpl()">加入 / 移出当前文件</button></div>
+      </div>
+      <div class="tpl-compact" id="tplSelectedList"></div>
     </div>
   </div>
 
@@ -697,11 +707,11 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 
   <div class="lib-section" id="lib_customers">
-    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 可从核对录入页存档</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div></div></div>
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 可在本页维护并在录入页调用</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div><div class="field" style="margin-top:14px"><label>客户资料编辑（每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人）</label><textarea id="libCustomersEdit" rows="6" style="font-family:var(--mono);font-size:12.5px"></textarea></div><div class="bar" style="margin-top:10px"><button class="btn btn-ink" onclick="saveLibraryCustomers()">保存客户资料</button><button class="btn btn-ghost" onclick="renderLibraryData()">重新载入</button></div></div></div>
   </div>
 
   <div class="lib-section" id="lib_products">
-    <div class="card"><div class="card-h"><span class="tag"></span><h3>产品资料</h3><span class="ru">品名 / HS / 单价 / 包装 / 申报要素</span></div><div class="card-b"><div class="lib-grid" id="libProductList"></div></div></div>
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>产品资料</h3><span class="ru">品名 / HS / 单价 / 包装 / 申报要素 · 录入页可直接选择带入</span></div><div class="card-b"><div class="lib-grid" id="libProductList"></div><div class="field" style="margin-top:14px"><label>产品资料编辑（每行：中文品名|俄文品名|HS|单位|默认单价|规格/参数|单件毛重kg|单件净重kg|默认包装|申报要素）</label><textarea id="libProductsEdit" rows="6" style="font-family:var(--mono);font-size:12.5px"></textarea></div><div class="bar" style="margin-top:10px"><button class="btn btn-ink" onclick="saveLibraryProducts()">保存产品资料</button><button class="btn btn-ghost" onclick="renderLibraryData()">重新载入</button></div></div></div>
   </div>
 
   <div class="lib-section" id="lib_history">
@@ -814,6 +824,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-data-library2"></script>
+<script src="app.js?v=20260618-pm-logic1"></script>
 </body>
 </html>
