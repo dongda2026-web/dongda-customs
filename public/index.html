@@ -91,10 +91,11 @@ body{font-family:var(--sans);background-color:var(--bg);background-image:linear-
 .qa-btn:hover{border-color:var(--teal);transform:translateY(-1px);box-shadow:0 6px 14px rgba(13,82,71,.1)}
 
 .grid{display:grid;gap:13px}
+.grid>.field{min-width:0}
 .g3{grid-template-columns:repeat(3,1fr)}
 .g2{grid-template-columns:repeat(2,1fr)}
-.field label{display:block;font-size:12px;font-weight:700;color:var(--steel);margin-bottom:6px;letter-spacing:.3px}
-.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;font-family:var(--sans);background:#FBFDFC;color:var(--ink)}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--steel);margin-bottom:6px;letter-spacing:.3px;line-height:1.45;white-space:normal}
+.field input,.field select,.field textarea{width:100%;max-width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-weight:600;font-family:var(--sans);background:#FBFDFC;color:var(--ink)}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px rgba(20,125,106,.14)}
 
 table.items{width:100%;border-collapse:collapse;font-size:13px}
@@ -307,6 +308,10 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .kpis{grid-template-columns:1fr 1fr;gap:10px}
   .kpi .v{font-size:22px}
   .dash2,.g3,.g2,.tax,.tpls,.contract-panel,.contract-fields,.contract-tools,.lang-tools,.seal-tools,.bilingual-doc{grid-template-columns:1fr}
+  .grid>.field[style*="grid-column"]{grid-column:span 1!important}
+  .field label{font-size:12px;letter-spacing:0}
+  .field textarea{min-height:118px;line-height:1.45;resize:vertical}
+  .card{overflow:hidden}
   .contract-fields .wide{grid-column:span 1}
   .footbar{left:0}
   .doc{padding:22px 16px;min-height:auto}
@@ -325,6 +330,12 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .doc table th,.doc table td{padding:4px 5px}
   .chip{padding:8px 12px;font-size:12px}
   .kpi{padding:12px}
+}
+@media (max-width:760px){
+  .g3,.g2,.contract-tools{grid-template-columns:1fr}
+  .grid>.field[style*="grid-column"]{grid-column:span 1!important}
+  .field label{letter-spacing:0}
+  .field textarea{line-height:1.45}
 }
 </style>
 </head>
@@ -445,6 +456,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
       <div class="field"><label>买方资料库</label><select id="buyerCustomerSelect" onchange="applyCustomerToEntry('buyer',this.value)"><option value="">选择客户资料</option></select></div>
       <div class="field"><label>卖方 Продавец</label><input id="f_seller" placeholder="公司名称" oninput="render()"></div>
       <div class="field"><label>买方 Покупатель</label><input id="f_buyer" list="clientList" placeholder="如 TOO «KazPack Trade»" oninput="render()"><datalist id="clientList"></datalist></div>
+      <div class="field"><label>资料存档</label><button class="mini" type="button" onclick="saveCurrentCustomer('seller')">存当前卖方</button></div>
+      <div class="field"><label>资料存档</label><button class="mini" type="button" onclick="saveCurrentCustomer('buyer')">存当前买方</button></div>
       <div class="field"><label>目的国</label>
         <select id="f_country" onchange="render()">
           <option value="KZ">哈萨克斯坦 Казахстан</option>
@@ -477,7 +490,10 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <thead><tr><th>产品库</th><th>品名 / 规格</th><th>HS编码</th><th>数量</th><th>单价</th><th class="num">金额</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
-      <button class="add-row" onclick="addRow()">＋ 添加一行</button>
+      <div class="bar" style="margin-top:11px">
+        <button class="add-row" style="margin:0;flex:1" onclick="addRow()">＋ 添加一行</button>
+        <button class="add-row" style="margin:0;flex:1" onclick="saveCurrentProducts()">存入产品库</button>
+      </div>
     </div>
   </div>
 
@@ -489,8 +505,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
       <div class="field"><label>出境口岸</label>
         <select id="f_port"><option>霍尔果斯</option><option>阿拉山口</option><option>巴克图</option><option>伊尔克什坦</option></select></div>
       <div class="field"><label>车牌 / 箱号</label><input id="f_truck" placeholder="装车后填写" oninput="render()"></div>
-      <div class="field"><label>毛重 (kg)</label><input id="f_gw" inputmode="decimal" placeholder="如 21500" oninput="render()"></div>
-      <div class="field"><label>净重 (kg)</label><input id="f_nw" inputmode="decimal" placeholder="如 21000" oninput="render()"></div>
+      <div class="field"><label>毛重 (kg)</label><input id="f_gw" inputmode="decimal" placeholder="如 21500" oninput="this.dataset.auto='0';render()"></div>
+      <div class="field"><label>净重 (kg)</label><input id="f_nw" inputmode="decimal" placeholder="如 21000" oninput="this.dataset.auto='0';render()"></div>
       <div class="field"><label>件数（打/托）</label><input id="f_pkg" placeholder="如 200 打 / 60 托" oninput="render()"></div>
     </div>
   </div>
@@ -729,7 +745,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <div class="field"><label>贸易条款库（每行一个）</label><textarea id="c_terms" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
         <div class="field"><label>HS编码库（每行一个）</label><textarea id="c_hs" rows="5" style="font-family:var(--mono);font-size:12.5px"></textarea></div>
         <div class="field"><label>客户基础信息库（每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人）</label><textarea id="c_clients" rows="6" style="font-family:var(--mono);font-size:12.5px" placeholder="TOO «KazPack Trade»|KZ|buyer|г. Алматы|BIN...|АО Банк|KZ...||BIK...|+7...|联系人&#10;Aksu Xinghua Import and Export Trade Co., Ltd|CN|seller|中国新疆|916...|中国银行|107...|BKCHCNBJ760|||"></textarea></div>
-        <div class="field" style="grid-column:span 2"><label>产品库（每行：中文品名|俄文品名|HS|单位|默认单价|规格/参数）</label><textarea id="c_products" rows="6" style="font-family:var(--mono);font-size:12.5px" placeholder="PP编织袋 50kg 白色 55×95cm 复膜|Полипропиленовый мешок 50 кг|6305.33|条|0.22|50kg 白色 55×95cm"></textarea></div>
+        <div class="field" style="grid-column:span 2"><label>产品库（每行：中文品名|俄文品名|HS|单位|默认单价|规格/参数|单件毛重kg|单件净重kg|默认包装|申报要素）</label><textarea id="c_products" rows="6" style="font-family:var(--mono);font-size:12.5px" placeholder="PP编织袋 50kg 白色 55×95cm 复膜|Полипропиленовый мешок 50 кг|6305.33|条|0.22|50kg 白色 55×95cm|||编织袋包装|材质PP；包装用"></textarea></div>
       </div>
       <div class="bar" style="margin-top:13px">
         <button class="btn btn-ink" onclick="saveCfg()">保存业务配置</button>
@@ -760,6 +776,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-customer-library"></script>
+<script src="app.js?v=20260618-library-workflow"></script>
 </body>
 </html>

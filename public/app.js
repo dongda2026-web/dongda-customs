@@ -43,9 +43,9 @@ const DEF_CFG={prefix:"DD",seal:"",pin:"",
   terms:["CPT Алматы","CPT Астана","DAP Ташкент","DAP Самарканд","FCA 霍尔果斯","FCA 阿拉山口","EXW 工厂","CIF"],
   hs:["6305.33","6305.32","6305.39","3923.21","3923.29"],
   products:[
-    {name:"PP编织袋 50kg 白色 55×95cm 复膜",nameRu:"Полипропиленовый мешок 50 кг, белый, 55×95 см, ламинированный",hs:"6305.33",unit:"条",price:0.22,spec:"50kg 白色 55×95cm 复膜"},
-    {name:"PP集装袋(吨袋) 90×90×110cm 四吊带",nameRu:"Биг-бэг полипропиленовый 90×90×110 см, 4 стропы",hs:"6305.32",unit:"条",price:3.2,spec:"90×90×110cm 四吊带"},
-    {name:"PP集装袋(吨袋) 80×80×140cm 四吊带",nameRu:"Биг-бэг полипропиленовый 80×80×140 см, 4 стропы",hs:"6305.32",unit:"条",price:33,spec:"80×80×140cm 四吊带 内膜"}
+    {name:"PP编织袋 50kg 白色 55×95cm 复膜",nameRu:"Полипропиленовый мешок 50 кг, белый, 55×95 см, ламинированный",hs:"6305.33",unit:"条",price:0.22,spec:"50kg 白色 55×95cm 复膜",gwUnit:"",nwUnit:"",pkg:"编织袋包装",elements:"材质PP；包装用；无品牌"},
+    {name:"PP集装袋(吨袋) 90×90×110cm 四吊带",nameRu:"Биг-бэг полипропиленовый 90×90×110 см, 4 стропы",hs:"6305.32",unit:"条",price:3.2,spec:"90×90×110cm 四吊带",gwUnit:"",nwUnit:"",pkg:"托盘/打包带固定",elements:"材质PP；包装用；四吊带；无品牌"},
+    {name:"PP集装袋(吨袋) 80×80×140cm 四吊带",nameRu:"Биг-бэг полипропиленовый 80×80×140 см, 4 стропы",hs:"6305.32",unit:"条",price:33,spec:"80×80×140cm 四吊带 内膜",gwUnit:"",nwUnit:"",pkg:"托盘/打包带固定",elements:"材质PP；包装用；四吊带；内膜；无品牌"}
   ],
   clients:[
     {name:"TOO «KazPack Trade»",country:"KZ",role:"buyer",addr:"Казахстан",tax:"",bank:"",account:"",swift:"",bik:"",tel:"",contact:""},
@@ -54,10 +54,10 @@ const DEF_CFG={prefix:"DD",seal:"",pin:"",
   ]};
 function cloneDefCfg(){return JSON.parse(JSON.stringify(DEF_CFG))}
 function normalizeProduct(p){
-  if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||""};
-  return {name:p&&p.name||"",nameRu:p&&p.nameRu||"",hs:p&&p.hs||"6305.33",unit:p&&p.unit||"条",price:numVal(p&&p.price),spec:p&&p.spec||""};
+  if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||"",gwUnit:p[6]||"",nwUnit:p[7]||"",pkg:p[8]||"",elements:p[9]||""};
+  return {name:p&&p.name||"",nameRu:p&&p.nameRu||"",hs:p&&p.hs||"6305.33",unit:p&&p.unit||"条",price:numVal(p&&p.price),spec:p&&p.spec||"",gwUnit:p&&p.gwUnit||"",nwUnit:p&&p.nwUnit||"",pkg:p&&p.pkg||"",elements:p&&p.elements||""};
 }
-function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||""].join("|")}
+function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||"",p.gwUnit||"",p.nwUnit||"",p.pkg||"",p.elements||""].join("|")}
 function parseProductLine(l){return normalizeProduct(l.split("|").map(s=>s.trim()))}
 function normRole(v){
   const s=String(v||"buyer").trim().toLowerCase();
@@ -148,6 +148,36 @@ function applyCustomerToContract(side,idx){
   previewContractTemplate(false);
   toast("已载入合同"+(side==="seller"?"卖方":"买方")+"资料："+c.name);
 }
+function upsertConfigList(key,item,match){
+  const cfg=loadCfg(),list=(cfg[key]||[]).slice(),i=list.findIndex(x=>match(x,item));
+  if(i>=0)list[i]=Object.assign({},list[i],item);else list.unshift(item);
+  cfg[key]=list;
+  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();applyCfg();drawCustomerSelects();drawItems();render();
+}
+function saveCurrentCustomer(side){
+  if(!curTicket)newTicket($("f_type").value||"export");
+  const isSeller=side==="seller",info=isSeller?(curTicket.sellerInfo||{}):(curTicket.buyerInfo||{});
+  const name=(isSeller?$("f_seller").value:$("f_buyer").value).trim();
+  if(!name){toast("请先填写"+(isSeller?"卖方":"买方")+"名称");return}
+  const c=normalizeCustomer({name,country:isSeller?"CN":$("f_country").value,role:isSeller?"seller":"buyer",addr:info.addr||"",tax:info.tax||info.bin||"",bank:info.bank||"",account:info.account||info.iban||"",swift:info.swift||"",bik:info.bik||"",tel:info.tel||"",contact:info.contact||""});
+  upsertConfigList("clients",c,(a,b)=>a.name===b.name&&a.role===b.role);
+  toast("已存入客户基础信息库："+name);
+}
+function productFromItem(it){
+  return normalizeProduct({name:it.name||"",nameRu:it.nameRu||"",hs:it.hs||"6305.33",unit:it.unit||"条",price:it.price||0,spec:it.spec||"",gwUnit:it.gwUnit||"",nwUnit:it.nwUnit||"",pkg:it.pkg||$("f_pkg").value||"",elements:it.elements||""});
+}
+function saveCurrentProducts(){
+  const rows=(items||[]).map(productFromItem).filter(p=>p.name);
+  if(!rows.length){toast("请先填写货物明细");return}
+  const cfg=loadCfg(),list=(cfg.products||[]).slice();
+  rows.forEach(p=>{
+    const i=list.findIndex(x=>x.name===p.name&&x.hs===p.hs);
+    if(i>=0)list[i]=Object.assign({},list[i],p);else list.unshift(p);
+  });
+  cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();drawItems();toast("已存入产品库："+rows.length+" 项");
+}
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
 function wipeAll(){if(!confirm("⚠ 将清空全部票据、配置、税率、公司信息，且不可恢复。建议先导出备份。确定？"))return;
   if(!confirm("再次确认：真的要清空全部数据？"))return;
@@ -207,7 +237,12 @@ function numVal(v){return +(String(v||"").replace(/,/g,"").trim())||0}
 function itemAmount(it){return numVal(it&&it.qty)*numVal(it&&it.price)}
 function lineAmount(i){const it=items[i]||{};return numVal(it.qty)*numVal(it.price)}
 function updateItemAmount(i){const el=$("itemAmt"+i);if(el)el.textContent=fmt(lineAmount(i))}
-function editItem(i,k,v){if(!items[i])return;items[i][k]=k==="qty"||k==="price"?numVal(v):v;updateItemAmount(i);render()}
+function syncAutoWeights(){
+  const gw=items.reduce((s,it)=>s+numVal(it.gwUnit)*numVal(it.qty),0),nw=items.reduce((s,it)=>s+numVal(it.nwUnit)*numVal(it.qty),0);
+  if(gw&&($("f_gw").dataset.auto==="1"||!$("f_gw").value)){$("f_gw").value=fmt(gw);$("f_gw").dataset.auto="1"}
+  if(nw&&($("f_nw").dataset.auto==="1"||!$("f_nw").value)){$("f_nw").value=fmt(nw);$("f_nw").dataset.auto="1"}
+}
+function editItem(i,k,v){if(!items[i])return;items[i][k]=k==="qty"||k==="price"?numVal(v):v;updateItemAmount(i);if(k==="qty")syncAutoWeights();render()}
 function productIndexOfItem(it){
   const list=getProducts();
   return list.findIndex(p=>p.name===it.name&&p.hs===it.hs);
@@ -215,7 +250,10 @@ function productIndexOfItem(it){
 function applyProductToItem(i,idx){
   const p=getProducts()[+idx];if(!p||!items[i])return;
   const oldQty=numVal(items[i].qty)||1;
-  items[i]=Object.assign({},items[i],{name:p.name,nameRu:p.nameRu||"",hs:p.hs||"6305.33",unit:p.unit||"条",price:numVal(p.price),spec:p.spec||"",qty:oldQty});
+  items[i]=Object.assign({},items[i],{name:p.name,nameRu:p.nameRu||"",hs:p.hs||"6305.33",unit:p.unit||"条",price:numVal(p.price),spec:p.spec||"",gwUnit:p.gwUnit||"",nwUnit:p.nwUnit||"",pkg:p.pkg||"",elements:p.elements||"",qty:oldQty});
+  if(p.pkg&&!$("f_pkg").value)$("f_pkg").value=p.pkg;
+  if(p.gwUnit&&(!$("f_gw").value||$("f_gw").dataset.auto==="1")){$("f_gw").value=fmt(numVal(p.gwUnit)*oldQty);$("f_gw").dataset.auto="1"}
+  if(p.nwUnit&&(!$("f_nw").value||$("f_nw").dataset.auto==="1")){$("f_nw").value=fmt(numVal(p.nwUnit)*oldQty);$("f_nw").dataset.auto="1"}
   drawItems();render();toast("已套用产品："+p.name);
 }
 function drawItems(){
@@ -235,7 +273,7 @@ function drawItems(){
   });
 }
 function delItem(i){items.splice(i,1);if(!items.length)items.push({name:"",nameRu:"",hs:"6305.33",qty:0,price:0});drawItems();render()}
-function addRow(){const p=getProducts()[0];items.push(p?{name:p.name,nameRu:p.nameRu,hs:p.hs,unit:p.unit,price:numVal(p.price),spec:p.spec,qty:1}:{name:"PP集装袋(吨袋) 90×90×110cm 四吊带",hs:"6305.32",qty:1000,price:3.2});drawItems();render()}
+function addRow(){const p=getProducts()[0];items.push(p?{name:p.name,nameRu:p.nameRu,hs:p.hs,unit:p.unit,price:numVal(p.price),spec:p.spec,gwUnit:p.gwUnit,nwUnit:p.nwUnit,pkg:p.pkg,elements:p.elements,qty:1}:{name:"PP集装袋(吨袋) 90×90×110cm 四吊带",hs:"6305.32",qty:1000,price:3.2});drawItems();render()}
 function total(){return items.reduce((s,it)=>s+numVal(it.qty)*numVal(it.price),0)}
 function esc(s){return String(s||"").replace(/"/g,"&quot;").replace(/</g,"&lt;")}
 function hs6(h){const d=String(h||"").replace(/\D/g,"");return d.length>=6?d.slice(0,4)+"."+d.slice(4,6):"6305.33"}
@@ -412,7 +450,7 @@ function addContractItem(){ensureContractLines();contractLines.push(makeContract
 function copyContractItem(i){ensureContractLines();contractLines.splice(i+1,0,Object.assign({},contractLines[i]));drawContractItems();previewContractTemplate(false)}
 function delContractItem(i){ensureContractLines();contractLines.splice(i,1);if(!contractLines.length)contractLines.push(makeContractLine({}));drawContractItems();previewContractTemplate(false)}
 function syncContractItemsFromEntry(){
-  contractLines=(items.length?items:[{name:"",hs:"6305.33",qty:0,price:0}]).map(it=>makeContractLine({name:it.name,nameRu:it.nameRu,hs:it.hs,qty:it.qty,price:it.price,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value}));
+  contractLines=(items.length?items:[{name:"",hs:"6305.33",qty:0,price:0}]).map(it=>makeContractLine({name:it.name,nameRu:it.nameRu,spec:it.spec,hs:it.hs,qty:it.qty,unit:it.unit,price:it.price,gw:$("f_gw").value,nw:$("f_nw").value,pkg:it.pkg||$("f_pkg").value,elements:it.elements}));
   drawContractItems();previewContractTemplate(false);toast("已同步核对录入商品到合同明细");
 }
 function contractTpl(){return CONTRACT_TPLS.find(t=>t.id===contractTplId)||CONTRACT_TPLS[0]}
@@ -496,7 +534,7 @@ function applyContractTemplate(){
   $("f_nw").value=d.nw||"";
   $("f_pkg").value=d.pkg||"";
   ensureContractLines();
-  items=contractLines.map(x=>({name:x.name||"",nameRu:x.nameRu||"",hs:x.hs||"6305.33",qty:+x.qty||0,price:+x.price||0}));
+  items=contractLines.map(x=>({name:x.name||"",nameRu:x.nameRu||"",spec:x.spec||"",hs:x.hs||"6305.33",unit:x.unit||"条",qty:+x.qty||0,price:+x.price||0,pkg:x.pkg||"",elements:x.elements||""}));
   curTicket.type=t.type;
   drawItems();render();go("p1");toast("已套用"+t.name+"参数，可继续核对保存");
 }
@@ -1319,7 +1357,7 @@ Object.assign(window,{
   editItem,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveRates,saveTicket,selectContractTemplate,
+  previewContractTemplate,resetRecognize,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveRates,saveTicket,selectContractTemplate,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,startRecognize,syncContractItemsFromEntry,testApi,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll
 });
 
