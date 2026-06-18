@@ -67,12 +67,43 @@ function normRole(v){
 }
 function normalizeCustomer(p){
   if(Array.isArray(p)){
-    return {name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||""};
+    return {name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||""};
   }
-  return {name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||""};
+  return {name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||""};
 }
-function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||""].join("|")}
+function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||""].join("|")}
 function parseCustomerLine(l){return normalizeCustomer(l.split("|").map(s=>s.trim()))}
+function cleanField(v){return String(v||"").replace(/^[：:\s]+|[；;,\s]+$/g,"").trim()}
+function matchField(txt,re){const m=String(txt||"").match(re);return cleanField(m&&m[1]||"")}
+function parseCustomerBlock(txt){
+  const raw=String(txt||"").replace(/\r/g,"").trim();
+  if(!raw)return null;
+  if(raw.includes("|")&&!/\n/.test(raw))return parseCustomerLine(raw);
+  const lines=raw.split("\n").map(s=>s.trim()).filter(Boolean);
+  const labelLine=(labs)=>lines.find(l=>labs.some(x=>l.toLowerCase().startsWith(x.toLowerCase())));
+  const after=(line)=>cleanField(String(line||"").replace(/^[^:：]+[:：]/,""));
+  let name=after(labelLine(["Покупатель","Buyer","客户","买方"]))||"";
+  if(!name)name=cleanField(lines.find(l=>!/:|：/.test(l)&&!/реквизит|контакт|адрес|банк|swift|iban|бин|рнн|ндс|тел|факс/i.test(l))||"");
+  const addr=after(labelLine(["Адрес","Address","地址"]));
+  const tax=matchField(raw,/(?:РНН\s*[0-9\s/]*\/\s*)?БИН\s*([0-9]{6,})/i)||matchField(raw,/РНН\s*([0-9]{6,})/i);
+  const swift=matchField(raw,/SWIFT\s*[:：]?\s*([A-Z0-9]+)/i);
+  const account=matchField(raw,/IBAN\s*[:：]?\s*([A-Z0-9]+)/i);
+  const kbe=matchField(raw,/кБе\s*[:：]?\s*([0-9]+)/i);
+  const corr=matchField(raw,/Account number with the Correspondent Bank\s*[:：]?\s*([A-Z0-9]+)/i);
+  const vat=matchField(raw,/(Свидетельство[^\n]+)/i);
+  const tel=matchField(raw,/^Тел\.?\s*[:：]?\s*([^\n]+)/im);
+  const fax=matchField(raw,/^Факс\s*[:：]?\s*([^\n]+)/im);
+  const bankLine=lines.find(l=>/^(АО|AО|AO|ТОО|TOO|Банк|Bank)(\s|«|")/i.test(l)&&!l.includes("Покупатель")&&!l.includes("Шымкентцемент"))
+    ||lines.find(l=>/банк/i.test(l)&&!/реквизит/i.test(l))||"";
+  const bank=cleanField(bankLine||after(labelLine(["Банк","Bank","银行"])));
+  return normalizeCustomer({name,country:/Узбекистан|UZ/i.test(raw)?"UZ":"KZ",role:"buyer",addr,tax,bank,account,swift,kbe,corr,vat,tel,fax});
+}
+function parseCustomersText(txt){
+  const raw=String(txt||"").trim();
+  if(!raw)return [];
+  if(raw.includes("|"))return raw.split("\n").map(s=>s.trim()).filter(Boolean).map(parseCustomerLine).filter(c=>c.name);
+  return [parseCustomerBlock(raw)].filter(c=>c&&c.name);
+}
 function loadCfg(){try{const raw=JSON.parse(localStorage.getItem("dd_cfg")||"null"),d=cloneDefCfg();
   if(!raw||!raw.ports)return d;
   const c=Object.assign(d,raw);
@@ -115,7 +146,7 @@ function getHS(){return loadCfg().hs}
 function getProducts(){return loadCfg().products||[]}
 function getCustomers(role){const list=loadCfg().clients||[];return role?list.filter(c=>!c.role||c.role===role||c.role==="both"):list}
 function partyInfoFromCustomer(c){
-  return {name:c.name||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",lat:c.name||""};
+  return {name:c.name||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",lat:c.name||""};
 }
 function drawCustomerSelects(){
   const fill=(id,role)=>{
@@ -185,12 +216,45 @@ function saveCurrentProducts(){
   cfg.products=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
   fillCfgForm();drawItems();renderLibraryData();toast("已存入产品库："+rows.length+" 项");
 }
+let editingCustomerIndex=null;
 function saveLibraryCustomers(){
   const el=$("libCustomersEdit");if(!el)return;
-  const rows=el.value.split("\n").map(s=>s.trim()).filter(Boolean).map(parseCustomerLine).filter(c=>c.name);
+  const raw=el.value.trim(),rows=parseCustomersText(raw);
   if(!rows.length){toast("请至少填写一条客户资料");return}
-  const cfg=loadCfg();cfg.clients=rows;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  const cfg=loadCfg(),list=(cfg.clients||[]).slice();
+  if(editingCustomerIndex!==null&&list[editingCustomerIndex]){
+    list[editingCustomerIndex]=rows[0];editingCustomerIndex=null;
+  }else if(raw.includes("|")&&raw.split("\n").filter(Boolean).length>1){
+    cfg.clients=rows;
+    localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+    fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("客户资料库已整体保存："+rows.length+" 条");
+    return;
+  }else{
+    rows.forEach(c=>{
+      const i=list.findIndex(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);
+      if(i>=0)list[i]=Object.assign({},list[i],c);else list.unshift(c);
+    });
+  }
+  cfg.clients=list;localStorage.setItem("dd_cfg",JSON.stringify(cfg));
   fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("客户资料库已保存："+rows.length+" 条");
+}
+function deleteLibraryCustomer(i){
+  const cfg=loadCfg(),c=(cfg.clients||[])[i];if(!c)return;
+  if(!confirm("删除客户资料："+c.name+"？"))return;
+  cfg.clients=(cfg.clients||[]).filter((_,idx)=>idx!==i);
+  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("已删除客户："+c.name);
+}
+function editLibraryCustomer(i){
+  const c=(loadCfg().clients||[])[i],el=$("libCustomersEdit");if(!c||!el)return;
+  editingCustomerIndex=i;el.value=customerLine(c);el.focus();toast("已载入编辑区，修改后点保存客户资料");
+}
+function applyLibraryCustomer(i,side){
+  const c=(loadCfg().clients||[])[i];if(!c)return;
+  if(!curTicket)newTicket($("f_type").value||"export");
+  if(side==="seller"){$("f_seller").value=c.name;curTicket.sellerInfo=partyInfoFromCustomer(c)}
+  else{$("f_buyer").value=c.name;curTicket.buyerInfo=partyInfoFromCustomer(c);if(["KZ","UZ"].includes(c.country))$("f_country").value=c.country}
+  render();go("p1");toast("已填入"+(side==="seller"?"卖方":"买方")+"："+c.name);
 }
 function saveLibraryProducts(){
   const el=$("libProductsEdit");if(!el)return;
@@ -638,7 +702,7 @@ function goLibrary(id){
 }
 function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
-  if(cl)cl.innerHTML=(cfg.clients||[]).map(c=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.country||"")} · ${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · 银行: ${esc(c.bank||"—")}</span><span>账号/IBAN: ${esc(c.account||"—")} · SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")}</span></div>`).join("")||'<div class="empty">暂无客户资料</div>';
+  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.country||"")} · ${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
   if(pl)pl.innerHTML=(cfg.products||[]).map(p=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span></div>`).join("")||'<div class="empty">暂无产品资料</div>';
   const ce=$("libCustomersEdit");if(ce&&document.activeElement!==ce)ce.value=(cfg.clients||[]).map(customerLine).join("\n");
   const pe=$("libProductsEdit");if(pe&&document.activeElement!==pe)pe.value=(cfg.products||[]).map(productLine).join("\n");
@@ -993,11 +1057,30 @@ function withDocCondition(html,id){return html?html.replace(/<\/div>$/,docCondit
 function partyViewInfo(side,name){
   const raw=curTicket?(side==="seller"?curTicket.sellerInfo:curTicket.buyerInfo)||{}:{};
   const current=String(name||"").trim();
+  const saved=(loadCfg().clients||[]).find(c=>normKey(c.name)===normKey(current));
+  if(saved&&Object.keys(raw).filter(k=>raw[k]).length<=2)return partyInfoFromCustomer(saved);
   const rawNames=[raw.name,raw.lat].filter(Boolean).map(x=>String(x).trim());
   const stale=current&&rawNames.length&&!rawNames.includes(current);
   if(stale)return Object.assign({},raw,side==="seller"?{name:current,lat:current,bank:"",swift:"",account:"",tax:""}:{name:current,addr:"",bank:"",iban:"",account:"",bik:"",bin:"",tax:""});
   return Object.assign({},raw,{name:raw.name||current,lat:raw.lat||current});
 }
+function partyLines(p,opts){
+  opts=opts||{};
+  const out=[p.name||""];
+  if(p.addr)out.push(p.addr);
+  if(p.tax||p.bin)out.push((opts.ru?"БИН/РНН: ":"税号/BIN: ")+esc(p.tax||p.bin));
+  if(p.vat)out.push(esc(p.vat));
+  if(p.bank)out.push((opts.ru?"Банк: ":"银行: ")+esc(p.bank));
+  if(p.account||p.iban)out.push("IBAN: "+esc(p.account||p.iban));
+  if(p.swift)out.push("SWIFT: "+esc(p.swift));
+  if(p.bik)out.push("BIK: "+esc(p.bik));
+  if(p.kbe)out.push("кБе: "+esc(p.kbe));
+  if(p.corr)out.push("Corr. account: "+esc(p.corr));
+  if(p.tel)out.push("Тел.: "+esc(p.tel));
+  if(p.fax)out.push("Факс: "+esc(p.fax));
+  return out.filter(Boolean).join("<br>");
+}
+function partyShort(p,name){return partyLines(Object.assign({name},p),{ru:true})}
 function gv(id){const o=docOverrides[id||curDoc]||{},seller=$("f_seller").value,buyer=$("f_buyer").value;
   return{t:total(),seller,buyer,contract:o.contract||$("f_contract").value,terms:$("f_terms").value||"—",
   cur:$("f_cur").value,gw:o.gw||$("f_gw").value||"—",nw:o.nw||$("f_nw").value||"—",pkg:o.pkg||$("f_pkg").value||"—",truck:$("f_truck").value||"—",
@@ -1037,8 +1120,8 @@ function docHtml(id){
    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${esc(docUnit(it,T))}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
    <tr><td colspan="6" style="text-align:right"><b>${T.total}</b></td><td class="num"><b>${fmt(v.t)}</b></td></tr></table>`;
   D.inv=`<div class="doc">${docBrand()}<h1>${T.inv}</h1><div class="sub">${T.inv2} ${hint("商业发票")}</div>${headT}
-    <div class="row2"><div><b>${T.seller} ${hint("卖方")}:</b><br>${esc(docLang==="cn"?v.seller:(v.si.lat||v.seller))}${docLang==="ru"&&v.si.lat?cn("<br>"+v.seller):""}${v.si.bank?"<br>"+T.bank+": "+esc(docLang==="cn"?v.si.bank:(v.si.bankLat||trBank(v.si.bank)))+(v.si.swift?", SWIFT: "+esc(v.si.swift):""):""}</div>
-    <div><b>${T.buyer} ${hint("买方")}:</b><br>${esc(v.buyer)}${v.bi.addr?"<br>"+esc(v.bi.addr):""}${v.bi.iban?"<br>IBAN: "+esc(v.bi.iban):""}</div></div><br>
+    <div class="row2"><div><b>${T.seller} ${hint("卖方")}:</b><br>${partyShort(v.si,docLang==="cn"?v.seller:(v.si.lat||v.seller))}${docLang==="ru"&&v.si.lat?cn("<br>"+v.seller):""}</div>
+    <div><b>${T.buyer} ${hint("买方")}:</b><br>${partyShort(v.bi,v.buyer)}</div></div><br>
     <div class="row2"><span><b>${T.terms}:</b> ${esc(v.terms)}</span><span><b>${T.pay}:</b> ${esc(trPay(v.pay))}</span><span><b>${T.cur}:</b> ${v.cur}</span></div>${tblT}
     <div class="row2"><span>${T.gross} ${hint("毛重")}: ${esc(v.gw)} ${T.kg}</span><span>${T.net} ${hint("净重")}: ${esc(v.nw)} ${T.kg}</span><span>${T.places} ${hint("件数")}: ${esc(v.pkg)}</span></div>${seal()}${docFoot(id)}</div>`;
   D.pkl=`<div class="doc">${docBrand()}<h1>${T.pkl}</h1><div class="sub">${T.pkl2} ${hint("装箱单")}</div>${headT}
@@ -1048,7 +1131,7 @@ function docHtml(id){
     <p style="font-size:12px">${T.veh} ${hint("车辆")}: ${esc(v.truck)}　${T.port} ${hint("口岸")}: ${docLang==="cn"?esc(v.port):portRu}</p>${seal()}${docFoot(id)}</div>`;
   D.cmr=`<div class="doc">${docBrand()}<h1>МЕЖДУНАРОДНАЯ ТОВАРНО-ТРАНСПОРТНАЯ НАКЛАДНАЯ (CMR)</h1><div class="sub">КДПГ / CMR ${cn("国际公路运输单")}</div>
     <table><tr><th style="width:50%">1. Отправитель ${cn("发货人")}</th><th>2. Получатель ${cn("收货人")}</th></tr>
-    <tr><td>${esc(v.si.lat||v.seller)}<br>КНР (Китай)</td><td>${esc(v.buyer)}${v.bi.addr?"<br>"+esc(v.bi.addr):""}</td></tr>
+    <tr><td>${partyShort(v.si,v.si.lat||v.seller)}<br>КНР (Китай)</td><td>${partyShort(v.bi,v.buyer)}</td></tr>
     <tr><th>4. Место и дата погрузки ${cn("装货地")}</th><th>3. Место разгрузки ${cn("卸货地")}</th></tr>
     <tr><td>${portRu}, КНР · ${v.date}</td><td>${v.country==="KZ"?"Республика Казахстан":"Республика Узбекистан"}</td></tr>
     <tr><th>5. Прилагаемые документы</th><th>15. Условия оплаты</th></tr>
@@ -1061,7 +1144,7 @@ function docHtml(id){
     <div class="sub">${v.country==="KZ"?"Декларация на товары (ЕАЭС) · для таможенного представителя":"Грузовая таможенная декларация · для таможенного брокера"} ${cn("申报资料表·给брокер")}</div>
     <table>
     <tr><th style="width:230px">Графа 2. Отправитель / Экспортер</th><td>${esc(v.si.lat||v.seller)}, КНР</td></tr>
-    <tr><th>Графа 8. Получатель / Импортер</th><td>${esc(v.buyer)}${v.bi.bin?", БИН "+esc(v.bi.bin):""}${v.bi.addr?"<br>"+esc(v.bi.addr):""}</td></tr>
+    <tr><th>Графа 8. Получатель / Импортер</th><td>${partyShort(v.bi,v.buyer)}</td></tr>
     <tr><th>Графа 11/15. Торгующая страна / Страна отправления</th><td>Китай (КНР), код CN</td></tr>
     <tr><th>Графа 20. Условия поставки</th><td>${esc(v.terms)}</td></tr>
     <tr><th>Графа 22. Валюта и общая фактурная стоимость</th><td class="num">${v.cur} ${fmt(v.t)}</td></tr>
@@ -1070,12 +1153,12 @@ function docHtml(id){
     <tr><th>Графа 33. Код товара / ставка</th><td>${items.map(it=>`${esc(it.hs)} · ${esc(hsInfo(it.hs).ru)} · ${v.country==="KZ"?"пошлина "+dutyFor("KZ",it.hs)+"%":"ставку проверить по 10-значному коду"}`).join("<br>")}</td></tr>
     <tr><th>Графа 44. Прилагаемые документы</th><td>Контракт ${esc(v.contract)}; инвойс ${esc(v.no)}; упаковочный лист; CMR; сертификат происхождения / сведения о происхождении; платежные и банковские реквизиты</td></tr>
     <tr><th>Налоги и платежи</th><td>${v.country==="KZ"?"Ввозная пошлина по ЕТТ ЕАЭС; НДС 16%":"Пошлина по tarif.customs.uz; НДС 12%; проверить происхождение и возможные дополнительные меры"}</td></tr>
-    ${v.bi.iban?`<tr><th>Банковские реквизиты получателя</th><td>${esc(v.bi.bank||"")}, IBAN ${esc(v.bi.iban)}${v.bi.bik?", БИК "+esc(v.bi.bik):""}</td></tr>`:""}</table>
+    ${(v.bi.iban||v.bi.account||v.bi.bank||v.bi.swift)?`<tr><th>Банковские реквизиты получателя</th><td>${partyShort(v.bi,v.buyer)}</td></tr>`:""}</table>
     <p style="font-size:12px;font-weight:600">Графа 31/33/42. Товары ${cn("货物明细")}:</p>${tblRu}${seal()}${docFoot(id)}</div>`;
   D.broker=`<div class="doc">${docBrand()}<h1>ПАКЕТ СВЕДЕНИЙ ДЛЯ ТАМОЖЕННОГО ПРЕДСТАВИТЕЛЯ</h1>
     <div class="sub">${v.country==="KZ"?"Республика Казахстан · ДТ / ASTANA-1":"Республика Узбекистан · ГТД / электронное декларирование"} ${cn("报关代理委托资料")}</div>
     ${headRu}<table>
-    <tr><th style="width:210px">Импортер</th><td>${esc(v.buyer)}${v.bi.bin?", БИН/ИНН "+esc(v.bi.bin):""}${v.bi.addr?"<br>"+esc(v.bi.addr):""}</td></tr>
+    <tr><th style="width:210px">Импортер</th><td>${partyShort(v.bi,v.buyer)}</td></tr>
     <tr><th>Экспортер</th><td>${esc(v.si.lat||v.seller)}, Китай</td></tr>
     <tr><th>Условия поставки / оплаты</th><td>${esc(v.terms)} · ${esc(trPay(v.pay))}</td></tr>
     <tr><th>Маршрут и транспорт</th><td>Китай, ${portRu} → ${v.country==="KZ"?"Казахстан":"Узбекистан"} · ${TRANS_RU[$("f_trans").value]||"автомобильный"} · ${esc(v.truck)}</td></tr>
@@ -1473,7 +1556,7 @@ function bindTemplateButtons(){
 
 Object.assign(window,{
   addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,confirmMasterInfo,copyContractItem,copyContractParams,
-  copyTicket,cycleStatus,deleteDocRecord,delContractItem,delItem,delTicket,demoRecognize,exportBackup,
+  applyLibraryCustomer,copyTicket,cycleStatus,deleteDocRecord,deleteLibraryCustomer,delContractItem,delItem,delTicket,demoRecognize,editLibraryCustomer,exportBackup,
   editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,

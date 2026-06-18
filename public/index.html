@@ -707,7 +707,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 
   <div class="lib-section" id="lib_customers">
-    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 可在本页维护并在录入页调用</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div><div class="field" style="margin-top:14px"><label>客户资料编辑（每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人）</label><textarea id="libCustomersEdit" rows="6" style="font-family:var(--mono);font-size:12.5px"></textarea></div><div class="bar" style="margin-top:10px"><button class="btn btn-ink" onclick="saveLibraryCustomers()">保存客户资料</button><button class="btn btn-ghost" onclick="renderLibraryData()">重新载入</button></div></div></div>
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 可粘贴整段俄文资料，系统自动识别</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div><div class="field" style="margin-top:14px"><label>客户资料编辑（可直接粘贴整段资料；或每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人|VAT|кБе|往来行账号|传真）</label><textarea id="libCustomersEdit" rows="8" style="font-family:var(--mono);font-size:12.5px" placeholder="Покупатель: ТОО «Шымкентцемент»&#10;Адрес: ...&#10;РНН ... / БИН ...&#10;SWIFT: ...&#10;IBAN: ..."></textarea></div><div class="bar" style="margin-top:10px"><button class="btn btn-ink" onclick="saveLibraryCustomers()">保存客户资料</button><button class="btn btn-ghost" onclick="renderLibraryData()">重新载入</button></div></div></div>
   </div>
 
   <div class="lib-section" id="lib_products">
@@ -824,6 +824,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-cmr-sync1"></script>
+<script src="app.js?v=20260618-client-logic2"></script>
 </body>
 </html>
