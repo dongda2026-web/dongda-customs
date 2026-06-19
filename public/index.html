@@ -746,6 +746,24 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     </div>
   </div>
   <div class="card">
+    <div class="card-h"><span class="tag"></span><h3>多设备同步</h3><span class="ru">客户 / 产品 / 业务配置 · 手机、电脑、PWA 共用服务器资料库</span></div>
+    <div class="card-b">
+      <div class="grid g3">
+        <div class="field"><label>自动同步</label><select id="sync_enabled"><option value="1">开启</option><option value="0">关闭</option></select></div>
+        <div class="field"><label>同步规则</label><select id="sync_mode"><option value="merge">智能合并（推荐）</option><option value="remote">服务器优先</option><option value="local">本机优先</option></select></div>
+        <div class="field"><label>自动同步间隔</label><select id="sync_interval"><option value="15">15秒</option><option value="30">30秒</option><option value="60">60秒</option><option value="120">2分钟</option></select></div>
+      </div>
+      <div class="bar" style="margin-top:13px">
+        <button class="btn btn-ink" onclick="saveSyncSettings()">保存同步规则</button>
+        <button class="btn btn-main" onclick="syncNow('merge')">立即双向同步</button>
+        <button class="btn btn-ghost" onclick="syncNow('upload')">上传本机资料</button>
+        <button class="btn btn-ghost" onclick="syncNow('download')">下载服务器资料</button>
+        <button class="btn btn-ghost" onclick="syncNow('test')">测试同步</button>
+      </div>
+      <p id="syncStatus" style="font-size:12px;color:var(--steel);font-weight:700;margin-top:10px;line-height:1.7">同步状态：等待检测</p>
+    </div>
+  </div>
+  <div class="card">
     <div class="card-h"><span class="tag"></span><h3>主体公司（唯一我方，可买可卖）</h3><span class="ru">票型为出口/销售时进入卖方；票型为进口/采购时进入买方</span></div>
     <div class="card-b grid g2">
       <div class="field"><label>公司法定名称</label><input id="c_main_name"></div>
@@ -821,6 +839,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260618-library-sync-printfix"></script>
+<script src="app.js?v=20260619-realtime-sync"></script>
 </body>
 </html>

@@ -1629,22 +1629,112 @@ async function cloudSaveGeneratedDoc(record){
     if(r.ok)loadRemoteDocHistory();
   }catch(e){}
 }
-async function cloudSaveCfg(cfg){
-  if(!cfg)return;
-  try{await fetch(apiBase()+"/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cfg})})}catch(e){}
+const DEF_SYNC={enabled:"1",mode:"merge",interval:"15",lastSync:0,lastMsg:""};
+let syncTimer=null,syncBusy=false;
+function loadSyncCfg(){try{return Object.assign({},DEF_SYNC,JSON.parse(localStorage.getItem("dd_sync")||"{}"))}catch(e){return Object.assign({},DEF_SYNC)}}
+function saveSyncCfg(c){localStorage.setItem("dd_sync",JSON.stringify(Object.assign({},DEF_SYNC,c||{})))}
+function fillSyncForm(){const c=loadSyncCfg();fillVal("sync_enabled",c.enabled);fillVal("sync_mode",c.mode);fillVal("sync_interval",c.interval);setSyncStatus(c.lastMsg||"同步状态：等待检测")}
+function setSyncStatus(msg,bad=false){
+  const s=$("syncStatus");if(!s)return;
+  s.textContent=msg;s.style.color=bad?"var(--bad)":"var(--steel)";
 }
-async function loadRemoteCfg(){
+function saveSyncSettings(){
+  const c={enabled:($("sync_enabled")&&$("sync_enabled").value)||"1",mode:($("sync_mode")&&$("sync_mode").value)||"merge",interval:($("sync_interval")&&$("sync_interval").value)||"15"};
+  saveSyncCfg(c);startSyncTimer();toast("同步规则已保存 ✓");syncNow("test");
+}
+function cfgClientKey(c){return [normKey(c&&c.name),normKey(c&&c.tax),normKey(c&&c.role)].join("|")}
+function cfgProductKey(p){return [normKey(p&&p.name),normKey(p&&p.nameRu),normKey(p&&p.hs),normKey(p&&p.spec)].join("|")}
+function mergeByKey(local,remote,keyFn,normalize){
+  const map=new Map();
+  (remote||[]).map(normalize).filter(x=>x&&x.name).forEach(x=>map.set(keyFn(x),x));
+  (local||[]).map(normalize).filter(x=>x&&x.name).forEach(x=>{
+    const k=keyFn(x),old=map.get(k)||{};
+    map.set(k,Object.assign({},old,x));
+  });
+  return [...map.values()];
+}
+function mergeCfgData(local,remote){
+  local=Object.assign(cloneDefCfg(),local||{});remote=Object.assign(cloneDefCfg(),remote||{});
+  const merged=Object.assign({},remote,local);
+  merged.terms=[...new Set([...(remote.terms||[]),...(local.terms||[])])].filter(Boolean);
+  merged.hs=[...new Set([...(remote.hs||[]),...(local.hs||[])])].filter(Boolean);
+  const portMap=new Map();[...(remote.ports||[]),...(local.ports||[])].forEach(p=>{if(p&&p[0])portMap.set(p[0],p)});
+  merged.ports=[...portMap.values()];
+  merged.clients=mergeByKey(local.clients,remote.clients,cfgClientKey,normalizeCustomer);
+  merged.products=mergeByKey(local.products,remote.products,cfgProductKey,normalizeProduct);
+  merged._updatedAt=Date.now();
+  return merged;
+}
+function applySyncedCfg(cfg){
+  localStorage.setItem("dd_cfg",JSON.stringify(cfg));
+  fillCfgForm();applyCfg();drawCustomerSelects();drawItems();renderLibraryData();render();
+}
+async function fetchRemoteCfg(){
+  const r=await fetch(apiBase()+"/api/config",{cache:"no-store"});
+  if(!r.ok)throw new Error("服务器资料库不可用："+r.status);
+  return await r.json();
+}
+async function cloudSaveCfg(cfg,opts={}){
+  if(!cfg)return false;
   try{
-    const r=await fetch(apiBase()+"/api/config",{cache:"no-store"});
-    if(!r.ok)return;
-    const d=await r.json(),remote=d&&d.cfg;
-    if(!remote||typeof remote!=="object")return;
-    const local=loadCfg(),rt=+remote._updatedAt||0,lt=+local._updatedAt||0;
-    if(rt>=lt){
-      localStorage.setItem("dd_cfg",JSON.stringify(remote));
-      fillCfgForm();applyCfg();drawCustomerSelects();drawItems();renderLibraryData();render();
+    const r=await fetch(apiBase()+"/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cfg})});
+    if(!r.ok)throw new Error("保存失败："+r.status);
+    return true;
+  }catch(e){
+    if(!opts.silent)setSyncStatus("同步失败："+e.message,true);
+    return false;
+  }
+}
+async function syncNow(action="auto",silent=false){
+  if(syncBusy)return;
+  const rule=loadSyncCfg();
+  if(action==="auto"&&rule.enabled!=="1")return;
+  syncBusy=true;
+  const mode=action==="auto"?rule.mode:action;
+  try{
+    if(!silent)setSyncStatus("同步状态：正在连接服务器…");
+    const local=loadCfg();
+    const d=await fetchRemoteCfg();
+    const remote=d&&d.cfg;
+    const remoteAt=remote?(+remote._updatedAt||Date.parse(d.updated_at||"")||0):0;
+    const localAt=+local._updatedAt||0;
+    if(mode==="test"){
+      const msg="同步状态：服务器正常 · 数据库"+(remote?"已有资料库":"暂无资料库")+" · "+new Date().toLocaleString("zh-CN",{hour12:false});
+      setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}));return;
     }
-  }catch(e){}
+    if(mode==="upload"||mode==="local"){
+      local._updatedAt=Date.now();saveCfgLocal(local,false);
+      if(!await cloudSaveCfg(local,{silent:true}))throw new Error("服务器保存失败");
+      const msg="同步状态：已上传本机资料到服务器 · "+new Date().toLocaleString("zh-CN",{hour12:false});
+      setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}));if(!silent)toast("本机资料已上传 ✓");return;
+    }
+    if(mode==="download"||mode==="remote"){
+      if(remote){applySyncedCfg(remote);const msg="同步状态：已下载服务器资料 · "+new Date().toLocaleString("zh-CN",{hour12:false});setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}));if(!silent)toast("服务器资料已下载 ✓")}
+      else{local._updatedAt=Date.now();saveCfgLocal(local,false);if(!await cloudSaveCfg(local,{silent:true}))throw new Error("服务器保存失败");const msg="同步状态：服务器为空，已用本机资料初始化 · "+new Date().toLocaleString("zh-CN",{hour12:false});setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}))}
+      return;
+    }
+    if(!remote){
+      local._updatedAt=Date.now();saveCfgLocal(local,false);if(!await cloudSaveCfg(local,{silent:true}))throw new Error("服务器保存失败");
+      const msg="同步状态：服务器为空，已初始化资料库 · "+new Date().toLocaleString("zh-CN",{hour12:false});
+      setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}));return;
+    }
+    if(remoteAt===localAt&&silent)return;
+    const merged=mergeCfgData(local,remote);
+    applySyncedCfg(merged);
+    await cloudSaveCfg(merged,{silent:true});
+    const msg="同步状态：已双向合并 · 客户 "+merged.clients.length+" 条 · 产品 "+merged.products.length+" 条 · "+new Date().toLocaleString("zh-CN",{hour12:false});
+    setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}));if(!silent)toast("已完成双向同步 ✓");
+  }catch(e){
+    if(!silent)setSyncStatus("同步失败："+e.message,true);
+  }finally{syncBusy=false}
+}
+function loadRemoteCfg(){return syncNow("auto",true)}
+function startSyncTimer(){
+  clearInterval(syncTimer);
+  const c=loadSyncCfg();
+  if(c.enabled!=="1"){setSyncStatus("同步状态：自动同步已关闭");return}
+  const ms=Math.max(15,+c.interval||15)*1000;
+  syncTimer=setInterval(()=>{syncNow("auto",true);loadRemoteTickets();loadRemoteDocHistory();loadRemoteArchiveFiles()},ms);
 }
 async function cloudUpdateGeneratedStatus(record){
   if(!record||!record.id)return;
@@ -1743,12 +1833,13 @@ Object.assign(window,{
   editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,saveLibraryProducts,saveRates,saveTicket,selectContractTemplate,
+  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,setTplFromSelect,startRecognize,syncContractItemsFromEntry,testApi,toggleCurrentTpl,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
+  ,syncNow
 });
 
 /* ================= 初始化 ================= */
-fillApiForm();fillRatesForm();fillCfgForm();applyCfg();
+fillApiForm();fillSyncForm();fillRatesForm();fillCfgForm();applyCfg();
 fillCompanyForm();
 newTicket("export");
 drawCustomerSelects();
@@ -1756,4 +1847,5 @@ bindTemplateButtons();
 renderArchive();
 computeDash();
 loadRemoteCfg();
+startSyncTimer();
 refreshCloudArchive();
