@@ -588,14 +588,14 @@ function drawItems(){
   items.forEach((it,i)=>{
     const pi=productIndexOfItem(it);
     tb.insertAdjacentHTML("beforeend",`<tr>
-      <td style="min-width:150px"><select onchange="applyProductToItem(${i},this.value)"><option value="">选择产品</option>${products.map((p,j)=>`<option value="${j}" ${j===pi?"selected":""}>${esc(p.name)}</option>`).join("")}</select></td>
-      <td style="min-width:190px"><input value="${esc(it.name)}" placeholder="品名/规格(中文)" oninput="editItem(${i},'name',this.value)">
+      <td data-label="产品库" style="min-width:150px"><select onchange="applyProductToItem(${i},this.value)"><option value="">选择产品</option>${products.map((p,j)=>`<option value="${j}" ${j===pi?"selected":""}>${esc(p.name)}</option>`).join("")}</select></td>
+      <td data-label="品名 / 规格" style="min-width:190px"><input value="${esc(it.name)}" placeholder="品名/规格(中文)" oninput="editItem(${i},'name',this.value)">
       <input value="${esc(it.nameRu||'')}" placeholder="Наименование (俄文·哈乌单证用)" style="margin-top:5px" oninput="editItem(${i},'nameRu',this.value)"></td>
-      <td style="width:110px"><select onchange="editItem(${i},'hs',this.value)">${getHS().map(h=>`<option ${h===it.hs?"selected":""}>${h}</option>`).join("")}</select></td>
-      <td style="width:100px"><input class="num" inputmode="numeric" value="${it.qty}" oninput="editItem(${i},'qty',this.value)"></td>
-      <td style="width:90px"><input class="num" inputmode="decimal" value="${it.price}" oninput="editItem(${i},'price',this.value)"></td>
-      <td class="num"><b id="itemAmt${i}">${fmt(lineAmount(i))}</b></td>
-      <td style="width:30px;text-align:center;color:#bbb;cursor:pointer" onclick="delItem(${i})">✕</td></tr>`);
+      <td data-label="HS编码" style="width:110px"><select onchange="editItem(${i},'hs',this.value)">${getHS().map(h=>`<option ${h===it.hs?"selected":""}>${h}</option>`).join("")}</select></td>
+      <td data-label="数量" style="width:100px"><input class="num" inputmode="numeric" value="${it.qty}" oninput="editItem(${i},'qty',this.value)"></td>
+      <td data-label="单价" style="width:90px"><input class="num" inputmode="decimal" value="${it.price}" oninput="editItem(${i},'price',this.value)"></td>
+      <td data-label="金额" class="num"><b id="itemAmt${i}">${fmt(lineAmount(i))}</b></td>
+      <td data-label="删除" style="width:30px;text-align:center;color:#bbb;cursor:pointer" onclick="delItem(${i})">✕</td></tr>`);
   });
 }
 function delItem(i){items.splice(i,1);if(!items.length)items.push({name:"",nameRu:"",hs:"6305.33",qty:0,price:0});drawItems();render()}
@@ -613,6 +613,7 @@ function taxTotals(country){return items.reduce((s,it)=>{const c=taxCalc(country
 /* ================= 模板选择 ================= */
 const TPLS={
   common:[
+    {id:"quote",t:"报价单 Quotation",d:"可单独选择，自动带入客户、货物、单价、条款和有效期",ver:"报价模板 v1 · 可编辑",must:false,on:false},
     {id:"inv",t:"商业发票 Инвойс",d:"中俄双语国际通行格式",ver:"双语版 v3 · 现行有效",must:true},
     {id:"pkl",t:"装箱单 Упаковочный лист",d:"中俄双语，含件数/毛净重",ver:"双语版 v3 · 现行有效",must:true},
     {id:"dec",t:"中国出口报关单（草单）",d:"横版A4 · 单一窗口申报项目齐全",ver:"《填制规范》现行版",must:true},
@@ -902,6 +903,7 @@ function copyContractParams(){
 
 /* ================= 表单模板左侧选择 ================= */
 const FORM_TPLS=[
+  {id:"quote",group:"商务",name:"报价单",desc:"可单独选择和填写，自动带入客户、货物、价格、条款和报价有效期"},
   {id:"inv",group:"商务",name:"商业发票",desc:"中俄/英文可切换，合同号、买卖方、金额、条款自动带入"},
   {id:"pkl",group:"商务",name:"装箱单",desc:"货物、件数、毛重、净重、包装信息自动生成"},
   {id:"dec",group:"中国出口",name:"出口报关单草单",desc:"境内发货人、境外收货人、成交方式、商品编号、申报金额"},
@@ -915,11 +917,11 @@ const FORM_TPLS=[
   {id:"check",group:"核验",name:"通关合规核验清单",desc:"合同、HS、CO、运输、银行、税费逐项核对"}
 ];
 const FORM_DESC={
-  cn:{inv:"商业发票：合同号、买卖方、货物、金额、贸易条款自动带入。",pkl:"装箱单：货物、件数、毛重、净重、包装信息自动生成。",dec:"出口报关单草单：用于中国单一窗口预录入核对。",ysys:"申报要素表：品名、用途、材质、规格、品牌等要素。",cmr:"CMR国际公路运输单：发货人、收货人、装卸地、车辆信息。",bro:"KZ/UZ申报资料表：给进口国报关代理录入ДТ/ГТД。",broker:"报关代理委托资料：给брокер的资料清单和核对要点。",co:"CO申请资料：原产地证申请所需出口商、收货人、路线、商品信息。",origin:"原产地声明资料：非优惠原产地说明和生产依据。",tax:"进口税费测算表：KZ/UZ关税、НДС和税率依据。",check:"通关合规核验清单：合同、HS、CO、运输、银行、税费逐项核对。"},
-  ru:{inv:"Инвойс: автоматически подставляет контракт, стороны, товар, сумму и условия поставки.",pkl:"Упаковочный лист: товар, места, брутто, нетто и упаковка.",dec:"Черновик экспортной декларации КНР: для проверки перед подачей в Single Window.",ysys:"Сведения о товаре: наименование, назначение, материал, спецификация и бренд.",cmr:"CMR: отправитель, получатель, места погрузки/разгрузки и транспорт.",bro:"Сведения для ДТ/ГТД KZ/UZ: для таможенного брокера страны импорта.",broker:"Пакет для брокера: перечень документов и контрольные вопросы.",co:"Заявка на CO: экспортер, получатель, маршрут и сведения о товаре.",origin:"Сведения о происхождении: непреференциальное происхождение и производственные основания.",tax:"Расчет платежей: пошлина KZ/UZ, НДС и основания ставок.",check:"Чек-лист комплаенса: контракт, HS, CO, транспорт, банк и налоги."},
-  en:{inv:"Commercial invoice: auto-fills contract, parties, goods, value and trade terms.",pkl:"Packing list: goods, packages, gross/net weight and packaging data.",dec:"China export declaration draft: for Single Window pre-entry checks.",ysys:"Declaration elements: name, use, material, specification and brand.",cmr:"CMR waybill: consignor, consignee, loading/unloading points and vehicle.",bro:"KZ/UZ customs declaration data sheet for the import broker.",broker:"Broker instruction pack: document list and control checks.",co:"CO application data: exporter, consignee, route and goods information.",origin:"Origin statement data: non-preferential origin and production basis.",tax:"Import tax estimate: KZ/UZ duty, VAT and rate basis.",check:"Customs compliance checklist: contract, HS, CO, transport, bank and taxes."},
-  kk:{inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."},
-  uz:{inv:"Tijorat invoysi: shartnoma, tomonlar, tovar, summa va yetkazib berish shartlarini avtomatik to'ldiradi.",pkl:"Qadoqlash varaqasi: tovar, joylar soni, brutto/netto vazn va qadoqlash.",dec:"Xitoy eksport deklaratsiyasi loyihasi: Single Window oldindan tekshirish uchun.",ysys:"Deklaratsiya elementlari: nomi, qo'llanishi, materiali, spetsifikatsiyasi va brendi.",cmr:"CMR yuk xati: jo'natuvchi, oluvchi, yuklash/tushirish joylari va transport.",bro:"KZ/UZ bojxona deklaratsiyasi ma'lumot varaqasi: import brokeri uchun.",broker:"Broker topshiriq paketi: hujjatlar ro'yxati va nazorat savollari.",co:"CO ariza ma'lumotlari: eksportchi, oluvchi, marshrut va tovar ma'lumoti.",origin:"Kelib chiqish ma'lumoti: preferensiyasiz kelib chiqish va ishlab chiqarish asosi.",tax:"Import soliq hisob-kitobi: KZ/UZ boj, QQS va stavka asosi.",check:"Bojxona muvofiqlik ro'yxati: shartnoma, HS, CO, transport, bank va soliqlar."}
+  cn:{quote:"报价单：客户、货物、单价、币种、贸易条款和有效期自动带入，可单独导出。",inv:"商业发票：合同号、买卖方、货物、金额、贸易条款自动带入。",pkl:"装箱单：货物、件数、毛重、净重、包装信息自动生成。",dec:"出口报关单草单：用于中国单一窗口预录入核对。",ysys:"申报要素表：品名、用途、材质、规格、品牌等要素。",cmr:"CMR国际公路运输单：发货人、收货人、装卸地、车辆信息。",bro:"KZ/UZ申报资料表：给进口国报关代理录入ДТ/ГТД。",broker:"报关代理委托资料：给брокер的资料清单和核对要点。",co:"CO申请资料：原产地证申请所需出口商、收货人、路线、商品信息。",origin:"原产地声明资料：非优惠原产地说明和生产依据。",tax:"进口税费测算表：KZ/UZ关税、НДС和税率依据。",check:"通关合规核验清单：合同、HS、CO、运输、银行、税费逐项核对。"},
+  ru:{quote:"Коммерческое предложение: клиент, товар, цена, валюта, условия поставки и срок действия.",inv:"Инвойс: автоматически подставляет контракт, стороны, товар, сумму и условия поставки.",pkl:"Упаковочный лист: товар, места, брутто, нетто и упаковка.",dec:"Черновик экспортной декларации КНР: для проверки перед подачей в Single Window.",ysys:"Сведения о товаре: наименование, назначение, материал, спецификация и бренд.",cmr:"CMR: отправитель, получатель, места погрузки/разгрузки и транспорт.",bro:"Сведения для ДТ/ГТД KZ/UZ: для таможенного брокера страны импорта.",broker:"Пакет для брокера: перечень документов и контрольные вопросы.",co:"Заявка на CO: экспортер, получатель, маршрут и сведения о товаре.",origin:"Сведения о происхождении: непреференциальное происхождение и производственные основания.",tax:"Расчет платежей: пошлина KZ/UZ, НДС и основания ставок.",check:"Чек-лист комплаенса: контракт, HS, CO, транспорт, банк и налоги."},
+  en:{quote:"Quotation: auto-fills customer, goods, unit price, currency, terms and validity for separate export.",inv:"Commercial invoice: auto-fills contract, parties, goods, value and trade terms.",pkl:"Packing list: goods, packages, gross/net weight and packaging data.",dec:"China export declaration draft: for Single Window pre-entry checks.",ysys:"Declaration elements: name, use, material, specification and brand.",cmr:"CMR waybill: consignor, consignee, loading/unloading points and vehicle.",bro:"KZ/UZ customs declaration data sheet for the import broker.",broker:"Broker instruction pack: document list and control checks.",co:"CO application data: exporter, consignee, route and goods information.",origin:"Origin statement data: non-preferential origin and production basis.",tax:"Import tax estimate: KZ/UZ duty, VAT and rate basis.",check:"Customs compliance checklist: contract, HS, CO, transport, bank and taxes."},
+  kk:{quote:"Баға ұсынысы: клиент, тауар, бірлік баға, валюта, жеткізу талаптары және жарамдылық мерзімі.",inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."},
+  uz:{quote:"Tijorat taklifi: mijoz, tovar, birlik narxi, valyuta, yetkazib berish shartlari va amal qilish muddati.",inv:"Tijorat invoysi: shartnoma, tomonlar, tovar, summa va yetkazib berish shartlarini avtomatik to'ldiradi.",pkl:"Qadoqlash varaqasi: tovar, joylar soni, brutto/netto vazn va qadoqlash.",dec:"Xitoy eksport deklaratsiyasi loyihasi: Single Window oldindan tekshirish uchun.",ysys:"Deklaratsiya elementlari: nomi, qo'llanishi, materiali, spetsifikatsiyasi va brendi.",cmr:"CMR yuk xati: jo'natuvchi, oluvchi, yuklash/tushirish joylari va transport.",bro:"KZ/UZ bojxona deklaratsiyasi ma'lumot varaqasi: import brokeri uchun.",broker:"Broker topshiriq paketi: hujjatlar ro'yxati va nazorat savollari.",co:"CO ariza ma'lumotlari: eksportchi, oluvchi, marshrut va tovar ma'lumoti.",origin:"Kelib chiqish ma'lumoti: preferensiyasiz kelib chiqish va ishlab chiqarish asosi.",tax:"Import soliq hisob-kitobi: KZ/UZ boj, QQS va stavka asosi.",check:"Bojxona muvofiqlik ro'yxati: shartnoma, HS, CO, transport, bank va soliqlar."}
 };
 let formTplId="inv";
 let currentLib="templates";
@@ -1210,7 +1212,7 @@ function setSelectOrAdd(sel,val){
 /* ================= 单证引擎（语言按使用方锁定，术语=当地海关官方用语） =================
    俄文单证(inv/pkl/cmr/bro)：纯俄文，ДТ按ЕАЭС официальные графы；屏幕灰字中文对照(.cnh)打印自动去除
    中文单证(dec/ysys/co)：纯中文，按《填制规范》官方栏目用语 */
-const DOC_META={inv:["商业发票","Инвойс · 俄文"],pkl:["装箱单","Упаковочный лист · 俄文"],dec:["出口报关单草单","中国海关 · 中文"],ysys:["申报要素表","中国海关 · 中文"],cmr:["CMR 运输单","КДПГ · 俄文"],bro:["申报资料表","ДТ/ГТД · 俄文"],co:["原产地证申请","CO · 中文"],origin:["原产地声明","CO辅助 · 中文"],tax:["税费测算表","KZ/UZ · 中文"],check:["合规清单","三国核验"],broker:["代理委托资料","Broker · 俄文"]};
+const DOC_META={quote:["报价单","Quotation · 可单独导出"],inv:["商业发票","Инвойс · 俄文"],pkl:["装箱单","Упаковочный лист · 俄文"],dec:["出口报关单草单","中国海关 · 中文"],ysys:["申报要素表","中国海关 · 中文"],cmr:["CMR 运输单","КДПГ · 俄文"],bro:["申报资料表","ДТ/ГТД · 俄文"],co:["原产地证申请","CO · 中文"],origin:["原产地声明","CO辅助 · 中文"],tax:["税费测算表","KZ/UZ · 中文"],check:["合规清单","三国核验"],broker:["代理委托资料","Broker · 俄文"]};
 function drawTabs(){
   const tabs=$("docTabs");if(!tabs)return;
   const list=selectedTpls().map(t=>t.id);
@@ -1248,7 +1250,7 @@ function saveDocOverride(){
 }
 /* 单证语言：所有模板均可切换，正式提交前仍按目的国/报关代理要求复核 */
 const ALL_DOC_LANGS=["ru","en","cn","kk","uz"];
-const DOC_LANGS={inv:ALL_DOC_LANGS,pkl:ALL_DOC_LANGS,cmr:ALL_DOC_LANGS,bro:ALL_DOC_LANGS,broker:ALL_DOC_LANGS,dec:ALL_DOC_LANGS,ysys:ALL_DOC_LANGS,co:ALL_DOC_LANGS,origin:ALL_DOC_LANGS,tax:ALL_DOC_LANGS,check:ALL_DOC_LANGS};
+const DOC_LANGS={quote:ALL_DOC_LANGS,inv:ALL_DOC_LANGS,pkl:ALL_DOC_LANGS,cmr:ALL_DOC_LANGS,bro:ALL_DOC_LANGS,broker:ALL_DOC_LANGS,dec:ALL_DOC_LANGS,ysys:ALL_DOC_LANGS,co:ALL_DOC_LANGS,origin:ALL_DOC_LANGS,tax:ALL_DOC_LANGS,check:ALL_DOC_LANGS};
 let docLang="ru",prefLang="ru"; // prefLang=用户偏好，docLang=当前单证生效语言
 const L={
  ru:{inv:"КОММЕРЧЕСКИЙ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"УПАКОВОЧНЫЙ ЛИСТ",pkl2:"PACKING LIST",seller:"Продавец",buyer:"Покупатель",bank:"Банк",terms:"Условия поставки",pay:"Условия оплаты",cur:"Валюта",name:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",unit:"Ед.",unitv:"шт.",price:"Цена",amount:"Сумма",total:"ИТОГО",gross:"Вес брутто",net:"Вес нетто",places:"Кол-во мест",kg:"кг",veh:"Транспортное средство",port:"Пункт пропуска",contract:"Контракт №",date:"Дата",invno:"Инвойс №"},
@@ -1289,7 +1291,7 @@ function docBrand(){
   const m=loadCompany().main;
   return `<img class="doc-watermark" src="brand/dongda-logo-header.jpg?v=20260613-6" alt=""><div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"><div class="brand-copy"><b>${esc(m.lat||m.name)} · ${esc(m.name)}</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(m.addr)}<br>Тел. ${esc(m.tel||DEF_COMPANY.main.tel)}</small></div></div>`;
 }
-const TPL_CODE={inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
+const TPL_CODE={quote:"QUOTE-v1",inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
 function docFoot(id){return `<div class="foot">TPL ${TPL_CODE[id]||id} · ${today()} · ${curTicket?curTicket.no:""}</div>`}
 function docConditionBlock(id){
   const note=(docConditions&&docConditions[id]||"").trim();
@@ -1366,10 +1368,24 @@ function docHtml(id){
   /* ---- 俄文单证 ---- */
   const T=L[DOC_LANGS[id]&&DOC_LANGS[id].includes(docLang)?docLang:(DOC_LANGS[id]||["ru"])[0]];
   const hint=s=>(docLang==="ru"&&(id==="inv"||id==="pkl"))?cn(s):"";
+  const quoteTitle={cn:"报 价 单",ru:"КОММЕРЧЕСКОЕ ПРЕДЛОЖЕНИЕ",en:"QUOTATION",kk:"БАҒА ҰСЫНЫСЫ",uz:"TIJORAT TAKLIFI"}[docLang]||"QUOTATION";
+  const quoteLabels={
+    cn:{no:"报价单号",date:"报价日期",valid:"有效期",from:"报价方",to:"客户",terms:"贸易条款",pay:"付款方式",note:"备注",noteText:"本报价基于当前产品规格、数量、币种和运输条款；最终成交以双方签署合同或确认订单为准。",validDays:"7天"},
+    ru:{no:"№ предложения",date:"Дата",valid:"Срок действия",from:"Поставщик",to:"Клиент",terms:"Условия поставки",pay:"Условия оплаты",note:"Примечание",noteText:"Предложение основано на текущих спецификациях, количестве, валюте и условиях поставки; окончательные условия фиксируются в договоре или заказе.",validDays:"7 дней"},
+    en:{no:"Quotation No.",date:"Date",valid:"Validity",from:"From",to:"Customer",terms:"Trade terms",pay:"Payment",note:"Note",noteText:"This quotation is based on the current specifications, quantity, currency and delivery terms; final terms are subject to the signed contract or confirmed order.",validDays:"7 days"},
+    kk:{no:"Ұсыныс №",date:"Күні",valid:"Жарамдылық мерзімі",from:"Ұсынушы",to:"Клиент",terms:"Жеткізу талаптары",pay:"Төлем",note:"Ескертпе",noteText:"Бұл баға ұсынысы ағымдағы сипаттама, сан, валюта және жеткізу талаптарына негізделген; соңғы шарттар қол қойылған шартпен немесе расталған тапсырыспен бекітіледі.",validDays:"7 күн"},
+    uz:{no:"Taklif №",date:"Sana",valid:"Amal qilish muddati",from:"Taklif beruvchi",to:"Mijoz",terms:"Yetkazib berish shartlari",pay:"To'lov",note:"Izoh",noteText:"Ushbu tijorat taklifi joriy spetsifikatsiya, miqdor, valyuta va yetkazib berish shartlariga asoslangan; yakuniy shartlar imzolangan shartnoma yoki tasdiqlangan buyurtma bilan belgilanadi.",validDays:"7 kun"}
+  }[docLang]||{};
   const headT=`<div class="meta"><span>${T.contract} ${esc(v.contract)}</span><span>${T.date}: ${v.date}</span><span>${T.invno} ${v.no}</span></div>`;
   const tblT=`<table><tr><th>№</th><th>${T.name} ${hint("品名")}</th><th>${T.hs}</th><th>${T.qty}</th><th>${T.unit}</th><th>${T.price}</th><th>${T.amount}, ${v.cur}</th></tr>
    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${esc(docUnit(it,T))}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
    <tr><td colspan="6" style="text-align:right"><b>${T.total}</b></td><td class="num"><b>${fmt(v.t)}</b></td></tr></table>`;
+  D.quote=`<div class="doc">${docBrand()}<h1>${quoteTitle}</h1><div class="sub">Quotation · Dongda controlled file</div>
+    <div class="meta"><span>${quoteLabels.no}: ${esc(v.no)}</span><span>${quoteLabels.date}: ${v.date}</span><span>${quoteLabels.valid}: ${quoteLabels.validDays}</span></div>
+    <div class="row2"><div><b>${quoteLabels.from}:</b><br>${partyShort(v.si,docLang==="cn"?v.seller:(v.si.lat||v.seller))}</div>
+    <div><b>${quoteLabels.to}:</b><br>${partyShort(v.bi,v.buyer)}</div></div><br>
+    <div class="row2"><span><b>${quoteLabels.terms}:</b> ${esc(v.terms||"—")}</span><span><b>${quoteLabels.pay}:</b> ${esc(trPay(v.pay)||"—")}</span><span><b>${T.cur}:</b> ${esc(v.cur||"—")}</span></div>${tblT}
+    <table><tr><th style="width:150px">${quoteLabels.note}</th><td>${esc(quoteLabels.noteText)}</td></tr></table>${seal()}${docFoot(id)}</div>`;
   D.inv=`<div class="doc">${docBrand()}<h1>${T.inv}</h1><div class="sub">${T.inv2} ${hint("商业发票")}</div>${headT}
     <div class="row2"><div><b>${T.seller} ${hint("卖方")}:</b><br>${partyShort(v.si,docLang==="cn"?v.seller:(v.si.lat||v.seller))}${docLang==="ru"&&v.si.lat?cn("<br>"+v.seller):""}</div>
     <div><b>${T.buyer} ${hint("买方")}:</b><br>${partyShort(v.bi,v.buyer)}</div></div><br>

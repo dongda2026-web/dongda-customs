@@ -347,6 +347,17 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .btn{padding:11px 14px;font-size:13px}
   .footbar{padding:10px 8px;gap:7px}
   .card-b{padding:13px}
+  table.items,table.items tbody,table.items tr,table.items td{display:block;width:100%}
+  table.items thead{display:none}
+  table.items tr{padding:12px;border:1px solid var(--line);border-radius:12px;background:#FBFDFC;margin-bottom:12px}
+  table.items td{border-bottom:none;padding:6px 0}
+  table.items td::before{content:attr(data-label);display:block;font-size:11px;font-weight:800;color:var(--steel);margin-bottom:5px}
+  table.items td[data-label="金额"]{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  table.items td[data-label="金额"]::before{margin:0}
+  table.items td[data-label="删除"]{text-align:right!important;padding-top:0}
+  table.items td[data-label="删除"]::before{display:none}
+  table.items input,table.items select{min-height:42px;font-size:14px}
+  table.items .num{text-align:left}
   .doc h1{font-size:15px;letter-spacing:1px}
   .doc table{font-size:10.5px}
   .doc table th,.doc table td{padding:4px 5px}
@@ -841,6 +852,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260619-five-lang-translate"></script>
+<script src="app.js?v=20260620-mobile-quote"></script>
 </body>
 </html>
