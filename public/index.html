@@ -569,6 +569,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
             <option value="ru">Русский · 俄文</option>
             <option value="en">English · 英文</option>
             <option value="cn">中文</option>
+            <option value="kk">Қазақша · 哈萨克语</option>
+            <option value="uz">O‘zbekcha · 乌兹别克语</option>
           </select></div>
         <button class="btn btn-ink" onclick="printDoc(false)">🖨 导出当前单证 PDF</button>
         <button class="btn btn-ghost" onclick="printDoc(true)">导出全部已选单证</button>
@@ -629,8 +631,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
             <div class="field"><label>合同买方资料</label><select id="contractBuyerCustomer" onchange="applyCustomerToContract('buyer',this.value)"><option value="">选择买方</option></select></div>
           </div>
           <div class="lang-tools">
-            <div class="field"><label>左侧语言</label><select id="contractLangLeft" onchange="setContractLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
-            <div class="field"><label>右侧语言</label><select id="contractLangRight" onchange="setContractLang('right',this.value)"><option value="ru">Русский</option><option value="cn">中文</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
+            <div class="field"><label>左侧语言</label><select id="contractLangLeft" onchange="setContractLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский · 俄文</option><option value="en">English · 英文</option><option value="kk">Қазақша · 哈萨克语</option><option value="uz">O‘zbekcha · 乌兹别克语</option></select></div>
+            <div class="field"><label>右侧语言</label><select id="contractLangRight" onchange="setContractLang('right',this.value)"><option value="ru">Русский · 俄文</option><option value="cn">中文</option><option value="en">English · 英文</option><option value="kk">Қазақша · 哈萨克语</option><option value="uz">O‘zbekcha · 乌兹别克语</option></select></div>
           </div>
           <div class="seal-tools">
             <div class="field"><label>印章版本</label><select id="sealMode" onchange="setSealMode(this.value)"><option value="on">带印章</option><option value="none">无印章版</option></select></div>
@@ -668,8 +670,8 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
         <div id="formTplBody">
           <div class="tpl-verify" id="formTplVerify"></div>
           <div class="lang-tools">
-            <div class="field"><label>左侧语言</label><select id="formLangLeft" onchange="setFormLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
-            <div class="field"><label>右侧语言</label><select id="formLangRight" onchange="setFormLang('right',this.value)"><option value="ru">Русский</option><option value="cn">中文</option><option value="en">English</option><option value="kk">Қазақша</option></select></div>
+            <div class="field"><label>左侧语言</label><select id="formLangLeft" onchange="setFormLang('left',this.value)"><option value="cn">中文</option><option value="ru">Русский · 俄文</option><option value="en">English · 英文</option><option value="kk">Қазақша · 哈萨克语</option><option value="uz">O‘zbekcha · 乌兹别克语</option></select></div>
+            <div class="field"><label>右侧语言</label><select id="formLangRight" onchange="setFormLang('right',this.value)"><option value="ru">Русский · 俄文</option><option value="cn">中文</option><option value="en">English · 英文</option><option value="kk">Қазақша · 哈萨克语</option><option value="uz">O‘zbekcha · 乌兹别克语</option></select></div>
           </div>
           <div class="card-b" id="formTplDetail" style="padding:0"></div>
           <div class="bar" style="margin-top:13px">
@@ -714,7 +716,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   </div>
 
   <div class="lib-section" id="lib_customers">
-    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 可粘贴整段俄文资料，系统自动识别</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div><div class="field" style="margin-top:14px"><label>客户资料编辑（可直接粘贴整段资料；或每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人|VAT|кБе|往来行账号|传真）</label><textarea id="libCustomersEdit" rows="8" style="font-family:var(--mono);font-size:12.5px" placeholder="Покупатель: ТОО «Шымкентцемент»&#10;Адрес: ...&#10;РНН ... / БИН ...&#10;SWIFT: ...&#10;IBAN: ..."></textarea></div><div class="bar" style="margin-top:10px"><button class="btn btn-ink" onclick="saveLibraryCustomers()">保存客户资料</button><button class="btn btn-ghost" onclick="renderLibraryData()">重新载入</button></div></div></div>
+    <div class="card"><div class="card-h"><span class="tag"></span><h3>客户资料</h3><span class="ru">买方 / 卖方 / 双方 · 支持俄文/英文/哈萨克语/乌兹别克语自动翻译</span></div><div class="card-b"><div class="lib-grid" id="libCustomerList"></div><div class="field" style="margin-top:14px"><label>客户资料编辑（每行：名称|国家|角色|地址|税号/BIN|银行|账号/IBAN|SWIFT|BIK|电话|联系人|VAT|кБе|往来行账号|传真|俄文名|英文名|哈文名|乌文名|俄文地址|英文地址|哈文地址|乌文地址|俄文银行|英文银行|哈文银行|乌文银行）</label><textarea id="libCustomersEdit" rows="8" style="font-family:var(--mono);font-size:12.5px" placeholder="Покупатель: ТОО «Шымкентцемент»&#10;Адрес: ...&#10;РНН ... / БИН ...&#10;SWIFT: ...&#10;IBAN: ..."></textarea></div><div class="bar" style="margin-top:10px"><button class="btn btn-ink" onclick="saveLibraryCustomers()">保存客户资料</button><button class="btn btn-main" onclick="translateLibraryCustomers()">AI翻译客户资料</button><button class="btn btn-ghost" onclick="renderLibraryData()">重新载入</button></div></div></div>
   </div>
 
   <div class="lib-section" id="lib_products">
@@ -839,6 +841,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260619-sync-cors-fix"></script>
+<script src="app.js?v=20260619-five-lang-translate"></script>
 </body>
 </html>

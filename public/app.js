@@ -117,16 +117,62 @@ function inferCustomerMeta(c,source){
   }
   return c;
 }
+function cjkText(s){return /[\u4e00-\u9fff]/.test(String(s||""))}
+function cyrText(s){return /[А-Яа-яЁёҚқҒғҢңӨөҰұҮүҺһІіЎў]/.test(String(s||""))}
+const COMMON_TR=[
+  ["阿克苏兴华进出口贸易有限公司",{ru:"Aksu Xinghua Import and Export Trade Co., Ltd",en:"Aksu Xinghua Import and Export Trade Co., Ltd",kk:"Aksu Xinghua Import and Export Trade Co., Ltd",uz:"Aksu Xinghua Import and Export Trade Co., Ltd"}],
+  ["Частная компания Dongda Ltd.",{ru:"Частная компания Dongda Ltd.",en:"Dongda Ltd.",kk:"Dongda Ltd. жеке компаниясы",uz:"Dongda Ltd. xususiy kompaniyasi"}],
+  ["Dongda Ltd.",{ru:"Частная компания Dongda Ltd.",en:"Dongda Ltd.",kk:"Dongda Ltd. жеке компаниясы",uz:"Dongda Ltd. xususiy kompaniyasi"}],
+  ["新疆",{ru:"Синьцзян",en:"Xinjiang",kk:"Шыңжаң",uz:"Shinjon"}],["阿克苏",{ru:"Аксу",en:"Aksu",kk:"Ақсу",uz:"Aksu"}],["地区",{ru:"округ",en:"Prefecture",kk:"аймағы",uz:"okrugi"}],
+  ["纺织工业城",{ru:"текстильный промышленный городок",en:"Textile Industrial Park",kk:"тоқыма өнеркәсіп паркі",uz:"to'qimachilik sanoat parki"}],
+  ["开发区",{ru:"зона развития",en:"Development Zone",kk:"даму аймағы",uz:"rivojlanish zonasi"}],["静湖社区",{ru:"район Цзинху",en:"Jinghu Community",kk:"Цзинху қауымдастығы",uz:"Jinghu mahallasi"}],
+  ["纺织大道",{ru:"проспект Фанчжи",en:"Textile Avenue",kk:"Тоқыма даңғылы",uz:"To'qimachilik shoh ko'chasi"}],["华孚路",{ru:"дорога Хуафу",en:"Huafu Road",kk:"Хуафу жолы",uz:"Huafu yo'li"}],
+  ["发展大厦",{ru:"здание Development",en:"Development Building",kk:"даму ғимараты",uz:"Rivojlanish binosi"}],["八层",{ru:"8 этаж",en:"8/F",kk:"8-қабат",uz:"8-qavat"}],
+  ["中国银行",{ru:"Банк Китая",en:"Bank of China",kk:"Қытай Банкі",uz:"Xitoy Banki"}],["中国工商银行",{ru:"ICBC",en:"ICBC",kk:"ICBC",uz:"ICBC"}],["中国建设银行",{ru:"China Construction Bank",en:"China Construction Bank",kk:"China Construction Bank",uz:"China Construction Bank"}],
+  ["中国农业银行",{ru:"Agricultural Bank of China",en:"Agricultural Bank of China",kk:"Agricultural Bank of China",uz:"Agricultural Bank of China"}],["交通银行",{ru:"Bank of Communications",en:"Bank of Communications",kk:"Bank of Communications",uz:"Bank of Communications"}],
+  ["分行",{ru:"филиал",en:"Branch",kk:"филиалы",uz:"filiali"}],["支行",{ru:"субфилиал",en:"Sub-branch",kk:"бөлімшесі",uz:"bo'limi"}],
+  ["哈萨克斯坦",{ru:"Казахстан",en:"Kazakhstan",kk:"Қазақстан",uz:"Qozog'iston"}],["乌兹别克斯坦",{ru:"Узбекистан",en:"Uzbekistan",kk:"Өзбекстан",uz:"O'zbekiston"}],["中国",{ru:"Китай",en:"China",kk:"Қытай",uz:"Xitoy"}],
+  ["有限公司",{ru:"Co., Ltd",en:"Co., Ltd",kk:"Co., Ltd",uz:"Co., Ltd"}],["贸易",{ru:"торговля",en:"Trade",kk:"сауда",uz:"savdo"}],["进出口",{ru:"импорт и экспорт",en:"Import and Export",kk:"импорт және экспорт",uz:"import va eksport"}]
+];
+function autoTranslateText(s,lang){
+  s=String(s||"").trim();if(!s)return "";
+  if(lang==="cn")return s;
+  if(lang==="ru"&&cyrText(s))return s;
+  if((lang==="en"||lang==="kk"||lang==="uz")&&!cjkText(s)&&!cyrText(s))return s;
+  let r=s;
+  COMMON_TR.forEach(([a,b])=>{r=r.split(a).join((b&&b[lang])||b.en||a)});
+  if(lang==="en")r=r.replace(/[，。；：]/g,m=>({"，":", ","。":". ","；":"; ","：":": "}[m]||" ")).replace(/\s+/g," ").trim();
+  if(lang==="ru"||lang==="kk"||lang==="uz")r=r.replace(/[，。；：]/g," ").replace(/\s+/g," ").trim();
+  return r||s;
+}
+function customerLangValue(c,field,lang){
+  if(lang==="cn")return c[field]||"";
+  const cap=field.charAt(0).toUpperCase()+field.slice(1),direct=c[field+cap]||c[field+lang.charAt(0).toUpperCase()+lang.slice(1)];
+  if(direct)return direct;
+  const suf=lang==="ru"?"Ru":lang==="en"?"En":lang==="kk"?"Kk":"Uz";
+  if(field==="name")return c["name"+suf]||autoTranslateText(c.name,lang);
+  if(field==="addr")return c["addr"+suf]||autoTranslateText(c.addr,lang);
+  if(field==="bank")return c["bank"+suf]||autoTranslateText(c.bank,lang);
+  return c[field]||"";
+}
+function enrichCustomerTranslations(c){
+  ["name","addr","bank"].forEach(f=>["ru","en","kk","uz"].forEach(lang=>{
+    const key=f+(lang==="ru"?"Ru":lang==="en"?"En":lang==="kk"?"Kk":"Uz");
+    if(!c[key]&&c[f])c[key]=autoTranslateText(c[f],lang);
+  }));
+  return c;
+}
 function normalizeCustomer(p){
   let c;
   if(Array.isArray(p)){
-    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||""};
-    return inferCustomerMeta(c,p.join(" "));
+    const old=p.length<=24;
+    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||"",nameRu:p[15]||"",nameEn:p[16]||"",nameKk:p[17]||"",nameUz:old?"":p[18]||"",addrRu:old?p[18]||"":p[19]||"",addrEn:old?p[19]||"":p[20]||"",addrKk:old?p[20]||"":p[21]||"",addrUz:old?"":p[22]||"",bankRu:old?p[21]||"":p[23]||"",bankEn:old?p[22]||"":p[24]||"",bankKk:old?p[23]||"":p[25]||"",bankUz:old?"":p[26]||""};
+    return enrichCustomerTranslations(inferCustomerMeta(c,p.join(" ")));
   }
-  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||""};
-  return inferCustomerMeta(c);
+  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||"",nameRu:p&&p.nameRu||"",nameEn:p&&p.nameEn||"",nameKk:p&&p.nameKk||"",nameUz:p&&p.nameUz||"",addrRu:p&&p.addrRu||"",addrEn:p&&p.addrEn||"",addrKk:p&&p.addrKk||"",addrUz:p&&p.addrUz||"",bankRu:p&&p.bankRu||"",bankEn:p&&p.bankEn||"",bankKk:p&&p.bankKk||"",bankUz:p&&p.bankUz||""};
+  return enrichCustomerTranslations(inferCustomerMeta(c));
 }
-function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||""].join("|")}
+function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||"",p.nameRu||"",p.nameEn||"",p.nameKk||"",p.nameUz||"",p.addrRu||"",p.addrEn||"",p.addrKk||"",p.addrUz||"",p.bankRu||"",p.bankEn||"",p.bankKk||"",p.bankUz||""].join("|")}
 function parseCustomerLine(l){return normalizeCustomer(l.split("|").map(s=>s.trim()))}
 function cleanField(v){return String(v||"").replace(/^[：:\s]+|[；;,\s]+$/g,"").trim()}
 function matchField(txt,re){const m=String(txt||"").match(re);return cleanField(m&&m[1]||"")}
@@ -256,7 +302,9 @@ function getHS(){return loadCfg().hs}
 function getProducts(){return loadCfg().products||[]}
 function getCustomers(role){const list=loadCfg().clients||[];return role?list.filter(c=>!c.role||c.role===role||c.role==="both"):list}
 function partyInfoFromCustomer(c){
-  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",lat:c.name||""};
+  c=normalizeCustomer(c||{});
+  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",lat:c.nameEn||c.name||"",
+    nameRu:c.nameRu||"",nameEn:c.nameEn||"",nameKk:c.nameKk||"",nameUz:c.nameUz||"",addrRu:c.addrRu||"",addrEn:c.addrEn||"",addrKk:c.addrKk||"",addrUz:c.addrUz||"",bankRu:c.bankRu||"",bankEn:c.bankEn||"",bankKk:c.bankKk||"",bankUz:c.bankUz||""};
 }
 function drawCustomerSelects(){
   const fill=(id,role)=>{
@@ -364,6 +412,22 @@ function saveLibraryCustomers(){
   }
   cfg.clients=list;saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已保存："+rows.length+" 条，并已同步");
+}
+async function translateLibraryCustomers(){
+  const cfg=loadCfg(),list=(cfg.clients||[]).map(normalizeCustomer).filter(c=>c.name);
+  if(!list.length){toast("请先保存客户资料");return}
+  toast("正在调用 API 翻译客户资料…");
+  try{
+    const r=await fetch(apiBase()+"/api/translate/customers",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({customers:list})});
+    const d=await r.json();
+    if(!r.ok||!d.ok)throw new Error(d.error||"翻译失败");
+    const got=Array.isArray(d.customers)?d.customers:[];
+    got.forEach((x,i)=>{if(list[i])Object.assign(list[i],x)});
+    cfg.clients=list.map(normalizeCustomer);
+    saveCfgLocal(cfg);
+    fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();
+    toast("AI 翻译完成，已写入客户资料库并同步 ✓");
+  }catch(e){toast("翻译失败："+apiFetchHint(e))}
 }
 function deleteLibraryCustomer(i){
   const cfg=loadCfg(),c=(cfg.clients||[])[i];if(!c)return;
@@ -684,7 +748,8 @@ const ML={
   cn:{name:"中文",purchase:"货物采购合同",sale:"货物销售合同",sub:"东大受控文件",no:"合同编号",place:"签约地点",date:"签订日期",seller:"卖方",buyer:"买方",addr:"地址",tax:"税号/信用代码",bank:"开户行",swift:"SWIFT",account:"银行账号/IBAN",bik:"BIK/SWIFT",goods:"第一条 标的物",goodsText:"双方确认以下货物名称、规格、数量、单价及金额。",item:"货物名称",hs:"HS编码",qty:"数量",price:"单价",amount:"金额",total:"合同总金额",country:"目的国",pkg:"包装",weight:"毛重/净重",quality:"第二条 质量要求",pack:"第三条 包装标准",delivery:"第四条 交货与运输",payment:"第五条 结算与支付",acceptance:"第六条 验收",breach:"第七条 违约责任与不可抗力",law:"第八条 法律适用与争议解决",effective:"第九条 合同生效",effectiveText:"本合同自双方授权代表签字并加盖公章或合同专用章之日起生效；传真件、扫描件与原件具有同等效力。",sellerSeal:"卖方签章",buyerSeal:"买方签章"},
   ru:{name:"Русский",purchase:"ДОГОВОР ПОСТАВКИ ТОВАРА",sale:"ДОГОВОР КУПЛИ-ПРОДАЖИ ТОВАРА",sub:"Контролируемый документ Dongda",no:"№ договора",place:"Место подписания",date:"Дата подписания",seller:"Продавец",buyer:"Покупатель",addr:"Адрес",tax:"Налоговый номер / код",bank:"Банк",swift:"SWIFT",account:"Счет / IBAN",bik:"БИК / SWIFT",goods:"1. Предмет договора",goodsText:"Стороны согласовали наименование, спецификацию, количество, цену и сумму товара.",item:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",price:"Цена",amount:"Сумма",total:"Общая сумма договора",country:"Страна назначения",pkg:"Упаковка",weight:"Брутто / нетто",quality:"2. Требования к качеству",pack:"3. Упаковка",delivery:"4. Поставка и транспортировка",payment:"5. Расчеты и оплата",acceptance:"6. Приемка",breach:"7. Ответственность и форс-мажор",law:"8. Применимое право и споры",effective:"9. Вступление в силу",effectiveText:"Договор вступает в силу после подписания уполномоченными представителями и проставления печати; скан-копия имеет силу оригинала.",sellerSeal:"Подпись/печать продавца",buyerSeal:"Подпись/печать покупателя"},
   en:{name:"English",purchase:"GOODS PURCHASE CONTRACT",sale:"GOODS SALES CONTRACT",sub:"Dongda controlled file",no:"Contract No.",place:"Place of signing",date:"Signing date",seller:"Seller",buyer:"Buyer",addr:"Address",tax:"Tax ID / registration code",bank:"Bank",swift:"SWIFT",account:"Account / IBAN",bik:"BIK / SWIFT",goods:"1. Subject matter",goodsText:"The parties confirm the goods, specifications, quantity, unit price and amount below.",item:"Description",hs:"HS code",qty:"Quantity",price:"Unit price",amount:"Amount",total:"Total contract amount",country:"Destination country",pkg:"Packaging",weight:"Gross / net weight",quality:"2. Quality requirements",pack:"3. Packaging standard",delivery:"4. Delivery and transport",payment:"5. Settlement and payment",acceptance:"6. Acceptance",breach:"7. Liability and force majeure",law:"8. Governing law and disputes",effective:"9. Effectiveness",effectiveText:"This contract becomes effective after signing by authorized representatives and affixing the company seal; scanned copies have the same legal effect as originals.",sellerSeal:"Seller signature/seal",buyerSeal:"Buyer signature/seal"},
-  kk:{name:"Қазақша",purchase:"ТАУАР САТЫП АЛУ ШАРТЫ",sale:"ТАУАР САТУ ШАРТЫ",sub:"Dongda бақыланатын құжаты",no:"Шарт нөмірі",place:"Қол қою орны",date:"Қол қою күні",seller:"Сатушы",buyer:"Сатып алушы",addr:"Мекенжай",tax:"Салық нөмірі / тіркеу коды",bank:"Банк",swift:"SWIFT",account:"Шот / IBAN",bik:"BIK / SWIFT",goods:"1. Шарт нысанасы",goodsText:"Тараптар тауардың атауын, сипаттамасын, санын, бірлік бағасын және сомасын растайды.",item:"Тауар атауы",hs:"HS / ТН ВЭД коды",qty:"Саны",price:"Бірлік бағасы",amount:"Сома",total:"Шарттың жалпы сомасы",country:"Межелі ел",pkg:"Қаптама",weight:"Брутто / нетто салмақ",quality:"2. Сапа талаптары",pack:"3. Қаптама стандарты",delivery:"4. Жеткізу және тасымалдау",payment:"5. Есеп айырысу және төлем",acceptance:"6. Қабылдау",breach:"7. Жауапкершілік және форс-мажор",law:"8. Қолданылатын құқық және даулар",effective:"9. Күшіне енуі",effectiveText:"Шарт уәкілетті өкілдер қол қойып, мөр басылғаннан кейін күшіне енеді; сканерленген көшірме түпнұсқамен бірдей күшке ие.",sellerSeal:"Сатушы қолы/мөрі",buyerSeal:"Сатып алушы қолы/мөрі"}
+  kk:{name:"Қазақша",purchase:"ТАУАР САТЫП АЛУ ШАРТЫ",sale:"ТАУАР САТУ ШАРТЫ",sub:"Dongda бақыланатын құжаты",no:"Шарт нөмірі",place:"Қол қою орны",date:"Қол қою күні",seller:"Сатушы",buyer:"Сатып алушы",addr:"Мекенжай",tax:"Салық нөмірі / тіркеу коды",bank:"Банк",swift:"SWIFT",account:"Шот / IBAN",bik:"BIK / SWIFT",goods:"1. Шарт нысанасы",goodsText:"Тараптар тауардың атауын, сипаттамасын, санын, бірлік бағасын және сомасын растайды.",item:"Тауар атауы",hs:"HS / ТН ВЭД коды",qty:"Саны",price:"Бірлік бағасы",amount:"Сома",total:"Шарттың жалпы сомасы",country:"Межелі ел",pkg:"Қаптама",weight:"Брутто / нетто салмақ",quality:"2. Сапа талаптары",pack:"3. Қаптама стандарты",delivery:"4. Жеткізу және тасымалдау",payment:"5. Есеп айырысу және төлем",acceptance:"6. Қабылдау",breach:"7. Жауапкершілік және форс-мажор",law:"8. Қолданылатын құқық және даулар",effective:"9. Күшіне енуі",effectiveText:"Шарт уәкілетті өкілдер қол қойып, мөр басылғаннан кейін күшіне енеді; сканерленген көшірме түпнұсқамен бірдей күшке ие.",sellerSeal:"Сатушы қолы/мөрі",buyerSeal:"Сатып алушы қолы/мөрі"},
+  uz:{name:"O‘zbekcha",purchase:"TOVAR SOTIB OLISH SHARTNOMASI",sale:"TOVAR SOTISH SHARTNOMASI",sub:"Dongda nazorat hujjati",no:"Shartnoma raqami",place:"Imzolash joyi",date:"Imzolash sanasi",seller:"Sotuvchi",buyer:"Xaridor",addr:"Manzil",tax:"Soliq raqami / ro'yxat kodi",bank:"Bank",swift:"SWIFT",account:"Hisob / IBAN",bik:"BIK / SWIFT",goods:"1. Shartnoma predmeti",goodsText:"Tomonlar tovar nomi, spetsifikatsiyasi, miqdori, bir birlik narxi va summasini tasdiqlaydi.",item:"Tovar nomi",hs:"HS / TN VED kodi",qty:"Miqdor",price:"Birlik narxi",amount:"Summa",total:"Shartnomaning umumiy summasi",country:"Mo'ljal mamlakati",pkg:"Qadoqlash",weight:"Brutto / netto vazn",quality:"2. Sifat talablari",pack:"3. Qadoqlash standarti",delivery:"4. Yetkazib berish va tashish",payment:"5. Hisob-kitob va to'lov",acceptance:"6. Qabul qilish",breach:"7. Javobgarlik va fors-major",law:"8. Qo'llaniladigan huquq va nizolar",effective:"9. Kuchga kirishi",effectiveText:"Shartnoma vakolatli vakillar imzolab muhr qo'ygandan so'ng kuchga kiradi; skaner nusxa asl nusxa bilan bir xil kuchga ega.",sellerSeal:"Sotuvchi imzosi/muhri",buyerSeal:"Xaridor imzosi/muhri"}
 };
 function langName(k){return (ML[k]||ML.cn).name}
 function setSelectVal(id,v){const el=$(id);if(el)el.value=v}
@@ -757,7 +822,12 @@ function contractParamData(){
   const d={};contractTpl().params.forEach(p=>{const el=$("ct_"+p[0]);d[p[0]]=el?el.value.trim():p[2]});return d;
 }
 function contractLineData(){ensureContractLines();return contractLines.map(makeContractLine).filter(x=>x.name||x.hs||x.qty||x.price)}
-function contractPartyData(prefix,p){
+function partyForLang(p,lang){
+  p=enrichCustomerTranslations(Object.assign({},p||{}));
+  return Object.assign({},p,{name:customerLangValue(p,"name",lang)||p.name,addr:customerLangValue(p,"addr",lang)||p.addr,bank:customerLangValue(p,"bank",lang)||p.bank,lat:p.nameEn||p.lat||p.name});
+}
+function contractPartyData(prefix,p,lang){
+  p=partyForLang(p,lang||"cn");
   return prefix==="seller"
     ?{seller:p.name,seller_addr:p.addr,seller_tax:p.tax||p.bin,seller_bank:p.bank,seller_swift:p.swift,seller_account:p.account||p.iban}
     :{buyer:p.name,buyer_addr:p.addr,buyer_tax:p.bin||p.tax,buyer_bank:p.bank,buyer_iban:p.iban||p.account,buyer_bik:p.bik};
@@ -848,7 +918,8 @@ const FORM_DESC={
   cn:{inv:"商业发票：合同号、买卖方、货物、金额、贸易条款自动带入。",pkl:"装箱单：货物、件数、毛重、净重、包装信息自动生成。",dec:"出口报关单草单：用于中国单一窗口预录入核对。",ysys:"申报要素表：品名、用途、材质、规格、品牌等要素。",cmr:"CMR国际公路运输单：发货人、收货人、装卸地、车辆信息。",bro:"KZ/UZ申报资料表：给进口国报关代理录入ДТ/ГТД。",broker:"报关代理委托资料：给брокер的资料清单和核对要点。",co:"CO申请资料：原产地证申请所需出口商、收货人、路线、商品信息。",origin:"原产地声明资料：非优惠原产地说明和生产依据。",tax:"进口税费测算表：KZ/UZ关税、НДС和税率依据。",check:"通关合规核验清单：合同、HS、CO、运输、银行、税费逐项核对。"},
   ru:{inv:"Инвойс: автоматически подставляет контракт, стороны, товар, сумму и условия поставки.",pkl:"Упаковочный лист: товар, места, брутто, нетто и упаковка.",dec:"Черновик экспортной декларации КНР: для проверки перед подачей в Single Window.",ysys:"Сведения о товаре: наименование, назначение, материал, спецификация и бренд.",cmr:"CMR: отправитель, получатель, места погрузки/разгрузки и транспорт.",bro:"Сведения для ДТ/ГТД KZ/UZ: для таможенного брокера страны импорта.",broker:"Пакет для брокера: перечень документов и контрольные вопросы.",co:"Заявка на CO: экспортер, получатель, маршрут и сведения о товаре.",origin:"Сведения о происхождении: непреференциальное происхождение и производственные основания.",tax:"Расчет платежей: пошлина KZ/UZ, НДС и основания ставок.",check:"Чек-лист комплаенса: контракт, HS, CO, транспорт, банк и налоги."},
   en:{inv:"Commercial invoice: auto-fills contract, parties, goods, value and trade terms.",pkl:"Packing list: goods, packages, gross/net weight and packaging data.",dec:"China export declaration draft: for Single Window pre-entry checks.",ysys:"Declaration elements: name, use, material, specification and brand.",cmr:"CMR waybill: consignor, consignee, loading/unloading points and vehicle.",bro:"KZ/UZ customs declaration data sheet for the import broker.",broker:"Broker instruction pack: document list and control checks.",co:"CO application data: exporter, consignee, route and goods information.",origin:"Origin statement data: non-preferential origin and production basis.",tax:"Import tax estimate: KZ/UZ duty, VAT and rate basis.",check:"Customs compliance checklist: contract, HS, CO, transport, bank and taxes."},
-  kk:{inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."}
+  kk:{inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."},
+  uz:{inv:"Tijorat invoysi: shartnoma, tomonlar, tovar, summa va yetkazib berish shartlarini avtomatik to'ldiradi.",pkl:"Qadoqlash varaqasi: tovar, joylar soni, brutto/netto vazn va qadoqlash.",dec:"Xitoy eksport deklaratsiyasi loyihasi: Single Window oldindan tekshirish uchun.",ysys:"Deklaratsiya elementlari: nomi, qo'llanishi, materiali, spetsifikatsiyasi va brendi.",cmr:"CMR yuk xati: jo'natuvchi, oluvchi, yuklash/tushirish joylari va transport.",bro:"KZ/UZ bojxona deklaratsiyasi ma'lumot varaqasi: import brokeri uchun.",broker:"Broker topshiriq paketi: hujjatlar ro'yxati va nazorat savollari.",co:"CO ariza ma'lumotlari: eksportchi, oluvchi, marshrut va tovar ma'lumoti.",origin:"Kelib chiqish ma'lumoti: preferensiyasiz kelib chiqish va ishlab chiqarish asosi.",tax:"Import soliq hisob-kitobi: KZ/UZ boj, QQS va stavka asosi.",check:"Bojxona muvofiqlik ro'yxati: shartnoma, HS, CO, transport, bank va soliqlar."}
 };
 let formTplId="inv";
 let currentLib="templates";
@@ -902,31 +973,32 @@ function contractRows(d){
 }
 const hasZh=s=>/[\u4e00-\u9fff]/.test(s||"");
 const VALUE_TR={
-  place:{cn:"中国 · 新疆",ru:"Китай · Синьцзян",en:"China · Xinjiang",kk:"Қытай · Шыңжаң"},
-  port:{cn:"霍尔果斯",ru:"Хоргос",en:"Khorgos",kk:"Қорғас"},
-  trans:{cn:"公路卡航（中欧卡车）",ru:"автомобильная перевозка",en:"road freight by truck",kk:"автокөлікпен тасымалдау"},
-  pay:{cn:"货到付款",ru:"оплата при доставке",en:"payment on delivery",kk:"жеткізілгеннен кейін төлеу"},
-  pkg:{cn:"托盘/打包带固定",ru:"паллеты / фиксация упаковочной лентой",en:"pallets / secured with strapping",kk:"паллет / қаптама таспасымен бекітілген"},
-  law:{cn:"中华人民共和国法律",ru:"право Китайской Народной Республики",en:"laws of the People's Republic of China",kk:"Қытай Халық Республикасының құқығы"},
-  goods:{cn:"PP集装袋(吨袋) 90×90×110cm 四吊带",ru:"полипропиленовый биг-бэг 90×90×110 см, 4 стропы",en:"PP jumbo bag 90×90×110 cm, four lifting loops",kk:"PP биг-бэг 90×90×110 см, төрт ілмекті"},
-  seller:{cn:"新疆立天东大贸易有限公司",ru:"Xinjiang Litian Dongda Trading Co., Ltd.",en:"Xinjiang Litian Dongda Trading Co., Ltd.",kk:"Xinjiang Litian Dongda Trading Co., Ltd."},
-  buyer:{cn:"Dongda Ltd.",ru:"Dongda Ltd.",en:"Dongda Ltd.",kk:"Dongda Ltd."},
-  seller_addr:{cn:"中国新疆",ru:"Китай, Синьцзян",en:"Xinjiang, China",kk:"Қытай, Шыңжаң"},
-  buyer_addr:{cn:"г. Астана, ул. Сауран 3/1, оф.783",ru:"г. Астана, ул. Сауран 3/1, оф.783",en:"Office 783, 3/1 Sauran St., Astana",kk:"Астана қ., Сауран к-сі 3/1, 783-кеңсе"},
-  bank:{cn:"开户银行",ru:"банк",en:"bank",kk:"банк"}
+  place:{cn:"中国 · 新疆",ru:"Китай · Синьцзян",en:"China · Xinjiang",kk:"Қытай · Шыңжаң",uz:"Xitoy · Shinjon"},
+  port:{cn:"霍尔果斯",ru:"Хоргос",en:"Khorgos",kk:"Қорғас",uz:"Xorgos"},
+  trans:{cn:"公路卡航（中欧卡车）",ru:"автомобильная перевозка",en:"road freight by truck",kk:"автокөлікпен тасымалдау",uz:"avtomobil transporti"},
+  pay:{cn:"货到付款",ru:"оплата при доставке",en:"payment on delivery",kk:"жеткізілгеннен кейін төлеу",uz:"yetkazilgandan keyin to'lov"},
+  pkg:{cn:"托盘/打包带固定",ru:"паллеты / фиксация упаковочной лентой",en:"pallets / secured with strapping",kk:"паллет / қаптама таспасымен бекітілген",uz:"palletlar / lenta bilan mahkamlangan"},
+  law:{cn:"中华人民共和国法律",ru:"право Китайской Народной Республики",en:"laws of the People's Republic of China",kk:"Қытай Халық Республикасының құқығы",uz:"Xitoy Xalq Respublikasi qonunchiligi"},
+  goods:{cn:"PP集装袋(吨袋) 90×90×110cm 四吊带",ru:"полипропиленовый биг-бэг 90×90×110 см, 4 стропы",en:"PP jumbo bag 90×90×110 cm, four lifting loops",kk:"PP биг-бэг 90×90×110 см, төрт ілмекті",uz:"PP big-beg 90×90×110 sm, to'rt ilgakli"},
+  seller:{cn:"新疆立天东大贸易有限公司",ru:"Xinjiang Litian Dongda Trading Co., Ltd.",en:"Xinjiang Litian Dongda Trading Co., Ltd.",kk:"Xinjiang Litian Dongda Trading Co., Ltd.",uz:"Xinjiang Litian Dongda Trading Co., Ltd."},
+  buyer:{cn:"Dongda Ltd.",ru:"Dongda Ltd.",en:"Dongda Ltd.",kk:"Dongda Ltd.",uz:"Dongda Ltd."},
+  seller_addr:{cn:"中国新疆",ru:"Китай, Синьцзян",en:"Xinjiang, China",kk:"Қытай, Шыңжаң",uz:"Shinjon, Xitoy"},
+  buyer_addr:{cn:"г. Астана, ул. Сауран 3/1, оф.783",ru:"г. Астана, ул. Сауран 3/1, оф.783",en:"Office 783, 3/1 Sauran St., Astana",kk:"Астана қ., Сауран к-сі 3/1, 783-кеңсе",uz:"Astana sh., Sauran ko'chasi 3/1, ofis 783"},
+  bank:{cn:"开户银行",ru:"банк",en:"bank",kk:"банк",uz:"bank"}
 };
 const CLAUSE_TR={
-  quality:{cn:"货物应符合合同约定规格、双方确认样品及出口包装要求。",ru:"Товар должен соответствовать согласованной спецификации, образцам и требованиям экспортной упаковки.",en:"The goods shall conform to the agreed specifications, confirmed samples and export packaging requirements.",kk:"Тауар келісілген сипаттамаға, расталған үлгілерге және экспорттық қаптама талаптарына сәйкес болуы тиіс."},
-  pack_clause:{cn:"卖方应采用适合国际运输的包装，保证货物在正常运输、装卸和仓储条件下完好。",ru:"Продавец обязан использовать упаковку, пригодную для международной перевозки, чтобы сохранить товар при обычной перевозке, погрузке и хранении.",en:"The seller shall use packaging suitable for international transport and keep the goods intact under normal transport, handling and storage conditions.",kk:"Сатушы халықаралық тасымалдауға жарамды қаптаманы қолданып, қалыпты тасымалдау, тиеу және сақтау кезінде тауардың сақталуын қамтамасыз етеді."},
-  acceptance:{cn:"买方应在收货后合理期限内完成验收；对数量、质量或规格有异议的，应及时提交书面证明。",ru:"Покупатель обязан провести приемку в разумный срок после получения товара; претензии по количеству, качеству или спецификации подаются письменно.",en:"The buyer shall complete acceptance within a reasonable period after receipt; any quantity, quality or specification claim shall be submitted in writing.",kk:"Сатып алушы тауарды алғаннан кейін ақылға қонымды мерзімде қабылдауды аяқтайды; саны, сапасы немесе сипаттамасы бойынша талап жазбаша беріледі."},
-  breach:{cn:"任一方违反本合同约定，应赔偿守约方因此遭受的直接损失；因不可抗力导致不能履约的，受影响方应及时通知并提供证明。",ru:"Сторона, нарушившая договор, возмещает другой стороне прямые убытки; при форс-мажоре затронутая сторона своевременно уведомляет другую сторону и предоставляет подтверждение.",en:"A breaching party shall compensate the non-breaching party for direct losses; in case of force majeure, the affected party shall promptly notify the other party and provide evidence.",kk:"Шартты бұзған тарап екінші тараптың тікелей шығындарын өтейді; форс-мажор кезінде зардап шеккен тарап дер кезінде хабарлап, дәлел ұсынады."},
-  dispute:{cn:"协商不成，提交卖方所在地有管辖权人民法院诉讼解决。",ru:"При недостижении соглашения спор передается в компетентный суд по месту нахождения продавца.",en:"If negotiation fails, the dispute shall be submitted to the competent court at the seller's location.",kk:"Келіссөз нәтиже бермесе, дау сатушы орналасқан жердегі құзыретті сотқа беріледі."},
-  delivery:{cn:"按双方确认计划执行",ru:"в соответствии с согласованным графиком",en:"according to the schedule confirmed by both parties",kk:"тараптар келіскен кестеге сәйкес"}
+  quality:{cn:"货物应符合合同约定规格、双方确认样品及出口包装要求。",ru:"Товар должен соответствовать согласованной спецификации, образцам и требованиям экспортной упаковки.",en:"The goods shall conform to the agreed specifications, confirmed samples and export packaging requirements.",kk:"Тауар келісілген сипаттамаға, расталған үлгілерге және экспорттық қаптама талаптарына сәйкес болуы тиіс.",uz:"Tovar kelishilgan spetsifikatsiya, tasdiqlangan namunalar va eksport qadoqlash talablariga mos bo'lishi kerak."},
+  pack_clause:{cn:"卖方应采用适合国际运输的包装，保证货物在正常运输、装卸和仓储条件下完好。",ru:"Продавец обязан использовать упаковку, пригодную для международной перевозки, чтобы сохранить товар при обычной перевозке, погрузке и хранении.",en:"The seller shall use packaging suitable for international transport and keep the goods intact under normal transport, handling and storage conditions.",kk:"Сатушы халықаралық тасымалдауға жарамды қаптаманы қолданып, қалыпты тасымалдау, тиеу және сақтау кезінде тауардың сақталуын қамтамасыз етеді.",uz:"Sotuvchi xalqaro tashishga mos qadoqlashdan foydalanib, odatiy tashish, yuklash va saqlash sharoitida tovar butligini ta'minlaydi."},
+  acceptance:{cn:"买方应在收货后合理期限内完成验收；对数量、质量或规格有异议的，应及时提交书面证明。",ru:"Покупатель обязан провести приемку в разумный срок после получения товара; претензии по количеству, качеству или спецификации подаются письменно.",en:"The buyer shall complete acceptance within a reasonable period after receipt; any quantity, quality or specification claim shall be submitted in writing.",kk:"Сатып алушы тауарды алғаннан кейін ақылға қонымды мерзімде қабылдауды аяқтайды; саны, сапасы немесе сипаттамасы бойынша талап жазбаша беріледі.",uz:"Xaridor tovarni olgandan so'ng oqilona muddatda qabul qilishni yakunlaydi; miqdor, sifat yoki spetsifikatsiya bo'yicha e'tiroz yozma taqdim etiladi."},
+  breach:{cn:"任一方违反本合同约定，应赔偿守约方因此遭受的直接损失；因不可抗力导致不能履约的，受影响方应及时通知并提供证明。",ru:"Сторона, нарушившая договор, возмещает другой стороне прямые убытки; при форс-мажоре затронутая сторона своевременно уведомляет другую сторону и предоставляет подтверждение.",en:"A breaching party shall compensate the non-breaching party for direct losses; in case of force majeure, the affected party shall promptly notify the other party and provide evidence.",kk:"Шартты бұзған тарап екінші тараптың тікелей шығындарын өтейді; форс-мажор кезінде зардап шеккен тарап дер кезінде хабарлап, дәлел ұсынады.",uz:"Shartnomani buzgan tomon boshqa tomonning bevosita zararlarini qoplaydi; fors-major holatida zarar ko'rgan tomon o'z vaqtida xabar beradi va dalil taqdim etadi."},
+  dispute:{cn:"协商不成，提交卖方所在地有管辖权人民法院诉讼解决。",ru:"При недостижении соглашения спор передается в компетентный суд по месту нахождения продавца.",en:"If negotiation fails, the dispute shall be submitted to the competent court at the seller's location.",kk:"Келіссөз нәтиже бермесе, дау сатушы орналасқан жердегі құзыретті сотқа беріледі.",uz:"Muzokara natija bermasa, nizo sotuvchi joylashgan hududdagi vakolatli sudga taqdim etiladi."},
+  delivery:{cn:"按双方确认计划执行",ru:"в соответствии с согласованным графиком",en:"according to the schedule confirmed by both parties",kk:"тараптар келіскен кестеге сәйкес",uz:"tomonlar kelishgan jadvalga muvofiq"}
 };
 function trValue(key,val,lang){
   if(lang==="cn")return val||VALUE_TR[key]?.cn||"—";
   if(!val||val==="—")return "—";
   if(VALUE_TR[key]&&hasZh(val))return VALUE_TR[key][lang]||VALUE_TR[key].en||val;
+  if(["seller","buyer","seller_addr","buyer_addr","bank"].includes(key)&&hasZh(val))return autoTranslateText(val,lang);
   if(key==="port"&&VALUE_TR.port&&hasZh(val))return VALUE_TR.port[lang]||val;
   if(key==="trans"&&hasZh(val))return VALUE_TR.trans[lang]||val;
   if(key==="pay"&&hasZh(val))return VALUE_TR.pay[lang]||val;
@@ -939,7 +1011,7 @@ function trClause(key,val,lang){
   if(lang==="cn")return val||CLAUSE_TR[key]?.cn||"";
   return (!val||hasZh(val))?(CLAUSE_TR[key]?.[lang]||CLAUSE_TR[key]?.en||val):val;
 }
-const PENDING_TR={ru:"наименование требует перевода",en:"name pending translation",kk:"атауы аударуды қажет етеді"};
+const PENDING_TR={ru:"наименование требует перевода",en:"name pending translation",kk:"атауы аударуды қажет етеді",uz:"nom tarjimasi talab qilinadi"};
 function lineNameByLang(it,lang){
   if(lang==="cn")return it.name||it.nameRu||"—";
   if(it.nameRu)return it.nameRu;
@@ -949,7 +1021,7 @@ function lineNameByLang(it,lang){
 function lineSpecByLang(it,lang){
   const s=[it.spec,it.elements].filter(Boolean).join("; ");
   if(lang==="cn")return s;
-  return hasZh(s)?(lang==="ru"?"характеристики требуют перевода":lang==="kk"?"сипаттамалар аударуды қажет етеді":"parameters pending translation"):s;
+  return hasZh(s)?(lang==="ru"?"характеристики требуют перевода":lang==="kk"?"сипаттамалар аударуды қажет етеді":lang==="uz"?"xususiyatlar tarjimasi talab qilinadi":"parameters pending translation"):s;
 }
 function contractGoodsRows(lines,lang,m,cur){
   return lines.map((it,i)=>{
@@ -1174,19 +1246,23 @@ function saveDocOverride(){
   docOverrides[curDoc]=o;
   drawDoc();
 }
-/* 单证语言：inv/pkl 可选 ru/en/cn；cmr/bro 锁俄文(官方)；dec/ysys/co 锁中文(官方) */
-const DOC_LANGS={inv:["ru","en","cn","kk"],pkl:["ru","en","cn","kk"],cmr:["ru"],bro:["ru"],broker:["ru"],dec:["cn"],ysys:["cn"],co:["cn"],origin:["cn"],tax:["cn"],check:["cn"]};
+/* 单证语言：所有模板均可切换，正式提交前仍按目的国/报关代理要求复核 */
+const ALL_DOC_LANGS=["ru","en","cn","kk","uz"];
+const DOC_LANGS={inv:ALL_DOC_LANGS,pkl:ALL_DOC_LANGS,cmr:ALL_DOC_LANGS,bro:ALL_DOC_LANGS,broker:ALL_DOC_LANGS,dec:ALL_DOC_LANGS,ysys:ALL_DOC_LANGS,co:ALL_DOC_LANGS,origin:ALL_DOC_LANGS,tax:ALL_DOC_LANGS,check:ALL_DOC_LANGS};
 let docLang="ru",prefLang="ru"; // prefLang=用户偏好，docLang=当前单证生效语言
 const L={
  ru:{inv:"КОММЕРЧЕСКИЙ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"УПАКОВОЧНЫЙ ЛИСТ",pkl2:"PACKING LIST",seller:"Продавец",buyer:"Покупатель",bank:"Банк",terms:"Условия поставки",pay:"Условия оплаты",cur:"Валюта",name:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",unit:"Ед.",unitv:"шт.",price:"Цена",amount:"Сумма",total:"ИТОГО",gross:"Вес брутто",net:"Вес нетто",places:"Кол-во мест",kg:"кг",veh:"Транспортное средство",port:"Пункт пропуска",contract:"Контракт №",date:"Дата",invno:"Инвойс №"},
  en:{inv:"COMMERCIAL INVOICE",inv2:"",pkl:"PACKING LIST",pkl2:"",seller:"Seller",buyer:"Buyer",bank:"Bank",terms:"Delivery terms",pay:"Payment terms",cur:"Currency",name:"Description of goods",hs:"HS Code",qty:"Quantity",unit:"Unit",unitv:"pcs",price:"Unit price",amount:"Amount",total:"TOTAL",gross:"Gross weight",net:"Net weight",places:"Packages",kg:"kg",veh:"Vehicle",port:"Border crossing",contract:"Contract No.",date:"Date",invno:"Invoice No."},
  cn:{inv:"商 业 发 票",inv2:"COMMERCIAL INVOICE",pkl:"装 箱 单",pkl2:"PACKING LIST",seller:"卖方",buyer:"买方",bank:"开户行",terms:"贸易条款",pay:"付款方式",cur:"币种",name:"商品名称及规格",hs:"HS编码",qty:"数量",unit:"单位",unitv:"条",price:"单价",amount:"金额",total:"合 计",gross:"毛重",net:"净重",places:"件数",kg:"千克",veh:"运输车辆",port:"出境口岸",contract:"合同号",date:"日期",invno:"发票号"},
- kk:{inv:"КОММЕРЦИЯЛЫҚ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"ҚАПТАМА ПАРАҒЫ",pkl2:"PACKING LIST",seller:"Сатушы",buyer:"Сатып алушы",bank:"Банк",terms:"Жеткізу талаптары",pay:"Төлем талаптары",cur:"Валюта",name:"Тауар сипаттамасы",hs:"HS / ТН ВЭД коды",qty:"Саны",unit:"Өлш.",unitv:"дана",price:"Бірлік бағасы",amount:"Сома",total:"БАРЛЫҒЫ",gross:"Брутто салмақ",net:"Нетто салмақ",places:"Орын саны",kg:"кг",veh:"Көлік құралы",port:"Шекара өткізу пункті",contract:"Шарт №",date:"Күні",invno:"Инвойс №"}
+ kk:{inv:"КОММЕРЦИЯЛЫҚ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"ҚАПТАМА ПАРАҒЫ",pkl2:"PACKING LIST",seller:"Сатушы",buyer:"Сатып алушы",bank:"Банк",terms:"Жеткізу талаптары",pay:"Төлем талаптары",cur:"Валюта",name:"Тауар сипаттамасы",hs:"HS / ТН ВЭД коды",qty:"Саны",unit:"Өлш.",unitv:"дана",price:"Бірлік бағасы",amount:"Сома",total:"БАРЛЫҒЫ",gross:"Брутто салмақ",net:"Нетто салмақ",places:"Орын саны",kg:"кг",veh:"Көлік құралы",port:"Шекара өткізу пункті",contract:"Шарт №",date:"Күні",invno:"Инвойс №"},
+ uz:{inv:"TIJORAT INVOYSI",inv2:"COMMERCIAL INVOICE",pkl:"QADOQLASH VARAQASI",pkl2:"PACKING LIST",seller:"Sotuvchi",buyer:"Xaridor",bank:"Bank",terms:"Yetkazib berish shartlari",pay:"To'lov shartlari",cur:"Valyuta",name:"Tovar tavsifi",hs:"HS / TN VED kodi",qty:"Miqdor",unit:"Birlik",unitv:"dona",price:"Birlik narxi",amount:"Summa",total:"JAMI",gross:"Brutto vazn",net:"Netto vazn",places:"Joylar soni",kg:"kg",veh:"Transport vositasi",port:"Chegara o'tish punkti",contract:"Shartnoma №",date:"Sana",invno:"Invoys №"}
 };
 function setDocLang(v){prefLang=v;drawDoc()}
 const PAY_TR={
  ru:[["货到付款","оплата при доставке"],["预付","предоплата"],["发货前","до отгрузки"],["发货后","после отгрузки"],["见提单副本","против копии коносамента"],["账期","отсрочка платежа"],["天","дней"],["信用证","аккредитив (L/C)"]],
- en:[["货到付款","payment on delivery"],["预付","advance payment"],["发货前","before shipment"],["发货后","after shipment"],["见提单副本","against copy of B/L"],["账期","net terms"],["天","days"],["信用证","L/C"]]};
+ en:[["货到付款","payment on delivery"],["预付","advance payment"],["发货前","before shipment"],["发货后","after shipment"],["见提单副本","against copy of B/L"],["账期","net terms"],["天","days"],["信用证","L/C"]],
+ kk:[["货到付款","жеткізілгеннен кейін төлеу"],["预付","алдын ала төлем"],["发货前","жөнелтуге дейін"],["发货后","жөнелтуден кейін"],["见提单副本","коносамент көшірмесіне қарсы"],["账期","төлем мерзімі"],["天","күн"],["信用证","аккредитив (L/C)"]],
+ uz:[["货到付款","yetkazilgandan keyin to'lov"],["预付","oldindan to'lov"],["发货前","jo'natishdan oldin"],["发货后","jo'natishdan keyin"],["见提单副本","B/L nusxasiga qarshi"],["账期","to'lov muddati"],["天","kun"],["信用证","akkreditiv (L/C)"]]};
 const hasCJK=s=>/[\u4e00-\u9fff]/.test(s||"");
 const BANK_TR=[["中国银行","BANK OF CHINA"],["中国工商银行","ICBC"],["中国建设银行","CHINA CONSTRUCTION BANK"],["中国农业银行","AGRICULTURAL BANK OF CHINA"],["交通银行","BANK OF COMMUNICATIONS"],["新疆","Xinjiang "],["阿克苏","Aksu "],["乌鲁木齐","Urumqi "],["地区分行","Branch"],["分行","Branch"],["支行","Sub-branch"]];
 function trBank(s){if(!s||!hasCJK(s))return s;let r=s;BANK_TR.forEach(([a,b])=>r=r.split(a).join(b));
@@ -1230,23 +1306,32 @@ function partyViewInfo(side,name){
   if(stale)return Object.assign({},raw,side==="seller"?{name:current,lat:current,bank:"",swift:"",account:"",tax:""}:{name:current,addr:"",bank:"",iban:"",account:"",bik:"",bin:"",tax:""});
   return Object.assign({},raw,{name:raw.name||current,lat:raw.lat||current});
 }
+const PARTY_LABELS={
+  cn:{tax:"税号/BIN: ",bank:"银行: ",tel:"电话: ",fax:"传真: "},
+  ru:{tax:"БИН/РНН: ",bank:"Банк: ",tel:"Тел.: ",fax:"Факс: "},
+  en:{tax:"Tax ID/BIN: ",bank:"Bank: ",tel:"Tel.: ",fax:"Fax: "},
+  kk:{tax:"Салық нөмірі/BIN: ",bank:"Банк: ",tel:"Тел.: ",fax:"Факс: "},
+  uz:{tax:"Soliq raqami/BIN: ",bank:"Bank: ",tel:"Tel.: ",fax:"Faks: "}
+};
 function partyLines(p,opts){
   opts=opts||{};
-  const out=[p.name||""];
-  if(p.addr)out.push(p.addr);
-  if(p.tax||p.bin)out.push((opts.ru?"БИН/РНН: ":"税号/BIN: ")+esc(p.tax||p.bin));
+  const lang=opts.lang||docLang||"ru",pv=partyForLang(p,lang);
+  const lab=PARTY_LABELS[lang]||PARTY_LABELS.en;
+  const out=[pv.name||""];
+  if(pv.addr)out.push(pv.addr);
+  if(p.tax||p.bin)out.push(lab.tax+esc(p.tax||p.bin));
   if(p.vat)out.push(esc(p.vat));
-  if(p.bank)out.push((opts.ru?"Банк: ":"银行: ")+esc(p.bank));
+  if(pv.bank)out.push(lab.bank+esc(pv.bank));
   if(p.account||p.iban)out.push("IBAN: "+esc(p.account||p.iban));
   if(p.swift)out.push("SWIFT: "+esc(p.swift));
   if(p.bik)out.push("BIK: "+esc(p.bik));
   if(p.kbe)out.push("кБе: "+esc(p.kbe));
   if(p.corr)out.push("Corr. account: "+esc(p.corr));
-  if(p.tel)out.push("Тел.: "+esc(p.tel));
-  if(p.fax)out.push("Факс: "+esc(p.fax));
+  if(p.tel)out.push(lab.tel+esc(p.tel));
+  if(p.fax)out.push(lab.fax+esc(p.fax));
   return out.filter(Boolean).join("<br>");
 }
-function partyShort(p,name){return partyLines(Object.assign({name},p),{ru:true})}
+function partyShort(p,name,lang){return partyLines(Object.assign({name},p),{ru:(lang||docLang)!=="cn",lang:lang||docLang})}
 function gv(id){const o=docOverrides[id||curDoc]||{},seller=$("f_seller").value,buyer=$("f_buyer").value;
   return{t:total(),seller,buyer,contract:o.contract||$("f_contract").value,terms:$("f_terms").value||"—",
   cur:$("f_cur").value,gw:o.gw||$("f_gw").value||"—",nw:o.nw||$("f_nw").value||"—",pkg:o.pkg||$("f_pkg").value||"—",truck:$("f_truck").value||"—",
@@ -1842,7 +1927,7 @@ Object.assign(window,{
   editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,
+  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,translateLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,setTplFromSelect,startRecognize,syncContractItemsFromEntry,testApi,toggleCurrentTpl,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
   ,syncNow
 });

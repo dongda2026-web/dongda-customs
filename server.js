@@ -343,6 +343,28 @@ async function recognize(req, res) {
   }
 }
 
+async function translateCustomers(req, res) {
+  try {
+    if (!process.env.ANTHROPIC_API_KEY) return sendJson(res, 500, { error: "服务器未配置 ANTHROPIC_API_KEY" });
+    const body = await readJson(req);
+    const customers = Array.isArray(body.customers) ? body.customers.slice(0, 20) : [];
+    if (!customers.length) return sendJson(res, 400, { error: "未收到客户资料" });
+    const prompt = `你是中国-中亚外贸单证翻译员。请把客户/企业资料翻译成正式单证可用语言。
+要求：
+1. 企业名称保留法定形式，不要意译公司专名；已有英文/拉丁名则优先保留。
+2. 地址、银行名称可翻译/转写为俄文、英文、哈萨克语、乌兹别克语。
+3. 税号、IBAN、SWIFT、BIK、电话等号码原样保留。
+4. 只返回JSON，不要markdown。
+输入JSON：${JSON.stringify(customers)}
+返回结构：
+{"customers":[{"name":"","nameRu":"","nameEn":"","nameKk":"","nameUz":"","addr":"","addrRu":"","addrEn":"","addrKk":"","addrUz":"","bank":"","bankRu":"","bankEn":"","bankKk":"","bankUz":""}]}`;
+    const data = await callClaude([], prompt);
+    sendJson(res, 200, { ok: true, customers: Array.isArray(data.customers) ? data.customers : [] });
+  } catch (err) {
+    sendJson(res, 500, { error: "翻译客户资料失败：" + err.message });
+  }
+}
+
 async function dbStatus(_, res) {
   try {
     const p = await ensureDb();
@@ -579,6 +601,7 @@ http.createServer((req, res) => {
   if (req.method === "GET" && pathname === "/healthz") return sendText(res, 200, "ok");
   if (req.method === "GET" && pathname === "/api/db/status") return dbStatus(req, res);
   if (req.method === "POST" && pathname === "/api/recognize") return recognize(req, res);
+  if (req.method === "POST" && pathname === "/api/translate/customers") return translateCustomers(req, res);
   if (req.method === "POST" && pathname === "/api/archive/upload") return archiveUpload(req, res);
   if (req.method === "GET" && pathname === "/api/archive/list") return archiveList(req, res);
   if (req.method === "GET" && pathname.startsWith("/api/archive/file/")) return archiveDownload(req, res, decodeURIComponent(pathname.slice("/api/archive/file/".length)));
