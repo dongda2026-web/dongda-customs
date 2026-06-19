@@ -1,4 +1,4 @@
-const CACHE_NAME = "dongda-customs-pwa-v20260619-realtime-sync";
+const CACHE_NAME = "dongda-customs-pwa-v20260619-sync-cors-fix";
 const APP_SHELL = [
   "/",
   "/index.html",

@@ -25,14 +25,23 @@ const MIME = {
   ".ico": "image/x-icon",
 };
 
+function corsHeaders(extra = {}) {
+  return Object.assign({
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,HEAD,OPTIONS",
+    "access-control-allow-headers": "content-type,authorization,accept",
+    "access-control-max-age": "86400",
+  }, extra);
+}
+
 function sendJson(res, status, body) {
   const data = JSON.stringify(body);
-  res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
+  res.writeHead(status, corsHeaders({ "content-type": "application/json; charset=utf-8" }));
   res.end(data);
 }
 
 function sendText(res, status, text) {
-  res.writeHead(status, { "content-type": "text/plain; charset=utf-8" });
+  res.writeHead(status, corsHeaders({ "content-type": "text/plain; charset=utf-8" }));
   res.end(text);
 }
 
@@ -383,6 +392,7 @@ async function archiveDownload(req, res, id) {
     if (!r.rowCount) return sendText(res, 404, "Not found");
     const f = r.rows[0];
     res.writeHead(200, {
+      ...corsHeaders(),
       "content-type": f.media_type || "application/octet-stream",
       "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(f.filename)}`,
     });
@@ -562,6 +572,10 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
 http.createServer((req, res) => {
   const { pathname } = new URL(req.url, "http://localhost");
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, corsHeaders());
+    return res.end();
+  }
   if (req.method === "GET" && pathname === "/healthz") return sendText(res, 200, "ok");
   if (req.method === "GET" && pathname === "/api/db/status") return dbStatus(req, res);
   if (req.method === "POST" && pathname === "/api/recognize") return recognize(req, res);

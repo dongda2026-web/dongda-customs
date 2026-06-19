@@ -1600,8 +1600,17 @@ let toastTimer=null;
 function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display="none",3400)}
 
 /* ================= API接口设置 ================= */
+const PROD_API="https://dongda-customs.onrender.com";
 function apiCfg(){try{return JSON.parse(localStorage.getItem("dd_api")||"{}")}catch(e){return{}}}
-function apiBase(){const b=(apiCfg().base||"").trim().replace(/\/+$/,"");return b||""}
+function apiBase(){
+  const b=(apiCfg().base||"").trim().replace(/\/+$/,"");
+  if(b)return b;
+  try{
+    if(location.protocol==="file:"||["localhost","127.0.0.1",""].includes(location.hostname))return PROD_API;
+  }catch(e){}
+  return "";
+}
+function apiFetchHint(e){return /Failed to fetch|NetworkError|Load failed/i.test(String(e&&e.message||e))?"网络连接失败：请确认已联网，或在后台 API 接口设置中填写 "+PROD_API:String(e&&e.message||e)}
 function fillApiForm(){const c=apiCfg();if($("api_base"))$("api_base").value=c.base||"";if($("api_ch"))$("api_ch").value=c.ch||"2"}
 function saveApi(){localStorage.setItem("dd_api",JSON.stringify({base:$("api_base").value.trim(),ch:$("api_ch").value}));toast("接口设置已保存 ✓");testApi()}
 async function testApi(){const s=$("apiStatus");s.textContent="测试中…";s.style.color="var(--steel)";
@@ -1610,7 +1619,7 @@ async function testApi(){const s=$("apiStatus");s.textContent="测试中…";s.s
       try{const d=await fetch(apiBase()+"/api/db/status",{cache:"no-store"}).then(x=>x.json());db=d.enabled?" · 数据库已连接":" · 未配置数据库"}catch(e){db=" · 数据库未确认"}
       s.textContent="✓ 后端连接正常"+db;s.style.color="var(--ok)"}
     else{s.textContent="✗ 后端响应异常 "+r.status;s.style.color="var(--bad)"}
-  }catch(e){s.textContent="✗ 连不上后端——请确认网址或先部署（可先用演示模式）";s.style.color="var(--bad)"}}
+  }catch(e){s.textContent="✗ "+apiFetchHint(e);s.style.color="var(--bad)"}}
 
 async function cloudArchiveFiles(files,category,ticketNo){
   if(!files||!files.length)return;
@@ -1681,7 +1690,7 @@ async function cloudSaveCfg(cfg,opts={}){
     if(!r.ok)throw new Error("保存失败："+r.status);
     return true;
   }catch(e){
-    if(!opts.silent)setSyncStatus("同步失败："+e.message,true);
+    if(!opts.silent)setSyncStatus("同步失败："+apiFetchHint(e),true);
     return false;
   }
 }
@@ -1725,7 +1734,7 @@ async function syncNow(action="auto",silent=false){
     const msg="同步状态：已双向合并 · 客户 "+merged.clients.length+" 条 · 产品 "+merged.products.length+" 条 · "+new Date().toLocaleString("zh-CN",{hour12:false});
     setSyncStatus(msg);saveSyncCfg(Object.assign(rule,{lastSync:Date.now(),lastMsg:msg}));if(!silent)toast("已完成双向同步 ✓");
   }catch(e){
-    if(!silent)setSyncStatus("同步失败："+e.message,true);
+    if(!silent)setSyncStatus("同步失败："+apiFetchHint(e),true);
   }finally{syncBusy=false}
 }
 function loadRemoteCfg(){return syncNow("auto",true)}
