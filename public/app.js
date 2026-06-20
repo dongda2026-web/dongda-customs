@@ -166,10 +166,10 @@ function normalizeCustomer(p){
   let c;
   if(Array.isArray(p)){
     const old=p.length<=24;
-    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||"",nameRu:p[15]||"",nameEn:p[16]||"",nameKk:p[17]||"",nameUz:old?"":p[18]||"",addrRu:old?p[18]||"":p[19]||"",addrEn:old?p[19]||"":p[20]||"",addrKk:old?p[20]||"":p[21]||"",addrUz:old?"":p[22]||"",bankRu:old?p[21]||"":p[23]||"",bankEn:old?p[22]||"":p[24]||"",bankKk:old?p[23]||"":p[25]||"",bankUz:old?"":p[26]||""};
+    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||"",nameRu:p[15]||"",nameEn:p[16]||"",nameKk:p[17]||"",nameUz:old?"":p[18]||"",addrRu:old?p[18]||"":p[19]||"",addrEn:old?p[19]||"":p[20]||"",addrKk:old?p[20]||"":p[21]||"",addrUz:old?"":p[22]||"",bankRu:old?p[21]||"":p[23]||"",bankEn:old?p[22]||"":p[24]||"",bankKk:old?p[23]||"":p[25]||"",bankUz:old?"":p[26]||"",logo:""};
     return enrichCustomerTranslations(inferCustomerMeta(c,p.join(" ")));
   }
-  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||"",nameRu:p&&p.nameRu||"",nameEn:p&&p.nameEn||"",nameKk:p&&p.nameKk||"",nameUz:p&&p.nameUz||"",addrRu:p&&p.addrRu||"",addrEn:p&&p.addrEn||"",addrKk:p&&p.addrKk||"",addrUz:p&&p.addrUz||"",bankRu:p&&p.bankRu||"",bankEn:p&&p.bankEn||"",bankKk:p&&p.bankKk||"",bankUz:p&&p.bankUz||""};
+  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||"",nameRu:p&&p.nameRu||"",nameEn:p&&p.nameEn||"",nameKk:p&&p.nameKk||"",nameUz:p&&p.nameUz||"",addrRu:p&&p.addrRu||"",addrEn:p&&p.addrEn||"",addrKk:p&&p.addrKk||"",addrUz:p&&p.addrUz||"",bankRu:p&&p.bankRu||"",bankEn:p&&p.bankEn||"",bankKk:p&&p.bankKk||"",bankUz:p&&p.bankUz||"",logo:p&&p.logo||""};
   return enrichCustomerTranslations(inferCustomerMeta(c));
 }
 function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||"",p.nameRu||"",p.nameEn||"",p.nameKk||"",p.nameUz||"",p.addrRu||"",p.addrEn||"",p.addrKk||"",p.addrUz||"",p.bankRu||"",p.bankEn||"",p.bankKk||"",p.bankUz||""].join("|")}
@@ -281,7 +281,8 @@ function saveCfg(){const c=loadCfg();
   c.terms=$("c_terms").value.split("\n").map(s=>s.trim()).filter(Boolean);
   c.hs=$("c_hs").value.split("\n").map(s=>s.trim()).filter(Boolean);
   c.products=($("c_products")?$("c_products").value:"").split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
-  c.clients=parseCustomersText($("c_clients").value);
+  const oldClients=(c.clients||[]).slice();
+  c.clients=parseCustomersText($("c_clients").value).map(x=>{const old=oldClients.find(o=>normKey(o.name)===normKey(x.name)||x.tax&&o.tax===x.tax);return Object.assign({},x,{logo:old&&old.logo||x.logo||""})});
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   if(!c.clients.length)c.clients=loadCfg().clients;
   saveCfgLocal(c);
@@ -303,7 +304,7 @@ function getProducts(){return loadCfg().products||[]}
 function getCustomers(role){const list=loadCfg().clients||[];return role?list.filter(c=>!c.role||c.role===role||c.role==="both"):list}
 function partyInfoFromCustomer(c){
   c=normalizeCustomer(c||{});
-  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",lat:c.nameEn||c.name||"",
+  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",logo:c.logo||"",lat:c.nameEn||c.name||"",
     nameRu:c.nameRu||"",nameEn:c.nameEn||"",nameKk:c.nameKk||"",nameUz:c.nameUz||"",addrRu:c.addrRu||"",addrEn:c.addrEn||"",addrKk:c.addrKk||"",addrUz:c.addrUz||"",bankRu:c.bankRu||"",bankEn:c.bankEn||"",bankKk:c.bankKk||"",bankUz:c.bankUz||""};
 }
 function drawCustomerSelects(){
@@ -376,7 +377,7 @@ function saveCurrentCustomer(side){
   const isSeller=side==="seller",info=isSeller?(curTicket.sellerInfo||{}):(curTicket.buyerInfo||{});
   const name=(isSeller?$("f_seller").value:$("f_buyer").value).trim();
   if(!name){toast("请先填写"+(isSeller?"卖方":"买方")+"名称");return}
-  const c=normalizeCustomer({name,country:isSeller?"CN":$("f_country").value,role:isSeller?"seller":"buyer",addr:info.addr||"",tax:info.tax||info.bin||"",bank:info.bank||"",account:info.account||info.iban||"",swift:info.swift||"",bik:info.bik||"",tel:info.tel||"",contact:info.contact||""});
+  const c=normalizeCustomer({name,country:isSeller?"CN":$("f_country").value,role:isSeller?"seller":"buyer",addr:info.addr||"",tax:info.tax||info.bin||"",bank:info.bank||"",account:info.account||info.iban||"",swift:info.swift||"",bik:info.bik||"",tel:info.tel||"",contact:info.contact||"",logo:info.logo||""});
   upsertConfigList("clients",c,(a,b)=>a.name===b.name&&a.role===b.role);
   toast("已存入客户基础信息库："+name);
 }
@@ -398,9 +399,9 @@ function saveLibraryCustomers(){
   if(!rows.length){toast("请至少填写一条客户资料");return}
   const cfg=loadCfg(),list=(cfg.clients||[]).slice();
   if(editingCustomerIndex!==null&&list[editingCustomerIndex]){
-    list[editingCustomerIndex]=rows[0];editingCustomerIndex=null;
+    list[editingCustomerIndex]=Object.assign({},rows[0],{logo:list[editingCustomerIndex].logo||rows[0].logo||""});editingCustomerIndex=null;
   }else if(raw.includes("|")&&raw.split("\n").filter(Boolean).length>1){
-    cfg.clients=rows;
+    cfg.clients=rows.map(c=>{const old=list.find(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);return Object.assign({},c,{logo:old&&old.logo||c.logo||""})});
     saveCfgLocal(cfg);
     fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已整体保存："+rows.length+" 条，并已同步");
     return;
@@ -412,6 +413,29 @@ function saveLibraryCustomers(){
   }
   cfg.clients=list;saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已保存："+rows.length+" 条，并已同步");
+}
+function compressImageFile(file,maxSize){
+  return new Promise((resolve,reject)=>{
+    if(!file||!/^image\//.test(file.type||"")){reject(new Error("请选择图片文件"));return}
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error("图片读取失败"));
+    reader.onload=()=>{const img=new Image();img.onerror=()=>reject(new Error("图片无法识别"));img.onload=()=>{
+      const scale=Math.min(1,(maxSize||640)/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+      const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL("image/webp",.86));
+    };img.src=reader.result};reader.readAsDataURL(file);
+  });
+}
+async function uploadCustomerLogo(i,input){
+  const file=input&&input.files&&input.files[0];if(!file)return;
+  try{const logo=await compressImageFile(file,640),cfg=loadCfg();if(!cfg.clients[i])return;cfg.clients[i].logo=logo;saveCfgLocal(cfg);renderLibraryData();render();toast("客户 Logo 已保存并同步 ✓")}
+  catch(e){toast(e.message||"客户 Logo 上传失败")}finally{if(input)input.value=""}
+}
+function removeCustomerLogo(i){
+  const cfg=loadCfg(),c=cfg.clients&&cfg.clients[i];if(!c||!c.logo)return;
+  if(!confirm("移除客户 Logo："+c.name+"？"))return;
+  c.logo="";saveCfgLocal(cfg);renderLibraryData();render();toast("已移除客户 Logo");
 }
 async function translateLibraryCustomers(){
   const cfg=loadCfg(),list=(cfg.clients||[]).map(normalizeCustomer).filter(c=>c.name);
@@ -515,12 +539,14 @@ function newTicket(type){
   curTicket={id:Date.now(),no:ticketNo(),type,status:"doc",warnings:[],
     sellerInfo:type==="export"?Object.assign({},main):{},
     buyerInfo:type==="import"?Object.assign({},main):{},
-    masterConfirmed:false,masterSnapshot:null,created:Date.now()};
+    productionArtwork:"",masterConfirmed:false,masterSnapshot:null,created:Date.now()};
   items=[{name:"PP编织袋 50kg 白色 55×95cm 复膜",hs:"6305.33",qty:10000,price:0.22}];
   tplState={};docConditions={};docOverrides={};
   $("f_type").value=type;$("f_contract").value="";$("f_date").value=today();
   $("f_cur").value=type==="import"?"CNY":"USD";$("f_pay").value=type==="import"?"货到付款":"T/T 30%预付 70%发货前";
   $("f_truck").value="";$("f_gw").value="";$("f_nw").value="";$("f_pkg").value="";
+  ["f_quote_note","f_prod_factory","f_prod_type","f_prod_approval","f_prod_plan_date","f_prod_date","f_prod_qty"].forEach(id=>fillVal(id,""));
+  fillVal("f_quote_valid","7");fillVal("f_prod_support","WhatsApp: 7707-559-0188");updateProductionArtworkStatus();
   applyTypeNames();drawItems();render();
 }
 function companySellerInfo(c){return companyPartyInfo(c)}
@@ -550,6 +576,13 @@ function updateMasterStatus(){
   const el=$("masterStatus");if(!el)return;
   el.textContent=curTicket&&curTicket.masterConfirmed?"主信息已确认":"主信息未确认";
   el.style.color=curTicket&&curTicket.masterConfirmed?"var(--ok)":"var(--warn)";
+}
+function updateProductionArtworkStatus(){const el=$("prodArtworkStatus");if(el)el.textContent=curTicket&&curTicket.productionArtwork?"已上传 ✓":"未上传"}
+async function uploadProductionArtwork(input){
+  const file=input&&input.files&&input.files[0];if(!file)return;
+  if(!curTicket)newTicket($("f_type").value||"export");
+  try{curTicket.productionArtwork=await compressImageFile(file,1200);updateProductionArtworkStatus();render();toast("生产图稿已带入生产卡 ✓")}
+  catch(e){toast(e.message||"生产图稿上传失败")}finally{if(input)input.value=""}
 }
 
 /* ================= 货物明细 ================= */
@@ -614,6 +647,7 @@ function taxTotals(country){return items.reduce((s,it)=>{const c=taxCalc(country
 const TPLS={
   common:[
     {id:"quote",t:"报价单 Quotation",d:"可单独选择，自动带入客户、货物、单价、条款和有效期",ver:"报价模板 v1 · 可编辑",must:false,on:false},
+    {id:"production",t:"生产卡 Production Card",d:"自动带入客户 Logo、产品与订单，生产参数手动填写",ver:"生产卡 v1 · 可编辑",must:false,on:false},
     {id:"inv",t:"商业发票 Инвойс",d:"中俄双语国际通行格式",ver:"双语版 v3 · 现行有效",must:true},
     {id:"pkl",t:"装箱单 Упаковочный лист",d:"中俄双语，含件数/毛净重",ver:"双语版 v3 · 现行有效",must:true},
     {id:"dec",t:"中国出口报关单（草单）",d:"横版A4 · 单一窗口申报项目齐全",ver:"《填制规范》现行版",must:true},
@@ -659,7 +693,14 @@ function drawTpls(){
 }
 function tplToggle(id,must){if(must)return;tplState[id]=!tplState[id];drawTpls();drawTabs()}
 function setTplFromSelect(id){if(!id)return;curDoc=id;drawTabs();drawDoc();loadDocCondition(id)}
-function toggleCurrentTpl(){const id=$("tplSelect")&&$("tplSelect").value;if(!id)return;const t=tplList().find(x=>x.id===id);tplToggle(id,!!(t&&t.must))}
+function toggleCurrentTpl(){
+  const id=$("tplSelect")&&$("tplSelect").value;if(!id)return;
+  const t=tplList().find(x=>x.id===id);if(t&&t.must){toast("该文件为当前票型必选模板");return}
+  tplState[id]=!tplState[id];
+  if(tplState[id])curDoc=id;
+  drawTpls();drawTabs();drawDoc();loadDocCondition(curDoc);
+  toast((tplState[id]?"已加入并打开：":"已移出：")+(t?t.t:id));
+}
 function selectedTpls(){return tplList().filter(t=>t.must||tplState[t.id])}
 
 /* ================= 合同模板参数 ================= */
@@ -904,6 +945,7 @@ function copyContractParams(){
 /* ================= 表单模板左侧选择 ================= */
 const FORM_TPLS=[
   {id:"quote",group:"商务",name:"报价单",desc:"可单独选择和填写，自动带入客户、货物、价格、条款和报价有效期"},
+  {id:"production",group:"生产",name:"客户生产卡",desc:"客户 Logo、产品和订单自动带入，生产日期、批次、图稿手动填写"},
   {id:"inv",group:"商务",name:"商业发票",desc:"中俄/英文可切换，合同号、买卖方、金额、条款自动带入"},
   {id:"pkl",group:"商务",name:"装箱单",desc:"货物、件数、毛重、净重、包装信息自动生成"},
   {id:"dec",group:"中国出口",name:"出口报关单草单",desc:"境内发货人、境外收货人、成交方式、商品编号、申报金额"},
@@ -923,6 +965,11 @@ const FORM_DESC={
   kk:{quote:"Баға ұсынысы: клиент, тауар, бірлік баға, валюта, жеткізу талаптары және жарамдылық мерзімі.",inv:"Коммерциялық инвойс: шарт, тараптар, тауар, сома және жеткізу талаптары автоматты толтырылады.",pkl:"Қаптама парағы: тауар, орын саны, брутто/нетто салмақ және қаптама.",dec:"Қытай экспорт декларациясының жобасы: Single Window алдын ала тексеруі үшін.",ysys:"Декларация элементтері: атауы, қолданылуы, материалы, сипаттамасы және бренді.",cmr:"CMR жүкқұжаты: жөнелтуші, алушы, тиеу/түсіру орны және көлік.",bro:"KZ/UZ кеден декларациясы деректері: импорт брокеріне арналған.",broker:"Брокерге тапсырма пакеті: құжаттар тізімі және бақылау тармақтары.",co:"CO өтінім деректері: экспорттаушы, алушы, маршрут және тауар ақпараты.",origin:"Шығу тегі туралы мәлімет: преференциясыз шығу тегі және өндірістік негіз.",tax:"Импорт салық есебі: KZ/UZ бажы, ҚҚС және мөлшерлеме негізі.",check:"Кедендік сәйкестік тізімі: шарт, HS, CO, тасымал, банк және салықтар."},
   uz:{quote:"Tijorat taklifi: mijoz, tovar, birlik narxi, valyuta, yetkazib berish shartlari va amal qilish muddati.",inv:"Tijorat invoysi: shartnoma, tomonlar, tovar, summa va yetkazib berish shartlarini avtomatik to'ldiradi.",pkl:"Qadoqlash varaqasi: tovar, joylar soni, brutto/netto vazn va qadoqlash.",dec:"Xitoy eksport deklaratsiyasi loyihasi: Single Window oldindan tekshirish uchun.",ysys:"Deklaratsiya elementlari: nomi, qo'llanishi, materiali, spetsifikatsiyasi va brendi.",cmr:"CMR yuk xati: jo'natuvchi, oluvchi, yuklash/tushirish joylari va transport.",bro:"KZ/UZ bojxona deklaratsiyasi ma'lumot varaqasi: import brokeri uchun.",broker:"Broker topshiriq paketi: hujjatlar ro'yxati va nazorat savollari.",co:"CO ariza ma'lumotlari: eksportchi, oluvchi, marshrut va tovar ma'lumoti.",origin:"Kelib chiqish ma'lumoti: preferensiyasiz kelib chiqish va ishlab chiqarish asosi.",tax:"Import soliq hisob-kitobi: KZ/UZ boj, QQS va stavka asosi.",check:"Bojxona muvofiqlik ro'yxati: shartnoma, HS, CO, transport, bank va soliqlar."}
 };
+Object.assign(FORM_DESC.cn,{production:"生产卡：自动带入客户 Logo、名称、产品、合同和批次数量，生产参数可手动填写。"});
+Object.assign(FORM_DESC.ru,{production:"Производственная карта: автоматически подставляет Logo клиента, товар, контракт и количество; параметры производства заполняются вручную."});
+Object.assign(FORM_DESC.en,{production:"Production card: automatically fills the customer logo, product, contract and quantity; production parameters are entered manually."});
+Object.assign(FORM_DESC.kk,{production:"Өндірістік карта: клиент Logo-сы, тауар, шарт және саны автоматты толтырылады; өндіріс параметрлері қолмен енгізіледі."});
+Object.assign(FORM_DESC.uz,{production:"Ishlab chiqarish kartasi: mijoz logotipi, mahsulot, shartnoma va miqdorni avtomatik to'ldiradi; ishlab chiqarish parametrlari qo'lda kiritiladi."});
 let formTplId="inv";
 let currentLib="templates";
 function goLibrary(id){
@@ -933,7 +980,7 @@ function goLibrary(id){
 }
 function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
-  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryCustomer(${i},'${(c.role||"buyer")==="seller"?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
+  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><div class="lib-item-head">${c.logo?`<img class="client-logo" src="${esc(c.logo)}" alt="${esc(c.name)} logo">`:'<span class="client-logo empty">NO<br>LOGO</span>'}<b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b></div><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><label class="mini upload-mini">上传 Logo<input type="file" accept="image/*" onchange="uploadCustomerLogo(${i},this)"></label>${c.logo?`<button class="mini" onclick="removeCustomerLogo(${i})">移除 Logo</button>`:""}<button class="mini" onclick="applyLibraryCustomer(${i},'${(c.role||"buyer")==="seller"?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
   if(pl)pl.innerHTML=(cfg.products||[]).map((p,i)=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryProduct(${i})">填入货物明细</button><button class="mini" onclick="editLibraryProduct(${i})">编辑</button><button class="mini del" onclick="deleteLibraryProduct(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无产品资料</div>';
   if(hl){const a=allDocRecords();hl.innerHTML=a.length?a.map(docRecordLine).join(""):'<div class="empty">暂无历史文件</div>'}
 }
@@ -1212,7 +1259,7 @@ function setSelectOrAdd(sel,val){
 /* ================= 单证引擎（语言按使用方锁定，术语=当地海关官方用语） =================
    俄文单证(inv/pkl/cmr/bro)：纯俄文，ДТ按ЕАЭС официальные графы；屏幕灰字中文对照(.cnh)打印自动去除
    中文单证(dec/ysys/co)：纯中文，按《填制规范》官方栏目用语 */
-const DOC_META={quote:["报价单","Quotation · 可单独导出"],inv:["商业发票","Инвойс · 俄文"],pkl:["装箱单","Упаковочный лист · 俄文"],dec:["出口报关单草单","中国海关 · 中文"],ysys:["申报要素表","中国海关 · 中文"],cmr:["CMR 运输单","КДПГ · 俄文"],bro:["申报资料表","ДТ/ГТД · 俄文"],co:["原产地证申请","CO · 中文"],origin:["原产地声明","CO辅助 · 中文"],tax:["税费测算表","KZ/UZ · 中文"],check:["合规清单","三国核验"],broker:["代理委托资料","Broker · 俄文"]};
+const DOC_META={quote:["报价单","Quotation · 可单独导出"],production:["生产卡","Production Card · 客户定制"],inv:["商业发票","Инвойс · 俄文"],pkl:["装箱单","Упаковочный лист · 俄文"],dec:["出口报关单草单","中国海关 · 中文"],ysys:["申报要素表","中国海关 · 中文"],cmr:["CMR 运输单","КДПГ · 俄文"],bro:["申报资料表","ДТ/ГТД · 俄文"],co:["原产地证申请","CO · 中文"],origin:["原产地声明","CO辅助 · 中文"],tax:["税费测算表","KZ/UZ · 中文"],check:["合规清单","三国核验"],broker:["代理委托资料","Broker · 俄文"]};
 function drawTabs(){
   const tabs=$("docTabs");if(!tabs)return;
   const list=selectedTpls().map(t=>t.id);
@@ -1250,7 +1297,7 @@ function saveDocOverride(){
 }
 /* 单证语言：所有模板均可切换，正式提交前仍按目的国/报关代理要求复核 */
 const ALL_DOC_LANGS=["ru","en","cn","kk","uz"];
-const DOC_LANGS={quote:ALL_DOC_LANGS,inv:ALL_DOC_LANGS,pkl:ALL_DOC_LANGS,cmr:ALL_DOC_LANGS,bro:ALL_DOC_LANGS,broker:ALL_DOC_LANGS,dec:ALL_DOC_LANGS,ysys:ALL_DOC_LANGS,co:ALL_DOC_LANGS,origin:ALL_DOC_LANGS,tax:ALL_DOC_LANGS,check:ALL_DOC_LANGS};
+const DOC_LANGS={quote:ALL_DOC_LANGS,production:ALL_DOC_LANGS,inv:ALL_DOC_LANGS,pkl:ALL_DOC_LANGS,cmr:ALL_DOC_LANGS,bro:ALL_DOC_LANGS,broker:ALL_DOC_LANGS,dec:ALL_DOC_LANGS,ysys:ALL_DOC_LANGS,co:ALL_DOC_LANGS,origin:ALL_DOC_LANGS,tax:ALL_DOC_LANGS,check:ALL_DOC_LANGS};
 let docLang="ru",prefLang="ru"; // prefLang=用户偏好，docLang=当前单证生效语言
 const L={
  ru:{inv:"КОММЕРЧЕСКИЙ ИНВОЙС",inv2:"COMMERCIAL INVOICE",pkl:"УПАКОВОЧНЫЙ ЛИСТ",pkl2:"PACKING LIST",seller:"Продавец",buyer:"Покупатель",bank:"Банк",terms:"Условия поставки",pay:"Условия оплаты",cur:"Валюта",name:"Наименование товара",hs:"Код ТН ВЭД",qty:"Кол-во",unit:"Ед.",unitv:"шт.",price:"Цена",amount:"Сумма",total:"ИТОГО",gross:"Вес брутто",net:"Вес нетто",places:"Кол-во мест",kg:"кг",veh:"Транспортное средство",port:"Пункт пропуска",contract:"Контракт №",date:"Дата",invno:"Инвойс №"},
@@ -1291,7 +1338,7 @@ function docBrand(){
   const m=loadCompany().main;
   return `<img class="doc-watermark" src="brand/dongda-logo-header.jpg?v=20260613-6" alt=""><div class="doc-brand"><img src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"><div class="brand-copy"><b>${esc(m.lat||m.name)} · ${esc(m.name)}</b><span>Customs & Trade Documents · Dongda Controlled File</span><small>${esc(m.addr)}<br>Тел. ${esc(m.tel||DEF_COMPANY.main.tel)}</small></div></div>`;
 }
-const TPL_CODE={quote:"QUOTE-v1",inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
+const TPL_CODE={quote:"QUOTE-v2",production:"PRODUCTION-v1",inv:"INV-v3",pkl:"PKL-v3",dec:"CN-DEC (GAC spec, current)",ysys:"CN-ELEM",cmr:"CMR (CMR Convention)",bro:"EAEU-DT №257 / UZ T-6",co:"CO-v2",origin:"ORIGIN-v1",tax:"TAX-"+RATE_VERSION,check:"COMPLIANCE-"+RATE_VERSION,broker:"BROKER-v1"};
 function docFoot(id){return `<div class="foot">TPL ${TPL_CODE[id]||id} · ${today()} · ${curTicket?curTicket.no:""}</div>`}
 function docConditionBlock(id){
   const note=(docConditions&&docConditions[id]||"").trim();
@@ -1376,6 +1423,9 @@ function docHtml(id){
     kk:{no:"Ұсыныс №",date:"Күні",valid:"Жарамдылық мерзімі",from:"Ұсынушы",to:"Клиент",terms:"Жеткізу талаптары",pay:"Төлем",note:"Ескертпе",noteText:"Бұл баға ұсынысы ағымдағы сипаттама, сан, валюта және жеткізу талаптарына негізделген; соңғы шарттар қол қойылған шартпен немесе расталған тапсырыспен бекітіледі.",validDays:"7 күн"},
     uz:{no:"Taklif №",date:"Sana",valid:"Amal qilish muddati",from:"Taklif beruvchi",to:"Mijoz",terms:"Yetkazib berish shartlari",pay:"To'lov",note:"Izoh",noteText:"Ushbu tijorat taklifi joriy spetsifikatsiya, miqdor, valyuta va yetkazib berish shartlariga asoslangan; yakuniy shartlar imzolangan shartnoma yoki tasdiqlangan buyurtma bilan belgilanadi.",validDays:"7 kun"}
   }[docLang]||{};
+  const quoteDays=Math.max(1,numVal($("f_quote_valid")&&$("f_quote_valid").value||7));
+  quoteLabels.validDays=quoteDays+({cn:"天",ru:" дней",en:" days",kk:" күн",uz:" kun"}[docLang]||" days");
+  const quoteNote=($("f_quote_note")&&$("f_quote_note").value.trim())||quoteLabels.noteText;
   const headT=`<div class="meta"><span>${T.contract} ${esc(v.contract)}</span><span>${T.date}: ${v.date}</span><span>${T.invno} ${v.no}</span></div>`;
   const tblT=`<table><tr><th>№</th><th>${T.name} ${hint("品名")}</th><th>${T.hs}</th><th>${T.qty}</th><th>${T.unit}</th><th>${T.price}</th><th>${T.amount}, ${v.cur}</th></tr>
    ${items.map((it,i)=>`<tr><td>${i+1}</td><td>${esc(gName(it))}${docLang==="ru"&&it.nameRu?cn(" "+it.name):""}</td><td class="num">${esc(it.hs)}</td><td class="num">${numVal(it.qty).toLocaleString()}</td><td>${esc(docUnit(it,T))}</td><td class="num">${fmt(numVal(it.price))}</td><td class="num">${fmt(itemAmount(it))}</td></tr>`).join("")}
@@ -1385,7 +1435,19 @@ function docHtml(id){
     <div class="row2"><div><b>${quoteLabels.from}:</b><br>${partyShort(v.si,docLang==="cn"?v.seller:(v.si.lat||v.seller))}</div>
     <div><b>${quoteLabels.to}:</b><br>${partyShort(v.bi,v.buyer)}</div></div><br>
     <div class="row2"><span><b>${quoteLabels.terms}:</b> ${esc(v.terms||"—")}</span><span><b>${quoteLabels.pay}:</b> ${esc(trPay(v.pay)||"—")}</span><span><b>${T.cur}:</b> ${esc(v.cur||"—")}</span></div>${tblT}
-    <table><tr><th style="width:150px">${quoteLabels.note}</th><td>${esc(quoteLabels.noteText)}</td></tr></table>${seal()}${docFoot(id)}</div>`;
+    <table><tr><th style="width:150px">${quoteLabels.note}</th><td>${esc(quoteNote)}</td></tr></table>${seal()}${docFoot(id)}</div>`;
+  const prodLabels={
+    cn:{title:"生 产 卡",customer:"客户 / 工厂名称",contract:"合同编号 / 订单类型",approval:"设计稿与技术参数确认",supplier:"供应商 / 生产工厂",plan:"计划生产日期",date:"出厂日期",qty:"批次数量",product:"生产产品",support:"客户支持"},
+    ru:{title:"ПРОИЗВОДСТВЕННАЯ КАРТА",customer:"Информация о клиенте / заводе",contract:"№ контракта / тип заказа",approval:"Утверждение макета и технических характеристик",supplier:"Поставщик / производитель",plan:"Дата запуска в производство",date:"Дата изготовления",qty:"Количество в партии",product:"Изделие",support:"Клиентская поддержка"},
+    en:{title:"PRODUCTION CARD",customer:"Customer / factory information",contract:"Contract No. / order type",approval:"Artwork and technical specification approval",supplier:"Supplier / production factory",plan:"Planned production date",date:"Manufacturing date",qty:"Batch quantity",product:"Product",support:"Customer support"},
+    kk:{title:"ӨНДІРІСТІК КАРТА",customer:"Клиент / зауыт туралы ақпарат",contract:"Шарт № / тапсырыс түрі",approval:"Макет пен техникалық параметрлерді бекіту",supplier:"Жеткізуші / өндіруші",plan:"Жоспарлы өндіріс күні",date:"Өндірілген күні",qty:"Партия саны",product:"Өнім",support:"Клиентті қолдау"},
+    uz:{title:"ISHLAB CHIQARISH KARTASI",customer:"Mijoz / zavod ma'lumoti",contract:"Shartnoma № / buyurtma turi",approval:"Dizayn va texnik parametrlarni tasdiqlash",supplier:"Yetkazib beruvchi / ishlab chiqaruvchi",plan:"Rejalashtirilgan ishlab chiqarish sanasi",date:"Ishlab chiqarilgan sana",qty:"Partiya miqdori",product:"Mahsulot",support:"Mijozlarni qo'llab-quvvatlash"}
+  }[docLang];
+  const prod=collect().production||{},customer=$("f_type").value==="export"?v.bi:v.si,customerName=$("f_type").value==="export"?v.buyer:v.seller;
+  const first=items[0]||{},batchQty=prod.qty||items.reduce((sum,it)=>sum+numVal(it.qty),0).toLocaleString(),artwork=prod.artwork||curTicket&&curTicket.productionArtwork||"";
+  D.production=`<div class="doc production-doc"><div class="production-head">${customer.logo?`<img class="production-customer-logo" src="${esc(customer.logo)}" alt="${esc(customerName)} logo">`:`<div><h1 style="text-align:left;margin:0">${esc(customerName||"CLIENT LOGO")}</h1></div>`}<img class="production-brand-logo" src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"></div>
+    <div class="production-grid"><div class="production-block"><h3>${prodLabels.customer}</h3><p>${partyShort(customer,customerName)}</p><h3>${prodLabels.contract}</h3><p>${esc(v.contract||"—")}<br>${esc(prod.type||"—")}</p><h3>${prodLabels.approval}</h3><p>${esc(prod.approval||"—")}</p>${artwork?`<img class="production-artwork" src="${esc(artwork)}" alt="Production artwork">`:""}</div>
+    <div class="production-block"><h3>${prodLabels.supplier}</h3><p>${esc(prod.factory||v.seller||"—")}</p><h3>${prodLabels.product}</h3><p>${esc(gName(first)||"—")}<br>HS ${esc(first.hs||"—")}</p><h3>${prodLabels.plan}</h3><p>${esc(prod.planDate||"—")}</p><h3>${prodLabels.date}</h3><p>${esc(prod.date||"—")}</p><h3>${prodLabels.qty}</h3><p>${esc(batchQty||"—")} ${esc(docUnit(first,T))}</p><div class="production-support">${prodLabels.support}<br>${esc(prod.support||loadCompany().main.tel||"—")}</div></div></div>${docFoot(id)}</div>`;
   D.inv=`<div class="doc">${docBrand()}<h1>${T.inv}</h1><div class="sub">${T.inv2} ${hint("商业发票")}</div>${headT}
     <div class="row2"><div><b>${T.seller} ${hint("卖方")}:</b><br>${partyShort(v.si,docLang==="cn"?v.seller:(v.si.lat||v.seller))}${docLang==="ru"&&v.si.lat?cn("<br>"+v.seller):""}</div>
     <div><b>${T.buyer} ${hint("买方")}:</b><br>${partyShort(v.bi,v.buyer)}</div></div><br>
@@ -1596,6 +1658,8 @@ function openArchiveFile(id){window.open(apiBase()+"/api/archive/file/"+encodeUR
 function collect(){return{type:$("f_type").value,seller:$("f_seller").value,buyer:$("f_buyer").value,country:$("f_country").value,
   contract:$("f_contract").value,date:$("f_date").value,terms:$("f_terms").value,cur:$("f_cur").value,pay:$("f_pay").value,
   trans:$("f_trans").value,port:$("f_port").value,truck:$("f_truck").value,gw:$("f_gw").value,nw:$("f_nw").value,pkg:$("f_pkg").value,
+  quote:{valid:$("f_quote_valid")?$("f_quote_valid").value:"7",note:$("f_quote_note")?$("f_quote_note").value:""},
+  production:{factory:$("f_prod_factory")?$("f_prod_factory").value:"",type:$("f_prod_type")?$("f_prod_type").value:"",approval:$("f_prod_approval")?$("f_prod_approval").value:"",planDate:$("f_prod_plan_date")?$("f_prod_plan_date").value:"",date:$("f_prod_date")?$("f_prod_date").value:"",qty:$("f_prod_qty")?$("f_prod_qty").value:"",support:$("f_prod_support")?$("f_prod_support").value:"",artwork:curTicket&&curTicket.productionArtwork||""},
   items:JSON.parse(JSON.stringify(items)),tpls:Object.assign({},tplState),docConditions:Object.assign({},docConditions),docOverrides:Object.assign({},docOverrides)}}
 function saveTicket(){
   if(!curTicket)newTicket();
@@ -1613,6 +1677,9 @@ function loadTicket(id){
   setSelectOrAdd($("f_terms"),d.terms!==undefined?d.terms:"CPT Алматы");$("f_cur").value=d.cur!==undefined?d.cur:"USD";$("f_pay").value=d.pay||"";
   $("f_trans").value=d.trans||"公路卡航（中欧卡车）";$("f_port").value=d.port||"霍尔果斯";$("f_truck").value=d.truck||"";
   $("f_gw").value=d.gw||"";$("f_nw").value=d.nw||"";$("f_pkg").value=d.pkg||"";
+  const q=d.quote||{},p=d.production||{};fillVal("f_quote_valid",q.valid||"7");fillVal("f_quote_note",q.note||"");
+  fillVal("f_prod_factory",p.factory||"");fillVal("f_prod_type",p.type||"");fillVal("f_prod_approval",p.approval||"");fillVal("f_prod_plan_date",p.planDate||"");fillVal("f_prod_date",p.date||"");fillVal("f_prod_qty",p.qty||"");fillVal("f_prod_support",p.support||"WhatsApp: 7707-559-0188");
+  curTicket.productionArtwork=p.artwork||curTicket.productionArtwork||"";updateProductionArtworkStatus();
   drawItems();render();go("p1");loadDocCondition(curDoc);toast("已载入 "+t.no);
 }
 function copyTicket(id){
@@ -1943,7 +2010,7 @@ Object.assign(window,{
   editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,translateLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,
+  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,translateLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,uploadCustomerLogo,removeCustomerLogo,uploadProductionArtwork,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,setTplFromSelect,startRecognize,syncContractItemsFromEntry,testApi,toggleCurrentTpl,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
   ,syncNow
 });
