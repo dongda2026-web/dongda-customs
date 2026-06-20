@@ -54,6 +54,8 @@ body{font-family:var(--sans);background-color:var(--bg);background-image:linear-
 .pagehead .sp{flex:1}
 .bill-no{font-family:var(--mono);font-size:12px;font-weight:700;background:var(--card);border:1.5px solid var(--line);padding:8px 14px;border-radius:9px;letter-spacing:.6px}
 .bill-no b{color:var(--orange)}
+.draft-status{font-size:11.5px;font-weight:800;color:var(--ok);background:#EAF5F0;border:1px solid #CBE4D9;padding:8px 11px;border-radius:9px;white-space:nowrap}
+.draft-status.bad{color:var(--bad);background:#FFF0EE;border-color:#F2CCC7}
 
 .mtop{display:none}
 .mnav{display:none}
@@ -372,6 +374,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   .archive-item{flex-wrap:wrap}
   .pagehead h2{font-size:18px}
   .bill-no{display:none}
+  .draft-status{order:3;width:100%;text-align:center;padding:7px 10px}
   .btn{padding:11px 14px;font-size:13px}
   .footbar{padding:10px 8px;gap:7px}
   .card-b{padding:13px}
@@ -508,7 +511,7 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
 
 <!-- ============ 核对录入 ============ -->
 <div class="panel" id="p1">
-  <div class="pagehead"><div><h2>核对录入</h2><p>先确认主票据信息，再逐份控制合同、发票、装箱单、申报资料</p></div><div class="sp"></div><div class="bill-no" id="masterStatus">主信息未确认</div><button class="mini" onclick="confirmMasterInfo()">确认主信息</button><div class="bill-no">本票 <b id="curNo">—</b></div></div>
+  <div class="pagehead"><div><h2>核对录入</h2><p>先确认主票据信息，再逐份控制合同、发票、装箱单、申报资料</p></div><div class="sp"></div><div class="draft-status" id="draftStatus">草稿自动保存</div><div class="bill-no" id="masterStatus">主信息未确认</div><button class="mini" onclick="confirmMasterInfo()">确认主信息</button><div class="bill-no">本票 <b id="curNo">—</b></div></div>
   <div class="entry-nav" aria-label="录入分类">
     <button type="button" class="active" data-entry-tab="base" onclick="setEntryGroup('base')">基础与双方</button>
     <button type="button" data-entry-tab="goods" onclick="setEntryGroup('goods')">货物信息</button>
@@ -597,9 +600,9 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
     <div class="card-h"><span class="tag"></span><h3>运输信息</h3><span class="ru">Транспорт</span></div>
     <div class="card-b grid g3">
       <div class="field"><label>运输方式</label>
-        <select id="f_trans"><option>公路卡航（中欧卡车）</option><option>铁路集装箱</option><option>公铁联运</option></select></div>
+        <select id="f_trans" onchange="render()"><option>公路卡航（中欧卡车）</option><option>铁路集装箱</option><option>公铁联运</option></select></div>
       <div class="field"><label>出境口岸</label>
-        <select id="f_port"><option>霍尔果斯</option><option>阿拉山口</option><option>巴克图</option><option>伊尔克什坦</option></select></div>
+        <select id="f_port" onchange="render()"><option>霍尔果斯</option><option>阿拉山口</option><option>巴克图</option><option>伊尔克什坦</option></select></div>
       <div class="field"><label>车牌 / 箱号</label><input id="f_truck" placeholder="装车后填写" oninput="render()"></div>
       <div class="field"><label>毛重 (kg)</label><input id="f_gw" inputmode="decimal" placeholder="如 21500" oninput="this.dataset.auto='0';render()"></div>
       <div class="field"><label>净重 (kg)</label><input id="f_nw" inputmode="decimal" placeholder="如 21000" oninput="this.dataset.auto='0';render()"></div>
@@ -911,6 +914,6 @@ tr.lowconf i{color:var(--warn);font-style:normal;font-weight:800}
   <button class="btn btn-ink" onclick="printDoc(true)">导出PDF</button>
 </div>
 
-<script src="app.js?v=20260620-entry-assets"></script>
+<script src="app.js?v=20260620-sync-draft"></script>
 </body>
 </html>

@@ -3,6 +3,24 @@
 const $=id=>document.getElementById(id);
 const fmt=n=>(+n||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const today=()=>new Date().toISOString().slice(0,10);
+const uid=prefix=>(prefix||"id")+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8);
+function stableId(prefix,seed){
+  const s=String(seed||"").trim();if(!s)return uid(prefix);
+  let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  return (prefix||"id")+"-"+(h>>>0).toString(36);
+}
+function normalizeAsset(a,prefix="asset"){
+  if(!a||!a.data)return null;
+  return {id:a.id||stableId(prefix,(a.name||"")+"|"+String(a.data).slice(-180)),name:a.name||"图稿",data:a.data,created:+a.created||Date.now()};
+}
+function mergeAssets(a,b,limit=12){
+  const map=new Map();
+  [...(a||[]),...(b||[])].map(x=>normalizeAsset(x)).filter(Boolean).forEach(x=>{
+    const key=x.id||stableId("asset",(x.name||"")+"|"+String(x.data).slice(-180));
+    const old=map.get(key);if(!old||x.created>=old.created)map.set(key,x);
+  });
+  return [...map.values()].sort((x,y)=>y.created-x.created).slice(0,limit);
+}
 const RATE_VERSION="2026-06-13";
 const HS_DUTIES={
   "6305.32":{cn:"集装袋/吨袋 FIBC",ru:"Гибкие промежуточные контейнеры большой емкости",kzDuty:10,uzDuty:10,note:"EAEU 6305 32 1100/1900/9000 均为10%；乌方按10位码逐票核验"},
@@ -54,7 +72,7 @@ function saveCompany(){const main={};
   localStorage.setItem("dd_company",JSON.stringify({main:c.main}));toast("主体公司资料已保存 ✓");}
 
 /* ================= 业务配置中心 ================= */
-const DEF_CFG={prefix:"DD",seal:"",pin:"",
+const DEF_CFG={prefix:"DD",seal:"",pin:"",deletedClientIds:[],deletedProductIds:[],
   ports:[["霍尔果斯","Хоргос"],["阿拉山口","Алашанькоу"],["巴克图","Бакту"],["伊尔克什坦","Иркештам"]],
   terms:["无","CPT Алматы","CPT Астана","DAP Ташкент","DAP Самарканд","FCA 霍尔果斯","FCA 阿拉山口","EXW 工厂","CIF"],
   hs:["6305.33","6305.32","6305.39","3923.21","3923.29"],
@@ -70,8 +88,10 @@ const DEF_CFG={prefix:"DD",seal:"",pin:"",
   ]};
 function cloneDefCfg(){return JSON.parse(JSON.stringify(DEF_CFG))}
 function normalizeProduct(p){
-  if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||"",gwUnit:p[6]||"",nwUnit:p[7]||"",pkg:p[8]||"",elements:p[9]||"",artworks:[]};
-  return {name:p&&p.name||"",nameRu:p&&p.nameRu||"",hs:p&&p.hs||"6305.33",unit:p&&p.unit||"条",price:numVal(p&&p.price),spec:p&&p.spec||"",gwUnit:p&&p.gwUnit||"",nwUnit:p&&p.nwUnit||"",pkg:p&&p.pkg||"",elements:p&&p.elements||"",artworks:Array.isArray(p&&p.artworks)?p.artworks.filter(a=>a&&a.data).slice(0,12):[]};
+  if(Array.isArray(p))p={name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||"",gwUnit:p[6]||"",nwUnit:p[7]||"",pkg:p[8]||"",elements:p[9]||"",artworks:[]};
+  p=p||{};
+  const out={id:p.id||stableId("product",[p.name,p.hs,p.spec].join("|")),name:p.name||"",nameRu:p.nameRu||"",hs:p.hs||"6305.33",unit:p.unit||"条",price:numVal(p.price),spec:p.spec||"",gwUnit:p.gwUnit||"",nwUnit:p.nwUnit||"",pkg:p.pkg||"",elements:p.elements||"",artworks:mergeAssets([],p.artworks||[]),deletedAssetIds:Array.isArray(p.deletedAssetIds)?p.deletedAssetIds.slice(0,100):[],updatedAt:+p.updatedAt||0};
+  return out;
 }
 function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||"",p.gwUnit||"",p.nwUnit||"",p.pkg||"",p.elements||""].join("|")}
 function parseProductLine(l){return normalizeProduct(l.split("|").map(s=>s.trim()))}
@@ -169,9 +189,11 @@ function normalizeCustomer(p){
   if(Array.isArray(p)){
     const old=p.length<=24;
     c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||"",nameRu:p[15]||"",nameEn:p[16]||"",nameKk:p[17]||"",nameUz:old?"":p[18]||"",addrRu:old?p[18]||"":p[19]||"",addrEn:old?p[19]||"":p[20]||"",addrKk:old?p[20]||"":p[21]||"",addrUz:old?"":p[22]||"",bankRu:old?p[21]||"":p[23]||"",bankEn:old?p[22]||"":p[24]||"",bankKk:old?p[23]||"":p[25]||"",bankUz:old?"":p[26]||"",logo:"",artworks:[]};
+    c.id=stableId("client",[c.tax,c.name,c.country].join("|"));c.updatedAt=0;
     return enrichCustomerTranslations(inferCustomerMeta(c,p.join(" ")));
   }
-  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||"",nameRu:p&&p.nameRu||"",nameEn:p&&p.nameEn||"",nameKk:p&&p.nameKk||"",nameUz:p&&p.nameUz||"",addrRu:p&&p.addrRu||"",addrEn:p&&p.addrEn||"",addrKk:p&&p.addrKk||"",addrUz:p&&p.addrUz||"",bankRu:p&&p.bankRu||"",bankEn:p&&p.bankEn||"",bankKk:p&&p.bankKk||"",bankUz:p&&p.bankUz||"",logo:p&&p.logo||"",artworks:Array.isArray(p&&p.artworks)?p.artworks.filter(a=>a&&a.data).slice(0,12):[]};
+  p=p||{};
+  c={id:p.id||stableId("client",[p.tax||p.bin,p.name,p.country].join("|")),name:p.name||"",country:(p.country||"KZ").toUpperCase(),role:normRole(p.role),addr:p.addr||p.address||"",tax:p.tax||p.bin||"",bank:p.bank||"",account:p.account||p.iban||"",swift:p.swift||"",bik:p.bik||"",tel:p.tel||"",contact:p.contact||"",vat:p.vat||"",kbe:p.kbe||"",corr:p.corr||"",fax:p.fax||"",nameRu:p.nameRu||"",nameEn:p.nameEn||"",nameKk:p.nameKk||"",nameUz:p.nameUz||"",addrRu:p.addrRu||"",addrEn:p.addrEn||"",addrKk:p.addrKk||"",addrUz:p.addrUz||"",bankRu:p.bankRu||"",bankEn:p.bankEn||"",bankKk:p.bankKk||"",bankUz:p.bankUz||"",logo:p.logo||"",logoUpdatedAt:+p.logoUpdatedAt||0,logoRemovedAt:+p.logoRemovedAt||0,artworks:mergeAssets([],p.artworks||[]),deletedAssetIds:Array.isArray(p.deletedAssetIds)?p.deletedAssetIds.slice(0,100):[],updatedAt:+p.updatedAt||0};
   return enrichCustomerTranslations(inferCustomerMeta(c));
 }
 function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||"",p.nameRu||"",p.nameEn||"",p.nameKk||"",p.nameUz||"",p.addrRu||"",p.addrEn||"",p.addrKk||"",p.addrUz||"",p.bankRu||"",p.bankEn||"",p.bankKk||"",p.bankUz||""].join("|")}
@@ -260,14 +282,22 @@ function loadCfg(){try{const raw=JSON.parse(localStorage.getItem("dd_cfg")||"nul
   if(!raw||!raw.ports)return d;
   const c=Object.assign(d,raw);
   if(!c.terms.includes("无"))c.terms=["无"].concat(c.terms);
-  c.products=(raw.products&&raw.products.length?raw.products:d.products).map(normalizeProduct).filter(p=>p.name);
-  c.clients=healCustomerFragments((raw.clients&&raw.clients.length?raw.clients:d.clients).map(normalizeCustomer).filter(p=>p.name));
+  const deletedProducts=new Set(c.deletedProductIds||[]),deletedClients=new Set(c.deletedClientIds||[]);
+  c.products=(Array.isArray(raw.products)?raw.products:d.products).map(normalizeProduct).filter(p=>p.name&&!deletedProducts.has(p.id));
+  c.clients=healCustomerFragments((Array.isArray(raw.clients)?raw.clients:d.clients).map(normalizeCustomer).filter(p=>p.name&&!deletedClients.has(p.id)));
   return c;
 }catch(e){return cloneDefCfg()}}
 function saveCfgLocal(c,sync=true){
   c._updatedAt=Date.now();
-  localStorage.setItem("dd_cfg",JSON.stringify(c));
+  let localOk=true;
+  try{localStorage.setItem("dd_cfg",JSON.stringify(c))}
+  catch(e){
+    localOk=false;
+    setSyncStatus("本机存储空间不足：资料将继续尝试保存到服务器",true);
+    toast("本机存储已满，请删除旧图稿或下载备份");
+  }
   if(sync)cloudSaveCfg(c);
+  return localOk;
 }
 function fillCfgForm(){const c=loadCfg();if(!$("c_prefix"))return;
   $("c_prefix").value=c.prefix;$("c_seal").value=c.seal;$("c_pin").value=c.pin;
@@ -284,9 +314,11 @@ function saveCfg(){const c=loadCfg();
   c.hs=$("c_hs").value.split("\n").map(s=>s.trim()).filter(Boolean);
   const oldProducts=(c.products||[]).slice();
   c.products=($("c_products")?$("c_products").value:"").split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name)
-    .map(x=>{const old=oldProducts.find(o=>normKey(o.name)===normKey(x.name)||x.hs&&o.hs===x.hs&&normKey(o.spec)===normKey(x.spec));return Object.assign({},x,{artworks:old&&old.artworks||x.artworks||[]})});
+    .map(x=>{const old=oldProducts.find(o=>normKey(o.name)===normKey(x.name)||x.hs&&o.hs===x.hs&&normKey(o.spec)===normKey(x.spec));return Object.assign({},x,{id:old&&old.id||x.id,artworks:mergeAssets(old&&old.artworks,x.artworks),deletedAssetIds:old&&old.deletedAssetIds||[],updatedAt:Date.now()})});
+  c.deletedProductIds=[...new Set([...(c.deletedProductIds||[]),...oldProducts.filter(o=>!c.products.some(x=>x.id===o.id)).map(o=>o.id)])].filter(Boolean);
   const oldClients=(c.clients||[]).slice();
-  c.clients=parseCustomersText($("c_clients").value).map(x=>{const old=oldClients.find(o=>normKey(o.name)===normKey(x.name)||x.tax&&o.tax===x.tax);return Object.assign({},x,{logo:old&&old.logo||x.logo||"",artworks:old&&old.artworks||x.artworks||[]})});
+  c.clients=parseCustomersText($("c_clients").value).map(x=>{const old=oldClients.find(o=>normKey(o.name)===normKey(x.name)||x.tax&&o.tax===x.tax);return Object.assign({},x,{id:old&&old.id||x.id,logo:old&&old.logo||x.logo||"",logoUpdatedAt:old&&old.logoUpdatedAt||0,logoRemovedAt:old&&old.logoRemovedAt||0,artworks:mergeAssets(old&&old.artworks,x.artworks),deletedAssetIds:old&&old.deletedAssetIds||[],updatedAt:Date.now()})});
+  c.deletedClientIds=[...new Set([...(c.deletedClientIds||[]),...oldClients.filter(o=>!c.clients.some(x=>x.id===o.id)).map(o=>o.id)])].filter(Boolean);
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   if(!c.clients.length)c.clients=loadCfg().clients;
   saveCfgLocal(c);
@@ -374,6 +406,8 @@ function upsertConfigList(key,item,match){
   const cfg=loadCfg(),list=(cfg[key]||[]).slice(),i=list.findIndex(x=>match(x,item));
   if(i>=0)list[i]=Object.assign({},list[i],item);else list.unshift(item);
   cfg[key]=list;
+  if(key==="clients")cfg.deletedClientIds=(cfg.deletedClientIds||[]).filter(id=>id!==item.id);
+  if(key==="products")cfg.deletedProductIds=(cfg.deletedProductIds||[]).filter(id=>id!==item.id);
   saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();drawItems();render();renderLibraryData();
 }
@@ -393,9 +427,14 @@ function saveCurrentProducts(){
   const rows=(items||[]).map(productFromItem).filter(p=>p.name);
   if(!rows.length){toast("请先填写货物明细");return}
   const cfg=loadCfg(),list=(cfg.products||[]).slice();
-  rows.forEach(p=>list.unshift(p));
-  cfg.products=list;saveCfgLocal(cfg);
-  fillCfgForm();drawItems();renderLibraryData();toast("已新增到产品库："+rows.length+" 项，并已同步");
+  rows.forEach(p=>{
+    const i=list.findIndex(x=>x.id===p.id||normKey(x.name)===normKey(p.name)&&String(x.hs||"")===String(p.hs||"")&&normKey(x.spec)===normKey(p.spec));
+    p.updatedAt=Date.now();
+    if(i>=0)list[i]=Object.assign({},list[i],p,{id:list[i].id||p.id,artworks:mergeAssets(list[i].artworks,p.artworks)});
+    else list.unshift(p);
+  });
+  cfg.products=list;cfg.deletedProductIds=(cfg.deletedProductIds||[]).filter(id=>!list.some(p=>p.id===id));saveCfgLocal(cfg);
+  fillCfgForm();drawItems();renderLibraryData();toast("产品资料已保存："+rows.length+" 项，不会覆盖其他产品");
 }
 let editingCustomerIndex=null,editingProductIndex=null;
 function saveLibraryCustomers(){
@@ -404,9 +443,10 @@ function saveLibraryCustomers(){
   if(!rows.length){toast("请至少填写一条客户资料");return}
   const cfg=loadCfg(),list=(cfg.clients||[]).slice();
   if(editingCustomerIndex!==null&&list[editingCustomerIndex]){
-    list[editingCustomerIndex]=Object.assign({},rows[0],{logo:list[editingCustomerIndex].logo||rows[0].logo||"",artworks:list[editingCustomerIndex].artworks||rows[0].artworks||[]});editingCustomerIndex=null;
+    list[editingCustomerIndex]=Object.assign({},rows[0],{id:list[editingCustomerIndex].id||rows[0].id,logo:list[editingCustomerIndex].logo||rows[0].logo||"",artworks:mergeAssets(list[editingCustomerIndex].artworks,rows[0].artworks),updatedAt:Date.now()});editingCustomerIndex=null;
   }else if(raw.includes("|")&&raw.split("\n").filter(Boolean).length>1){
-    cfg.clients=rows.map(c=>{const old=list.find(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);return Object.assign({},c,{logo:old&&old.logo||c.logo||"",artworks:old&&old.artworks||c.artworks||[]})});
+    cfg.clients=rows.map(c=>{const old=list.find(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);return Object.assign({},c,{id:old&&old.id||c.id,logo:old&&old.logo||c.logo||"",logoUpdatedAt:old&&old.logoUpdatedAt||0,logoRemovedAt:old&&old.logoRemovedAt||0,artworks:mergeAssets(old&&old.artworks,c.artworks),deletedAssetIds:old&&old.deletedAssetIds||[],updatedAt:Date.now()})});
+    cfg.deletedClientIds=(cfg.deletedClientIds||[]).filter(id=>!cfg.clients.some(c=>c.id===id));
     saveCfgLocal(cfg);
     fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已整体保存："+rows.length+" 条，并已同步");
     return;
@@ -416,7 +456,7 @@ function saveLibraryCustomers(){
       if(i>=0)list[i]=Object.assign({},list[i],c,{logo:list[i].logo||c.logo||"",artworks:list[i].artworks||c.artworks||[]});else list.unshift(c);
     });
   }
-  cfg.clients=list;saveCfgLocal(cfg);
+  cfg.clients=list;cfg.deletedClientIds=(cfg.deletedClientIds||[]).filter(id=>!list.some(c=>c.id===id));saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已保存："+rows.length+" 条，并已同步");
 }
 function compressImageFile(file,maxSize){
@@ -434,28 +474,31 @@ function compressImageFile(file,maxSize){
 }
 async function uploadCustomerLogo(i,input){
   const file=input&&input.files&&input.files[0];if(!file)return;
-  try{const logo=await compressImageFile(file,640),cfg=loadCfg();if(!cfg.clients[i])return;cfg.clients[i].logo=logo;saveCfgLocal(cfg);renderLibraryData();render();toast("客户 Logo 已保存并同步 ✓")}
+  try{const logo=await compressImageFile(file,640),cfg=loadCfg();if(!cfg.clients[i])return;cfg.clients[i].logo=logo;cfg.clients[i].logoUpdatedAt=Date.now();cfg.clients[i].logoRemovedAt=0;cfg.clients[i].updatedAt=Date.now();saveCfgLocal(cfg);renderLibraryData();render();toast("客户 Logo 已保存并同步 ✓")}
   catch(e){toast(e.message||"客户 Logo 上传失败")}finally{if(input)input.value=""}
 }
 function removeCustomerLogo(i){
   const cfg=loadCfg(),c=cfg.clients&&cfg.clients[i];if(!c||!c.logo)return;
   if(!confirm("移除客户 Logo："+c.name+"？"))return;
-  c.logo="";saveCfgLocal(cfg);renderLibraryData();render();toast("已移除客户 Logo");
+  c.logo="";c.logoRemovedAt=Date.now();c.updatedAt=Date.now();saveCfgLocal(cfg);renderLibraryData();render();toast("已移除客户 Logo");
 }
 async function uploadCustomerArtwork(i,input){
   const file=input&&input.files&&input.files[0];if(!file)return;
   try{
     const data=await compressImageFile(file,1200),cfg=loadCfg();if(!cfg.clients[i])return;
     cfg.clients[i].artworks=Array.isArray(cfg.clients[i].artworks)?cfg.clients[i].artworks:[];
-    cfg.clients[i].artworks.unshift({name:file.name||"客户图稿",data,created:Date.now()});
+    const asset={id:uid("asset"),name:file.name||"客户图稿",data,created:Date.now()};
+    cfg.clients[i].artworks.unshift(asset);
+    cfg.clients[i].deletedAssetIds=(cfg.clients[i].deletedAssetIds||[]).filter(id=>id!==asset.id);
     cfg.clients[i].artworks=cfg.clients[i].artworks.slice(0,12);
+    cfg.clients[i].updatedAt=Date.now();
     saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("客户图稿已保存并同步 ✓");
   }catch(e){toast(e.message||"客户图稿上传失败")}finally{if(input)input.value=""}
 }
 function removeCustomerArtwork(i,j){
   const cfg=loadCfg(),c=cfg.clients&&cfg.clients[i];if(!c||!Array.isArray(c.artworks)||!c.artworks[j])return;
   if(!confirm("删除客户图稿："+(c.artworks[j].name||c.name)+"？"))return;
-  c.artworks.splice(j,1);saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("已删除客户图稿");
+  const removed=c.artworks[j];c.artworks.splice(j,1);c.deletedAssetIds=[...(c.deletedAssetIds||[]),removed.id].filter(Boolean).slice(-100);c.updatedAt=Date.now();saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("已删除客户图稿");
 }
 async function translateLibraryCustomers(){
   const cfg=loadCfg(),list=(cfg.clients||[]).map(normalizeCustomer).filter(c=>c.name);
@@ -477,6 +520,7 @@ function deleteLibraryCustomer(i){
   const cfg=loadCfg(),c=(cfg.clients||[])[i];if(!c)return;
   if(!confirm("删除客户资料："+c.name+"？"))return;
   cfg.clients=(cfg.clients||[]).filter((_,idx)=>idx!==i);
+  cfg.deletedClientIds=[...new Set([...(cfg.deletedClientIds||[]),c.id])].filter(Boolean);
   saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();render();toast("已删除客户："+c.name);
 }
@@ -495,6 +539,7 @@ function deleteLibraryProduct(i){
   const cfg=loadCfg(),p=(cfg.products||[])[i];if(!p)return;
   if(!confirm("删除产品资料："+p.name+"？"))return;
   cfg.products=(cfg.products||[]).filter((_,idx)=>idx!==i);
+  cfg.deletedProductIds=[...new Set([...(cfg.deletedProductIds||[]),p.id])].filter(Boolean);
   saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawItems();renderLibraryData();render();toast("已删除产品："+p.name);
 }
@@ -503,15 +548,18 @@ async function uploadProductArtwork(i,input){
   try{
     const data=await compressImageFile(file,1200),cfg=loadCfg();if(!cfg.products[i])return;
     cfg.products[i].artworks=Array.isArray(cfg.products[i].artworks)?cfg.products[i].artworks:[];
-    cfg.products[i].artworks.unshift({name:file.name||"产品图稿",data,created:Date.now()});
+    const asset={id:uid("asset"),name:file.name||"产品图稿",data,created:Date.now()};
+    cfg.products[i].artworks.unshift(asset);
+    cfg.products[i].deletedAssetIds=(cfg.products[i].deletedAssetIds||[]).filter(id=>id!==asset.id);
     cfg.products[i].artworks=cfg.products[i].artworks.slice(0,12);
+    cfg.products[i].updatedAt=Date.now();
     saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("产品设计稿已保存并同步 ✓");
   }catch(e){toast(e.message||"产品设计稿上传失败")}finally{if(input)input.value=""}
 }
 function removeProductArtwork(i,j){
   const cfg=loadCfg(),p=cfg.products&&cfg.products[i];if(!p||!Array.isArray(p.artworks)||!p.artworks[j])return;
   if(!confirm("删除产品图稿："+(p.artworks[j].name||p.name)+"？"))return;
-  p.artworks.splice(j,1);saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("已删除产品图稿");
+  const removed=p.artworks[j];p.artworks.splice(j,1);p.deletedAssetIds=[...(p.deletedAssetIds||[]),removed.id].filter(Boolean).slice(-100);p.updatedAt=Date.now();saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("已删除产品图稿");
 }
 function editLibraryProduct(i){
   const p=(loadCfg().products||[])[i],el=$("libProductsEdit");if(!p||!el)return;
@@ -529,9 +577,13 @@ function saveLibraryProducts(){
   if(!rows.length){toast("请至少填写一条产品资料");return}
   const cfg=loadCfg(),list=(cfg.products||[]).slice();
   if(editingProductIndex!==null&&list[editingProductIndex]){
-    list[editingProductIndex]=Object.assign({},rows[0],{artworks:list[editingProductIndex].artworks||rows[0].artworks||[]});editingProductIndex=null;
-  }else rows.forEach(p=>list.unshift(p));
-  cfg.products=list;saveCfgLocal(cfg);
+    list[editingProductIndex]=Object.assign({},rows[0],{id:list[editingProductIndex].id||rows[0].id,artworks:mergeAssets(list[editingProductIndex].artworks,rows[0].artworks),updatedAt:Date.now()});editingProductIndex=null;
+  }else rows.forEach(p=>{
+    const i=list.findIndex(x=>x.id===p.id||normKey(x.name)===normKey(p.name)&&String(x.hs||"")===String(p.hs||"")&&normKey(x.spec)===normKey(p.spec));
+    p.updatedAt=Date.now();
+    if(i>=0)list[i]=Object.assign({},list[i],p,{id:list[i].id||p.id,artworks:mergeAssets(list[i].artworks,p.artworks)});else list.unshift(p);
+  });
+  cfg.products=list;cfg.deletedProductIds=(cfg.deletedProductIds||[]).filter(id=>!list.some(p=>p.id===id));saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawItems();renderLibraryData();el.value="";render();toast("产品资料库已新增："+rows.length+" 条，并已同步");
 }
 function portRuOf(p){const c=loadCfg();const f=c.ports.find(x=>x[0]===p);return f?f[1]:(PORT_RU[p]||p)}
@@ -569,8 +621,25 @@ function rateStale(){const r=loadRates();return (Date.now()-new Date(r.checked))
 /* ================= 票据状态 ================= */
 let items=[],tplState={},docConditions={},docOverrides={},curTicket=null,curDoc="inv";
 let entryGroup="base";
+let draftTimer=null;
+function setDraftStatus(msg,bad=false){const el=$("draftStatus");if(!el)return;el.textContent=msg;el.classList.toggle("bad",bad)}
+function clearDraft(){clearTimeout(draftTimer);try{localStorage.removeItem("dd_ticket_draft")}catch(e){}setDraftStatus("草稿自动保存")}
+function scheduleDraftSave(){
+  if(!curTicket)return;
+  setDraftStatus("正在保存…");clearTimeout(draftTimer);draftTimer=setTimeout(saveDraftNow,650);
+}
+function saveDraftNow(){
+  if(!curTicket)return;
+  try{
+    const draft=Object.assign({},curTicket,{productionArtwork:"",data:collect(),total:total(),draftSaved:Date.now()});
+    localStorage.setItem("dd_ticket_draft",JSON.stringify(draft));
+    setDraftStatus("已自动保存 "+new Date(draft.draftSaved).toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}));
+  }catch(e){setDraftStatus("草稿保存失败：本机空间不足",true)}
+}
+function loadDraft(){try{const d=JSON.parse(localStorage.getItem("dd_ticket_draft")||"null");return d&&d.data?d:null}catch(e){return null}}
 function ticketNo(){const d=today().replace(/-/g,""),px=loadCfg().prefix;const n=tickets().filter(t=>t.no&&t.no.includes(d)).length+1;return px+"-"+d+"-"+String(n).padStart(2,"0")}
-function newTicket(type){
+function newTicket(type,preserveDraft=false){
+  if(!preserveDraft)clearDraft();
   const c=loadCompany(),main=companyPartyInfo(c);type=type||"export";
   curTicket={id:Date.now(),no:ticketNo(),type,status:"doc",warnings:[],
     sellerInfo:type==="export"?Object.assign({},main):{},
@@ -1227,8 +1296,10 @@ function render(){
   if(curTicket){$("curNo").textContent=curTicket.no;$("curNo2").textContent=curTicket.no}
   updateMasterStatus();drawProductionAssetControls();
   drawTpls();drawContractTemplates();drawFormTemplateLibrary();drawTabs();drawDoc();
+  scheduleDraftSave();
 }
 function setEntryGroup(id){
+  saveDraftNow();
   entryGroup=id||"base";
   document.querySelectorAll("[data-entry-tab]").forEach(b=>b.classList.toggle("active",b.dataset.entryTab===entryGroup));
   document.querySelectorAll("[data-entry-group]").forEach(s=>s.classList.toggle("active",s.dataset.entryGroup===entryGroup));
@@ -1754,11 +1825,11 @@ function saveTicket(){
   Object.assign(curTicket,{data:collect(),total:total(),updated:Date.now()});
   const a=tickets(),i=a.findIndex(t=>t.id===curTicket.id);
   if(i>=0)a[i]=curTicket;else a.unshift(curTicket);
-  setTickets(a);renderArchive();computeDash();toast("本票已保存 ✓ "+curTicket.no);
+  setTickets(a);clearDraft();setDraftStatus("已存入历史档案");renderArchive();computeDash();toast("本票已保存 ✓ "+curTicket.no);
   cloudSaveTicket(curTicket);
 }
-function loadTicket(id){
-  const t=tickets().find(x=>x.id===id);if(!t)return;
+function applyTicketToForm(t){
+  if(!t||!t.data)return false;
   curTicket=t;const d=t.data||{};items=d.items||[];tplState=d.tpls||{};docConditions=d.docConditions||{};docOverrides=d.docOverrides||{};
   $("f_type").value=d.type||"export";$("f_seller").value=d.seller||"";$("f_buyer").value=d.buyer||"";
   $("f_country").value=d.country||"KZ";$("f_contract").value=d.contract||"";$("f_date").value=d.date||today();
@@ -1768,7 +1839,17 @@ function loadTicket(id){
   const q=d.quote||{},p=d.production||{};fillVal("f_quote_valid",q.valid||"7");fillVal("f_quote_note",q.note||"");
   fillVal("f_prod_factory",p.factory||"");fillVal("f_prod_type",p.type||"");fillVal("f_prod_approval",p.approval||"");fillVal("f_prod_plan_date",p.planDate||"");fillVal("f_prod_date",p.date||"");fillVal("f_prod_qty",p.qty||"");fillVal("f_prod_support",p.support||"WhatsApp: 7707-559-0188");
   curTicket.productionArtwork=p.artwork||curTicket.productionArtwork||"";updateProductionArtworkStatus();
-  drawItems();render();go("p1");loadDocCondition(curDoc);toast("已载入 "+t.no);
+  drawItems();render();loadDocCondition(curDoc);return true;
+}
+function loadTicket(id){
+  const t=tickets().find(x=>x.id===id);if(!t)return;
+  clearDraft();applyTicketToForm(t);go("p1");toast("已载入 "+t.no);
+}
+function restoreDraft(){
+  const d=loadDraft();if(!d)return false;
+  if(!applyTicketToForm(d))return false;
+  setDraftStatus("已恢复未保存草稿");
+  return true;
 }
 function copyTicket(id){
   loadTicket(id);
@@ -1908,16 +1989,24 @@ function saveSyncSettings(){
   const c={enabled:($("sync_enabled")&&$("sync_enabled").value)||"1",mode:($("sync_mode")&&$("sync_mode").value)||"merge",interval:($("sync_interval")&&$("sync_interval").value)||"15"};
   saveSyncCfg(c);startSyncTimer();toast("同步规则已保存 ✓");syncNow("test");
 }
-function cfgClientKey(c){return [normKey(c&&c.name),normKey(c&&c.tax),normKey(c&&c.role)].join("|")}
-function cfgProductKey(p){return [normKey(p&&p.name),normKey(p&&p.nameRu),normKey(p&&p.hs),normKey(p&&p.spec)].join("|")}
+function cfgClientKey(c){return c&&c.id||[normKey(c&&c.tax)||normKey(c&&c.name),normKey(c&&c.country)].join("|")}
+function cfgProductKey(p){return p&&p.id||[normKey(p&&p.name),normKey(p&&p.hs),normKey(p&&p.spec)].join("|")}
 function mergeByKey(local,remote,keyFn,normalize){
   const map=new Map();
   (remote||[]).map(normalize).filter(x=>x&&x.name).forEach(x=>map.set(keyFn(x),x));
   (local||[]).map(normalize).filter(x=>x&&x.name).forEach(x=>{
     const k=keyFn(x),old=map.get(k)||{};
-    const next=Object.assign({},old,x);
-    if((!next.logo)&&old.logo)next.logo=old.logo;
-    if((!next.artworks||!next.artworks.length)&&old.artworks)next.artworks=old.artworks;
+    const localNewer=(+x.updatedAt||0)>=(+old.updatedAt||0);
+    const next=localNewer?Object.assign({},old,x):Object.assign({},x,old);
+    next.id=x.id||old.id||k;
+    next.logoUpdatedAt=Math.max(+old.logoUpdatedAt||(+old.updatedAt||0),+x.logoUpdatedAt||(+x.updatedAt||0));
+    next.logoRemovedAt=Math.max(+old.logoRemovedAt||0,+x.logoRemovedAt||0);
+    if(next.logoRemovedAt>0&&next.logoRemovedAt>=next.logoUpdatedAt)next.logo="";
+    else next.logo=((+x.logoUpdatedAt||+x.updatedAt||0)>=(+old.logoUpdatedAt||+old.updatedAt||0)?x.logo:old.logo)||old.logo||x.logo||"";
+    next.deletedAssetIds=[...new Set([...(old.deletedAssetIds||[]),...(x.deletedAssetIds||[])])].slice(-100);
+    const deleted=new Set(next.deletedAssetIds);
+    next.artworks=mergeAssets(old.artworks,x.artworks).filter(a=>!deleted.has(a.id));
+    next.updatedAt=Math.max(+old.updatedAt||0,+x.updatedAt||0);
     map.set(k,next);
   });
   return [...map.values()];
@@ -1925,12 +2014,23 @@ function mergeByKey(local,remote,keyFn,normalize){
 function mergeCfgData(local,remote){
   local=Object.assign(cloneDefCfg(),local||{});remote=Object.assign(cloneDefCfg(),remote||{});
   const merged=Object.assign({},remote,local);
+  const localAt=+local._updatedAt||0,remoteAt=+remote._updatedAt||0;
   merged.terms=[...new Set([...(remote.terms||[]),...(local.terms||[])])].filter(Boolean);
   merged.hs=[...new Set([...(remote.hs||[]),...(local.hs||[])])].filter(Boolean);
   const portMap=new Map();[...(remote.ports||[]),...(local.ports||[])].forEach(p=>{if(p&&p[0])portMap.set(p[0],p)});
   merged.ports=[...portMap.values()];
-  merged.clients=mergeByKey(local.clients,remote.clients,cfgClientKey,normalizeCustomer);
-  merged.products=mergeByKey(local.products,remote.products,cfgProductKey,normalizeProduct);
+  merged.deletedClientIds=[...new Set([...(remote.deletedClientIds||[]),...(local.deletedClientIds||[])])].filter(Boolean);
+  merged.deletedProductIds=[...new Set([...(remote.deletedProductIds||[]),...(local.deletedProductIds||[])])].filter(Boolean);
+  if(localAt>remoteAt){
+    const liveClients=new Set((local.clients||[]).map(c=>c.id));const liveProducts=new Set((local.products||[]).map(p=>p.id));
+    merged.deletedClientIds=merged.deletedClientIds.filter(id=>!liveClients.has(id));merged.deletedProductIds=merged.deletedProductIds.filter(id=>!liveProducts.has(id));
+  }else if(remoteAt>localAt){
+    const liveClients=new Set((remote.clients||[]).map(c=>c.id));const liveProducts=new Set((remote.products||[]).map(p=>p.id));
+    merged.deletedClientIds=merged.deletedClientIds.filter(id=>!liveClients.has(id));merged.deletedProductIds=merged.deletedProductIds.filter(id=>!liveProducts.has(id));
+  }
+  const deletedClients=new Set(merged.deletedClientIds),deletedProducts=new Set(merged.deletedProductIds);
+  merged.clients=mergeByKey(local.clients,remote.clients,cfgClientKey,normalizeCustomer).filter(c=>!deletedClients.has(c.id));
+  merged.products=mergeByKey(local.products,remote.products,cfgProductKey,normalizeProduct).filter(p=>!deletedProducts.has(p.id));
   merged._updatedAt=Date.now();
   return merged;
 }
@@ -2110,7 +2210,8 @@ Object.assign(window,{
 /* ================= 初始化 ================= */
 fillApiForm();fillSyncForm();fillRatesForm();fillCfgForm();applyCfg();
 fillCompanyForm();
-newTicket("export");
+newTicket("export",true);
+if(restoreDraft())toast("已自动恢复上次未存入档案的票据草稿");
 drawCustomerSelects();
 bindTemplateButtons();
 renderArchive();
