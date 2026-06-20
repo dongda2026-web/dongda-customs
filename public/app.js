@@ -70,8 +70,8 @@ const DEF_CFG={prefix:"DD",seal:"",pin:"",
   ]};
 function cloneDefCfg(){return JSON.parse(JSON.stringify(DEF_CFG))}
 function normalizeProduct(p){
-  if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||"",gwUnit:p[6]||"",nwUnit:p[7]||"",pkg:p[8]||"",elements:p[9]||""};
-  return {name:p&&p.name||"",nameRu:p&&p.nameRu||"",hs:p&&p.hs||"6305.33",unit:p&&p.unit||"条",price:numVal(p&&p.price),spec:p&&p.spec||"",gwUnit:p&&p.gwUnit||"",nwUnit:p&&p.nwUnit||"",pkg:p&&p.pkg||"",elements:p&&p.elements||""};
+  if(Array.isArray(p))return {name:p[0]||"",nameRu:p[1]||"",hs:p[2]||"6305.33",unit:p[3]||"条",price:numVal(p[4]),spec:p[5]||"",gwUnit:p[6]||"",nwUnit:p[7]||"",pkg:p[8]||"",elements:p[9]||"",artworks:[]};
+  return {name:p&&p.name||"",nameRu:p&&p.nameRu||"",hs:p&&p.hs||"6305.33",unit:p&&p.unit||"条",price:numVal(p&&p.price),spec:p&&p.spec||"",gwUnit:p&&p.gwUnit||"",nwUnit:p&&p.nwUnit||"",pkg:p&&p.pkg||"",elements:p&&p.elements||"",artworks:Array.isArray(p&&p.artworks)?p.artworks.filter(a=>a&&a.data).slice(0,12):[]};
 }
 function productLine(p){return [p.name,p.nameRu||"",p.hs||"",p.unit||"条",p.price||"",p.spec||"",p.gwUnit||"",p.nwUnit||"",p.pkg||"",p.elements||""].join("|")}
 function parseProductLine(l){return normalizeProduct(l.split("|").map(s=>s.trim()))}
@@ -101,7 +101,9 @@ function parseProductsText(txt){
 }
 function normRole(v){
   const s=String(v||"buyer").trim().toLowerCase();
-  if(["seller","卖方","供方","exporter","supplier"].includes(s))return "seller";
+  if(["factory","manufacturer","producer","生产厂家","厂家","工厂"].includes(s))return "factory";
+  if(["supplier","供应商"].includes(s))return "supplier";
+  if(["seller","卖方","供方","exporter"].includes(s))return "seller";
   if(["both","双方","全部","all"].includes(s))return "both";
   return "buyer";
 }
@@ -166,10 +168,10 @@ function normalizeCustomer(p){
   let c;
   if(Array.isArray(p)){
     const old=p.length<=24;
-    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||"",nameRu:p[15]||"",nameEn:p[16]||"",nameKk:p[17]||"",nameUz:old?"":p[18]||"",addrRu:old?p[18]||"":p[19]||"",addrEn:old?p[19]||"":p[20]||"",addrKk:old?p[20]||"":p[21]||"",addrUz:old?"":p[22]||"",bankRu:old?p[21]||"":p[23]||"",bankEn:old?p[22]||"":p[24]||"",bankKk:old?p[23]||"":p[25]||"",bankUz:old?"":p[26]||"",logo:""};
+    c={name:p[0]||"",country:(p[1]||"KZ").toUpperCase(),role:normRole(p[2]),addr:p[3]||"",tax:p[4]||"",bank:p[5]||"",account:p[6]||"",swift:p[7]||"",bik:p[8]||"",tel:p[9]||"",contact:p[10]||"",vat:p[11]||"",kbe:p[12]||"",corr:p[13]||"",fax:p[14]||"",nameRu:p[15]||"",nameEn:p[16]||"",nameKk:p[17]||"",nameUz:old?"":p[18]||"",addrRu:old?p[18]||"":p[19]||"",addrEn:old?p[19]||"":p[20]||"",addrKk:old?p[20]||"":p[21]||"",addrUz:old?"":p[22]||"",bankRu:old?p[21]||"":p[23]||"",bankEn:old?p[22]||"":p[24]||"",bankKk:old?p[23]||"":p[25]||"",bankUz:old?"":p[26]||"",logo:"",artworks:[]};
     return enrichCustomerTranslations(inferCustomerMeta(c,p.join(" ")));
   }
-  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||"",nameRu:p&&p.nameRu||"",nameEn:p&&p.nameEn||"",nameKk:p&&p.nameKk||"",nameUz:p&&p.nameUz||"",addrRu:p&&p.addrRu||"",addrEn:p&&p.addrEn||"",addrKk:p&&p.addrKk||"",addrUz:p&&p.addrUz||"",bankRu:p&&p.bankRu||"",bankEn:p&&p.bankEn||"",bankKk:p&&p.bankKk||"",bankUz:p&&p.bankUz||"",logo:p&&p.logo||""};
+  c={name:p&&p.name||"",country:(p&&p.country||"KZ").toUpperCase(),role:normRole(p&&p.role),addr:p&&p.addr||p&&p.address||"",tax:p&&p.tax||p&&p.bin||"",bank:p&&p.bank||"",account:p&&p.account||p&&p.iban||"",swift:p&&p.swift||"",bik:p&&p.bik||"",tel:p&&p.tel||"",contact:p&&p.contact||"",vat:p&&p.vat||"",kbe:p&&p.kbe||"",corr:p&&p.corr||"",fax:p&&p.fax||"",nameRu:p&&p.nameRu||"",nameEn:p&&p.nameEn||"",nameKk:p&&p.nameKk||"",nameUz:p&&p.nameUz||"",addrRu:p&&p.addrRu||"",addrEn:p&&p.addrEn||"",addrKk:p&&p.addrKk||"",addrUz:p&&p.addrUz||"",bankRu:p&&p.bankRu||"",bankEn:p&&p.bankEn||"",bankKk:p&&p.bankKk||"",bankUz:p&&p.bankUz||"",logo:p&&p.logo||"",artworks:Array.isArray(p&&p.artworks)?p.artworks.filter(a=>a&&a.data).slice(0,12):[]};
   return enrichCustomerTranslations(inferCustomerMeta(c));
 }
 function customerLine(p){return [p.name,p.country||"KZ",p.role||"buyer",p.addr||"",p.tax||"",p.bank||"",p.account||"",p.swift||"",p.bik||"",p.tel||"",p.contact||"",p.vat||"",p.kbe||"",p.corr||"",p.fax||"",p.nameRu||"",p.nameEn||"",p.nameKk||"",p.nameUz||"",p.addrRu||"",p.addrEn||"",p.addrKk||"",p.addrUz||"",p.bankRu||"",p.bankEn||"",p.bankKk||"",p.bankUz||""].join("|")}
@@ -280,9 +282,11 @@ function saveCfg(){const c=loadCfg();
   c.ports=$("c_ports").value.split("\n").map(l=>l.split("=").map(s=>s.trim())).filter(p=>p[0]).map(p=>[p[0],p[1]||p[0]]);
   c.terms=$("c_terms").value.split("\n").map(s=>s.trim()).filter(Boolean);
   c.hs=$("c_hs").value.split("\n").map(s=>s.trim()).filter(Boolean);
-  c.products=($("c_products")?$("c_products").value:"").split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name);
+  const oldProducts=(c.products||[]).slice();
+  c.products=($("c_products")?$("c_products").value:"").split("\n").map(s=>s.trim()).filter(Boolean).map(parseProductLine).filter(p=>p.name)
+    .map(x=>{const old=oldProducts.find(o=>normKey(o.name)===normKey(x.name)||x.hs&&o.hs===x.hs&&normKey(o.spec)===normKey(x.spec));return Object.assign({},x,{artworks:old&&old.artworks||x.artworks||[]})});
   const oldClients=(c.clients||[]).slice();
-  c.clients=parseCustomersText($("c_clients").value).map(x=>{const old=oldClients.find(o=>normKey(o.name)===normKey(x.name)||x.tax&&o.tax===x.tax);return Object.assign({},x,{logo:old&&old.logo||x.logo||""})});
+  c.clients=parseCustomersText($("c_clients").value).map(x=>{const old=oldClients.find(o=>normKey(o.name)===normKey(x.name)||x.tax&&o.tax===x.tax);return Object.assign({},x,{logo:old&&old.logo||x.logo||"",artworks:old&&old.artworks||x.artworks||[]})});
   if(!c.ports.length||!c.terms.length||!c.hs.length){alert("口岸/条款/HS库不能为空");return}
   if(!c.clients.length)c.clients=loadCfg().clients;
   saveCfgLocal(c);
@@ -302,9 +306,10 @@ function applyCfg(){const c=loadCfg();
 function getHS(){return loadCfg().hs}
 function getProducts(){return loadCfg().products||[]}
 function getCustomers(role){const list=loadCfg().clients||[];return role?list.filter(c=>!c.role||c.role===role||c.role==="both"):list}
+function getFactoryCustomers(){return (loadCfg().clients||[]).filter(c=>["seller","both","factory","supplier"].includes(c.role)||c.country==="CN"||c.country==="UZ")}
 function partyInfoFromCustomer(c){
   c=normalizeCustomer(c||{});
-  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",logo:c.logo||"",lat:c.nameEn||c.name||"",
+  return {name:c.name||"",country:c.country||"",addr:c.addr||"",tax:c.tax||"",bin:c.tax||"",bank:c.bank||"",account:c.account||"",iban:c.account||"",swift:c.swift||"",bik:c.bik||"",tel:c.tel||"",contact:c.contact||"",vat:c.vat||"",kbe:c.kbe||"",corr:c.corr||"",fax:c.fax||"",logo:c.logo||"",artworks:Array.isArray(c.artworks)?c.artworks:[],lat:c.nameEn||c.name||"",
     nameRu:c.nameRu||"",nameEn:c.nameEn||"",nameKk:c.nameKk||"",nameUz:c.nameUz||"",addrRu:c.addrRu||"",addrEn:c.addrEn||"",addrKk:c.addrKk||"",addrUz:c.addrUz||"",bankRu:c.bankRu||"",bankEn:c.bankEn||"",bankKk:c.bankKk||"",bankUz:c.bankUz||""};
 }
 function drawCustomerSelects(){
@@ -377,7 +382,7 @@ function saveCurrentCustomer(side){
   const isSeller=side==="seller",info=isSeller?(curTicket.sellerInfo||{}):(curTicket.buyerInfo||{});
   const name=(isSeller?$("f_seller").value:$("f_buyer").value).trim();
   if(!name){toast("请先填写"+(isSeller?"卖方":"买方")+"名称");return}
-  const c=normalizeCustomer({name,country:isSeller?"CN":$("f_country").value,role:isSeller?"seller":"buyer",addr:info.addr||"",tax:info.tax||info.bin||"",bank:info.bank||"",account:info.account||info.iban||"",swift:info.swift||"",bik:info.bik||"",tel:info.tel||"",contact:info.contact||"",logo:info.logo||""});
+  const c=normalizeCustomer({name,country:isSeller?"CN":$("f_country").value,role:isSeller?"seller":"buyer",addr:info.addr||"",tax:info.tax||info.bin||"",bank:info.bank||"",account:info.account||info.iban||"",swift:info.swift||"",bik:info.bik||"",tel:info.tel||"",contact:info.contact||"",logo:info.logo||"",artworks:info.artworks||[]});
   upsertConfigList("clients",c,(a,b)=>a.name===b.name&&a.role===b.role);
   toast("已存入客户基础信息库："+name);
 }
@@ -399,16 +404,16 @@ function saveLibraryCustomers(){
   if(!rows.length){toast("请至少填写一条客户资料");return}
   const cfg=loadCfg(),list=(cfg.clients||[]).slice();
   if(editingCustomerIndex!==null&&list[editingCustomerIndex]){
-    list[editingCustomerIndex]=Object.assign({},rows[0],{logo:list[editingCustomerIndex].logo||rows[0].logo||""});editingCustomerIndex=null;
+    list[editingCustomerIndex]=Object.assign({},rows[0],{logo:list[editingCustomerIndex].logo||rows[0].logo||"",artworks:list[editingCustomerIndex].artworks||rows[0].artworks||[]});editingCustomerIndex=null;
   }else if(raw.includes("|")&&raw.split("\n").filter(Boolean).length>1){
-    cfg.clients=rows.map(c=>{const old=list.find(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);return Object.assign({},c,{logo:old&&old.logo||c.logo||""})});
+    cfg.clients=rows.map(c=>{const old=list.find(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);return Object.assign({},c,{logo:old&&old.logo||c.logo||"",artworks:old&&old.artworks||c.artworks||[]})});
     saveCfgLocal(cfg);
     fillCfgForm();applyCfg();drawCustomerSelects();renderLibraryData();if(el)el.value="";render();toast("客户资料库已整体保存："+rows.length+" 条，并已同步");
     return;
   }else{
     rows.forEach(c=>{
       const i=list.findIndex(x=>normKey(x.name)===normKey(c.name)||c.tax&&x.tax===c.tax);
-      if(i>=0)list[i]=Object.assign({},list[i],c);else list.unshift(c);
+      if(i>=0)list[i]=Object.assign({},list[i],c,{logo:list[i].logo||c.logo||"",artworks:list[i].artworks||c.artworks||[]});else list.unshift(c);
     });
   }
   cfg.clients=list;saveCfgLocal(cfg);
@@ -436,6 +441,21 @@ function removeCustomerLogo(i){
   const cfg=loadCfg(),c=cfg.clients&&cfg.clients[i];if(!c||!c.logo)return;
   if(!confirm("移除客户 Logo："+c.name+"？"))return;
   c.logo="";saveCfgLocal(cfg);renderLibraryData();render();toast("已移除客户 Logo");
+}
+async function uploadCustomerArtwork(i,input){
+  const file=input&&input.files&&input.files[0];if(!file)return;
+  try{
+    const data=await compressImageFile(file,1200),cfg=loadCfg();if(!cfg.clients[i])return;
+    cfg.clients[i].artworks=Array.isArray(cfg.clients[i].artworks)?cfg.clients[i].artworks:[];
+    cfg.clients[i].artworks.unshift({name:file.name||"客户图稿",data,created:Date.now()});
+    cfg.clients[i].artworks=cfg.clients[i].artworks.slice(0,12);
+    saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("客户图稿已保存并同步 ✓");
+  }catch(e){toast(e.message||"客户图稿上传失败")}finally{if(input)input.value=""}
+}
+function removeCustomerArtwork(i,j){
+  const cfg=loadCfg(),c=cfg.clients&&cfg.clients[i];if(!c||!Array.isArray(c.artworks)||!c.artworks[j])return;
+  if(!confirm("删除客户图稿："+(c.artworks[j].name||c.name)+"？"))return;
+  c.artworks.splice(j,1);saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("已删除客户图稿");
 }
 async function translateLibraryCustomers(){
   const cfg=loadCfg(),list=(cfg.clients||[]).map(normalizeCustomer).filter(c=>c.name);
@@ -478,6 +498,21 @@ function deleteLibraryProduct(i){
   saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawItems();renderLibraryData();render();toast("已删除产品："+p.name);
 }
+async function uploadProductArtwork(i,input){
+  const file=input&&input.files&&input.files[0];if(!file)return;
+  try{
+    const data=await compressImageFile(file,1200),cfg=loadCfg();if(!cfg.products[i])return;
+    cfg.products[i].artworks=Array.isArray(cfg.products[i].artworks)?cfg.products[i].artworks:[];
+    cfg.products[i].artworks.unshift({name:file.name||"产品图稿",data,created:Date.now()});
+    cfg.products[i].artworks=cfg.products[i].artworks.slice(0,12);
+    saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("产品设计稿已保存并同步 ✓");
+  }catch(e){toast(e.message||"产品设计稿上传失败")}finally{if(input)input.value=""}
+}
+function removeProductArtwork(i,j){
+  const cfg=loadCfg(),p=cfg.products&&cfg.products[i];if(!p||!Array.isArray(p.artworks)||!p.artworks[j])return;
+  if(!confirm("删除产品图稿："+(p.artworks[j].name||p.name)+"？"))return;
+  p.artworks.splice(j,1);saveCfgLocal(cfg);renderLibraryData();drawProductionAssetControls();render();toast("已删除产品图稿");
+}
 function editLibraryProduct(i){
   const p=(loadCfg().products||[])[i],el=$("libProductsEdit");if(!p||!el)return;
   editingProductIndex=i;el.value=productLine(p);el.focus();toast("已载入产品编辑区，修改后点保存产品资料");
@@ -494,7 +529,7 @@ function saveLibraryProducts(){
   if(!rows.length){toast("请至少填写一条产品资料");return}
   const cfg=loadCfg(),list=(cfg.products||[]).slice();
   if(editingProductIndex!==null&&list[editingProductIndex]){
-    list[editingProductIndex]=rows[0];editingProductIndex=null;
+    list[editingProductIndex]=Object.assign({},rows[0],{artworks:list[editingProductIndex].artworks||rows[0].artworks||[]});editingProductIndex=null;
   }else rows.forEach(p=>list.unshift(p));
   cfg.products=list;saveCfgLocal(cfg);
   fillCfgForm();applyCfg();drawItems();renderLibraryData();el.value="";render();toast("产品资料库已新增："+rows.length+" 条，并已同步");
@@ -533,6 +568,7 @@ function rateStale(){const r=loadRates();return (Date.now()-new Date(r.checked))
 
 /* ================= 票据状态 ================= */
 let items=[],tplState={},docConditions={},docOverrides={},curTicket=null,curDoc="inv";
+let entryGroup="base";
 function ticketNo(){const d=today().replace(/-/g,""),px=loadCfg().prefix;const n=tickets().filter(t=>t.no&&t.no.includes(d)).length+1;return px+"-"+d+"-"+String(n).padStart(2,"0")}
 function newTicket(type){
   const c=loadCompany(),main=companyPartyInfo(c);type=type||"export";
@@ -546,7 +582,7 @@ function newTicket(type){
   $("f_cur").value=type==="import"?"CNY":"USD";$("f_pay").value=type==="import"?"货到付款":"T/T 30%预付 70%发货前";
   $("f_truck").value="";$("f_gw").value="";$("f_nw").value="";$("f_pkg").value="";
   ["f_quote_note","f_prod_factory","f_prod_type","f_prod_approval","f_prod_plan_date","f_prod_date","f_prod_qty"].forEach(id=>fillVal(id,""));
-  fillVal("f_quote_valid","7");fillVal("f_prod_support","WhatsApp: 7707-559-0188");updateProductionArtworkStatus();
+  fillVal("f_quote_valid","7");fillVal("f_prod_support","WhatsApp: 7707-559-0188");updateProductionArtworkStatus();drawProductionAssetControls();
   applyTypeNames();drawItems();render();
 }
 function companySellerInfo(c){return companyPartyInfo(c)}
@@ -578,6 +614,36 @@ function updateMasterStatus(){
   el.style.color=curTicket&&curTicket.masterConfirmed?"var(--ok)":"var(--warn)";
 }
 function updateProductionArtworkStatus(){const el=$("prodArtworkStatus");if(el)el.textContent=curTicket&&curTicket.productionArtwork?"已上传 ✓":"未上传"}
+function productionAssetOptions(){
+  const cfg=loadCfg(),out=[];
+  (cfg.clients||[]).forEach((c,ci)=>(c.artworks||[]).forEach((a,ai)=>out.push({key:"c:"+ci+":"+ai,label:"客户图稿 · "+c.name+" · "+(a.name||"图稿"),data:a.data})));
+  (cfg.products||[]).forEach((p,pi)=>(p.artworks||[]).forEach((a,ai)=>out.push({key:"p:"+pi+":"+ai,label:"产品图稿 · "+p.name+" · "+(a.name||"图稿"),data:a.data})));
+  return out;
+}
+function drawProductionAssetControls(){
+  const fs=$("f_prod_factory_select"),as=$("f_prod_artwork_select");
+  if(fs){
+    const old=fs.value,arr=getFactoryCustomers();
+    fs.innerHTML='<option value="">选择厂家 / 供应商资料</option>'+arr.map((c,i)=>`<option value="${i}">${esc(c.name)} · ${esc((c.role||"").toUpperCase())} · ${esc(c.country||"")}</option>`).join("");
+    if([...fs.options].some(o=>o.value===old))fs.value=old;
+  }
+  if(as){
+    const old=as.value,arr=productionAssetOptions();
+    as.innerHTML='<option value="">选择客户/产品图稿</option>'+arr.map(a=>`<option value="${esc(a.key)}">${esc(a.label)}</option>`).join("");
+    if([...as.options].some(o=>o.value===old))as.value=old;
+  }
+}
+function applyFactoryToProduction(idx){
+  const c=getFactoryCustomers()[+idx];if(!c)return;
+  fillVal("f_prod_factory",c.name);
+  render();toast("已选择生产厂家："+c.name);
+}
+function applyProductionArtwork(key){
+  const a=productionAssetOptions().find(x=>x.key===key);if(!a)return;
+  if(!curTicket)newTicket($("f_type").value||"export");
+  curTicket.productionArtwork=a.data;
+  updateProductionArtworkStatus();render();toast("已选择生产图稿："+a.label);
+}
 async function uploadProductionArtwork(input){
   const file=input&&input.files&&input.files[0];if(!file)return;
   if(!curTicket)newTicket($("f_type").value||"export");
@@ -605,6 +671,15 @@ function productIndexOfItem(it){
   i=list.findIndex(p=>String(p.hs||"")===hs&&(normKey(p.name)===name||normKey(p.spec)===spec));
   if(i>=0)return i;
   return list.findIndex(p=>String(p.hs||"")===hs&&(name.includes(normKey(p.name))||normKey(p.name).includes(name)||spec&&normKey(p.spec).includes(spec)));
+}
+function firstArtworkFromProduct(it){
+  const idx=productIndexOfItem(it||{});
+  const p=idx>=0?getProducts()[idx]:null;
+  return p&&p.artworks&&p.artworks[0]&&p.artworks[0].data||"";
+}
+function firstArtworkFromParty(name){
+  const c=(loadCfg().clients||[]).find(x=>normKey(x.name)===normKey(name));
+  return c&&c.artworks&&c.artworks[0]&&c.artworks[0].data||"";
 }
 function applyProductToItem(i,idx){
   const p=getProducts()[+idx];if(!p||!items[i])return;
@@ -980,8 +1055,15 @@ function goLibrary(id){
 }
 function renderLibraryData(){
   const cfg=loadCfg(),cl=$("libCustomerList"),pl=$("libProductList"),hl=$("libHistoryList");
-  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>`<div class="lib-item"><div class="lib-item-head">${c.logo?`<img class="client-logo" src="${esc(c.logo)}" alt="${esc(c.name)} logo">`:'<span class="client-logo empty">NO<br>LOGO</span>'}<b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b></div><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span><div class="bar" style="margin-top:8px"><label class="mini upload-mini">上传 Logo<input type="file" accept="image/*" onchange="uploadCustomerLogo(${i},this)"></label>${c.logo?`<button class="mini" onclick="removeCustomerLogo(${i})">移除 Logo</button>`:""}<button class="mini" onclick="applyLibraryCustomer(${i},'${(c.role||"buyer")==="seller"?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无客户资料</div>';
-  if(pl)pl.innerHTML=(cfg.products||[]).map((p,i)=>`<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span><div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryProduct(${i})">填入货物明细</button><button class="mini" onclick="editLibraryProduct(${i})">编辑</button><button class="mini del" onclick="deleteLibraryProduct(${i})">删除</button></div></div>`).join("")||'<div class="empty">暂无产品资料</div>';
+  if(cl)cl.innerHTML=(cfg.clients||[]).map((c,i)=>{
+    const art=(c.artworks||[]).map((a,j)=>`<span class="asset-thumb"><img src="${esc(a.data)}" alt="${esc(a.name||"客户图稿")}"><button onclick="removeCustomerArtwork(${i},${j})">×</button></span>`).join("");
+    return `<div class="lib-item"><div class="lib-item-head">${c.logo?`<img class="client-logo" src="${esc(c.logo)}" alt="${esc(c.name)} logo">`:'<span class="client-logo empty">NO<br>LOGO</span>'}<b>${esc(c.name)} · ${esc((c.country||"").toUpperCase())} · ${esc((c.role||"buyer").toUpperCase())}</b></div><span>${esc(c.addr||"地址未填")}</span><span>税号/BIN: ${esc(c.tax||"—")} · VAT: ${esc(c.vat||"—")}</span><span>银行: ${esc(c.bank||"—")} · IBAN: ${esc(c.account||"—")}</span><span>SWIFT/BIK: ${esc([c.swift,c.bik].filter(Boolean).join(" / ")||"—")} · кБе: ${esc(c.kbe||"—")}</span><span>电话: ${esc(c.tel||"—")} · 传真: ${esc(c.fax||"—")}</span>${art?`<div class="asset-strip">${art}</div>`:""}<div class="bar" style="margin-top:8px"><label class="mini upload-mini">上传 Logo<input type="file" accept="image/*" onchange="uploadCustomerLogo(${i},this)"></label><label class="mini upload-mini">上传图稿<input type="file" accept="image/*" onchange="uploadCustomerArtwork(${i},this)"></label>${c.logo?`<button class="mini" onclick="removeCustomerLogo(${i})">移除 Logo</button>`:""}<button class="mini" onclick="applyLibraryCustomer(${i},'${["seller","factory","supplier"].includes(c.role||"")?"seller":"buyer"}')">按角色填入</button><button class="mini" onclick="applyLibraryCustomer(${i},'buyer')">填入买方</button><button class="mini" onclick="applyLibraryCustomer(${i},'seller')">填入卖方</button><button class="mini" onclick="editLibraryCustomer(${i})">编辑</button><button class="mini del" onclick="deleteLibraryCustomer(${i})">删除</button></div></div>`;
+  }).join("")||'<div class="empty">暂无客户资料</div>';
+  if(pl)pl.innerHTML=(cfg.products||[]).map((p,i)=>{
+    const art=(p.artworks||[]).map((a,j)=>`<span class="asset-thumb"><img src="${esc(a.data)}" alt="${esc(a.name||"产品图稿")}"><button onclick="removeProductArtwork(${i},${j})">×</button></span>`).join("");
+    return `<div class="lib-item"><b>${esc(p.name)}</b><span>${esc(p.nameRu||"外文品名未填")}</span><span>HS ${esc(p.hs)} · ${esc(p.unit||"条")} · 单价 ${esc(p.price||"—")}</span><span>${esc(p.spec||"规格未填")} · 包装: ${esc(p.pkg||"—")}</span><span>申报要素: ${esc(p.elements||"—")}</span>${art?`<div class="asset-strip">${art}</div>`:""}<div class="bar" style="margin-top:8px"><button class="mini" onclick="applyLibraryProduct(${i})">填入货物明细</button><label class="mini upload-mini">上传设计稿<input type="file" accept="image/*" onchange="uploadProductArtwork(${i},this)"></label><button class="mini" onclick="editLibraryProduct(${i})">编辑</button><button class="mini del" onclick="deleteLibraryProduct(${i})">删除</button></div></div>`;
+  }).join("")||'<div class="empty">暂无产品资料</div>';
+  drawProductionAssetControls();
   if(hl){const a=allDocRecords();hl.innerHTML=a.length?a.map(docRecordLine).join(""):'<div class="empty">暂无历史文件</div>'}
 }
 function formTpl(){return FORM_TPLS.find(t=>t.id===formTplId)||FORM_TPLS[0]}
@@ -1143,8 +1225,14 @@ function render(){
   $("kz_cif").textContent=curLabel+" "+fmt(t);$("kz_duty").textContent=curLabel+" "+fmt(kzD);$("kz_vat").textContent=curLabel+" "+fmt(kzV);$("kz_total").textContent=curLabel+" "+fmt(kzD+kzV);
   $("uz_cif").textContent=curLabel+" "+fmt(t);$("uz_duty").textContent=curLabel+" "+fmt(uzD);$("uz_vat").textContent=curLabel+" "+fmt(uzV);$("uz_total").textContent=curLabel+" "+fmt(uzD+uzV);
   if(curTicket){$("curNo").textContent=curTicket.no;$("curNo2").textContent=curTicket.no}
-  updateMasterStatus();
+  updateMasterStatus();drawProductionAssetControls();
   drawTpls();drawContractTemplates();drawFormTemplateLibrary();drawTabs();drawDoc();
+}
+function setEntryGroup(id){
+  entryGroup=id||"base";
+  document.querySelectorAll("[data-entry-tab]").forEach(b=>b.classList.toggle("active",b.dataset.entryTab===entryGroup));
+  document.querySelectorAll("[data-entry-group]").forEach(s=>s.classList.toggle("active",s.dataset.entryGroup===entryGroup));
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
 /* ================= 合同识别（多层验证） ================= */
@@ -1444,7 +1532,7 @@ function docHtml(id){
     uz:{title:"ISHLAB CHIQARISH KARTASI",customer:"Mijoz / zavod ma'lumoti",contract:"Shartnoma № / buyurtma turi",approval:"Dizayn va texnik parametrlarni tasdiqlash",supplier:"Yetkazib beruvchi / ishlab chiqaruvchi",plan:"Rejalashtirilgan ishlab chiqarish sanasi",date:"Ishlab chiqarilgan sana",qty:"Partiya miqdori",product:"Mahsulot",support:"Mijozlarni qo'llab-quvvatlash"}
   }[docLang];
   const prod=collect().production||{},customer=$("f_type").value==="export"?v.bi:v.si,customerName=$("f_type").value==="export"?v.buyer:v.seller;
-  const first=items[0]||{},batchQty=prod.qty||items.reduce((sum,it)=>sum+numVal(it.qty),0).toLocaleString(),artwork=prod.artwork||curTicket&&curTicket.productionArtwork||"";
+  const first=items[0]||{},batchQty=prod.qty||items.reduce((sum,it)=>sum+numVal(it.qty),0).toLocaleString(),artwork=prod.artwork||curTicket&&curTicket.productionArtwork||firstArtworkFromProduct(first)||firstArtworkFromParty(customerName)||"";
   D.production=`<div class="doc production-doc"><div class="production-head">${customer.logo?`<img class="production-customer-logo" src="${esc(customer.logo)}" alt="${esc(customerName)} logo">`:`<div><h1 style="text-align:left;margin:0">${esc(customerName||"CLIENT LOGO")}</h1></div>`}<img class="production-brand-logo" src="brand/dongda-logo-header.jpg?v=20260613-6" alt="Dongda Ltd logo"></div>
     <div class="production-grid"><div class="production-block"><h3>${prodLabels.customer}</h3><p>${partyShort(customer,customerName)}</p><h3>${prodLabels.contract}</h3><p>${esc(v.contract||"—")}<br>${esc(prod.type||"—")}</p><h3>${prodLabels.approval}</h3><p>${esc(prod.approval||"—")}</p>${artwork?`<img class="production-artwork" src="${esc(artwork)}" alt="Production artwork">`:""}</div>
     <div class="production-block"><h3>${prodLabels.supplier}</h3><p>${esc(prod.factory||v.seller||"—")}</p><h3>${prodLabels.product}</h3><p>${esc(gName(first)||"—")}<br>HS ${esc(first.hs||"—")}</p><h3>${prodLabels.plan}</h3><p>${esc(prod.planDate||"—")}</p><h3>${prodLabels.date}</h3><p>${esc(prod.date||"—")}</p><h3>${prodLabels.qty}</h3><p>${esc(batchQty||"—")} ${esc(docUnit(first,T))}</p><div class="production-support">${prodLabels.support}<br>${esc(prod.support||loadCompany().main.tel||"—")}</div></div></div>${docFoot(id)}</div>`;
@@ -1758,6 +1846,7 @@ function go(p){
   document.querySelectorAll(".panel").forEach(x=>x.classList.toggle("active",x.id===target));
   document.querySelectorAll(".nav-item[data-p],.mnav .mi").forEach(s=>s.classList.toggle("active",s.dataset.p===target));
   if(p==="p2"){
+    setEntryGroup("preview");
     drawDoc();
     const sec=$("docPreviewSection");
     if(sec)setTimeout(()=>sec.scrollIntoView({behavior:"smooth",block:"start"}),60);
@@ -1826,7 +1915,10 @@ function mergeByKey(local,remote,keyFn,normalize){
   (remote||[]).map(normalize).filter(x=>x&&x.name).forEach(x=>map.set(keyFn(x),x));
   (local||[]).map(normalize).filter(x=>x&&x.name).forEach(x=>{
     const k=keyFn(x),old=map.get(k)||{};
-    map.set(k,Object.assign({},old,x));
+    const next=Object.assign({},old,x);
+    if((!next.logo)&&old.logo)next.logo=old.logo;
+    if((!next.artworks||!next.artworks.length)&&old.artworks)next.artworks=old.artworks;
+    map.set(k,next);
   });
   return [...map.values()];
 }
@@ -2006,11 +2098,11 @@ function bindTemplateButtons(){
 
 Object.assign(window,{
   addContractItem,addRow,applyContractBaseSource,applyContractTemplate,applyCustomerToContract,applyCustomerToEntry,applyExtract,applyProductToItem,approveDocRecord,archiveDocRecord,confirmMasterInfo,copyContractItem,copyContractParams,
-  applyLibraryCustomer,applyLibraryProduct,copyTicket,cycleStatus,deleteDocRecord,deleteLibraryCustomer,deleteLibraryProduct,delContractItem,delItem,delTicket,demoRecognize,editLibraryCustomer,editLibraryProduct,exportBackup,
+  applyFactoryToProduction,applyLibraryCustomer,applyLibraryProduct,applyProductionArtwork,copyTicket,cycleStatus,deleteDocRecord,deleteLibraryCustomer,deleteLibraryProduct,delContractItem,delItem,delTicket,demoRecognize,editLibraryCustomer,editLibraryProduct,exportBackup,
   editItem,editPartyName,exportContractTemplate,go,importBackup,installPWA,applyFormTemplate,
   loadTicket,newTicket,onTypeChange,onUpload,pickDoc,printDoc,render,resetCfg,
   loadDocCondition,openArchiveFile,refreshCloudArchive,renderDocHistory,recordGeneratedDoc,saveDocCondition,
-  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,translateLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,uploadCustomerLogo,removeCustomerLogo,uploadProductionArtwork,
+  previewContractTemplate,resetRecognize,renderLibraryData,saveApi,saveCfg,saveCompany,saveCurrentCustomer,saveCurrentProducts,saveDocOverride,saveLibraryCustomers,translateLibraryCustomers,saveLibraryProducts,saveRates,saveSyncSettings,saveTicket,selectContractTemplate,setEntryGroup,uploadCustomerArtwork,uploadCustomerLogo,uploadProductArtwork,removeCustomerArtwork,removeCustomerLogo,removeProductArtwork,uploadProductionArtwork,
   selectFormTemplate,setContractLang,setDocLang,setFormLang,setSealMode,setSealPosition,setTplFromSelect,startRecognize,syncContractItemsFromEntry,testApi,toggleCurrentTpl,toggleFormTemplate,tplToggle,viewDocRecord,wipeAll,goLibrary
   ,syncNow
 });
