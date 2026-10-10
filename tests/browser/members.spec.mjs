@@ -19,7 +19,7 @@ test.beforeEach(async () => {
     stdio: ["ignore", "pipe", "pipe"] });
   await Promise.race([once(child.stdout, "data"), once(child, "exit").then(() => { throw new Error("Server exited"); })]);
   expect(await fetch(base + "/api/health").then(r => r.json())).toMatchObject({
-    service: "trade-erp", build: "members-browser-test", schemaVersion: 40, database: "ready",
+    service: "trade-erp", build: "members-browser-test", schemaVersion: 41, database: "ready",
   });
 });
 test.afterEach(async () => {

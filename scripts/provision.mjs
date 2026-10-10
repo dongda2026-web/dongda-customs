@@ -17,7 +17,7 @@
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
-const { createPool, migrate } = require("../src/db");
+const { createPool, migrate, withTenant } = require("../src/db");
 const { hashPassword } = require("../src/auth");
 
 function required(name) {
@@ -54,23 +54,27 @@ try {
   await migrate(pool, role);
 
   const client = await pool.connect();
+  let tenantId, userId;
   try {
     await client.query("BEGIN");
     await client.query("INSERT INTO tenants(id,slug,name) VALUES ($1,$2,$3) ON CONFLICT (slug) DO NOTHING",
       [randomUUID(), slug, tenantName]);
-    const tenant = (await client.query("SELECT id FROM tenants WHERE slug=$1", [slug])).rows[0];
+    tenantId = (await client.query("SELECT id FROM tenants WHERE slug=$1", [slug])).rows[0].id;
     await client.query("INSERT INTO users(id,email,name,password_hash) VALUES ($1,$2,$3,$4) ON CONFLICT (email) DO NOTHING",
       [randomUUID(), email, tenantName, await hashPassword(password)]);
-    const user = (await client.query("SELECT id FROM users WHERE email=$1", [email])).rows[0];
-    await client.query("INSERT INTO memberships(tenant_id,user_id,role) VALUES ($1,$2,'admin') ON CONFLICT (tenant_id,user_id) DO NOTHING",
-      [tenant.id, user.id]);
+    userId = (await client.query("SELECT id FROM users WHERE email=$1", [email])).rows[0].id;
     await client.query("COMMIT");
-    console.log(`已开通企业「${tenantName}」(标识 ${slug})，管理员 ${email}（角色 admin）。`);
-    console.log("初始密码仅保存在你的输入环境变量中，本脚本不会回显；请在首次登录后尽快更换。");
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;
   } finally { client.release(); }
+
+  // memberships 受 FORCE RLS 保护，必须在明确的租户事务上下文中写入。
+  await withTenant(pool, tenantId, c => c.query(
+    "INSERT INTO memberships(tenant_id,user_id,role) VALUES ($1,$2,'admin') ON CONFLICT (tenant_id,user_id) DO NOTHING",
+    [tenantId, userId]));
+  console.log(`已开通企业「${tenantName}」(标识 ${slug})，管理员 ${email}（角色 admin）。`);
+  console.log("初始密码仅保存在你的输入环境变量中，本脚本不会回显；请在首次登录后尽快更换。");
 } catch (error) {
   fail(error.message);
 } finally {

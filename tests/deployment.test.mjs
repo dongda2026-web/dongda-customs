@@ -29,8 +29,8 @@ test("production server migrates an empty database before reporting healthy", as
     const health = await fetch(`${server.base}/api/health`).then(r => r.json());
     assert.equal(health.service, "trade-erp");
     assert.equal(health.database, "ready");
-    assert.equal(health.schemaVersion, 40);
-    assert.equal((await cluster.owner.query("SELECT max(version) AS version FROM schema_migrations")).rows[0].version, 40);
+    assert.equal(health.schemaVersion, 41);
+    assert.equal((await cluster.owner.query("SELECT max(version) AS version FROM schema_migrations")).rows[0].version, 41);
   } finally {
     if (server) await server.stop();
     await cluster.stop();

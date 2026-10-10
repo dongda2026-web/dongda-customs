@@ -27,7 +27,7 @@ test.beforeAll(async () => {
     env: { PATH: process.env.PATH, HOST: "127.0.0.1", PORT: String(port), NODE_ENV: "test", DATABASE_URL: f.cluster.runtimeUrl,
       DB_SSL: "false", BUILD_ID: "documents-browser-test" }, stdio: ["ignore", "pipe", "pipe"] });
   await Promise.race([once(child.stdout, "data"), once(child, "exit").then(() => { throw new Error("Server exited"); })]);
-  expect(await fetch(base + "/api/health").then(r => r.json())).toMatchObject({ service: "trade-erp", build: "documents-browser-test", schemaVersion: 40 });
+  expect(await fetch(base + "/api/health").then(r => r.json())).toMatchObject({ service: "trade-erp", build: "documents-browser-test", schemaVersion: 41 });
 });
 test.afterAll(async () => {
   if (child && child.exitCode === null) { const exited = once(child, "exit"); child.kill("SIGTERM"); await exited; }
