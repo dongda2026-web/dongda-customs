@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>外贸业务工作台</title>
+  <link rel="stylesheet" href="/erp.css">
+</head>
+<body>
+  <section id="login-screen">
+    <form id="login-form">
+      <div class="eyebrow">TRADE OPERATIONS</div>
+      <h1>外贸业务工作台</h1>
+      <p class="muted">使用企业账号进入工作区</p>
+      <label>企业标识<input name="tenant" required autocomplete="organization"></label>
+      <label>邮箱<input name="email" type="email" required autocomplete="username"></label>
+      <label>密码<input name="password" type="password" required autocomplete="current-password"></label>
+      <p id="login-error" role="alert"></p>
+      <button class="primary" type="submit">登录</button>
+    </form>
+  </section>
+  <div id="workspace" hidden>
+    <header class="topbar">
+      <strong>外贸业务工作台</strong><span class="divider">/</span><span id="tenant-name"></span>
+      <div class="account"><span id="user-name"></span><button id="logout">退出</button></div>
+    </header>
+    <div class="layout">
+      <nav id="navigation" aria-label="工作区导航"></nav>
+      <main>
+        <div class="page-heading"><div><div class="eyebrow" id="section-label"></div><h1 id="view-title"></h1></div><span id="connection-status" class="muted">服务端实时数据</span></div>
+        <div id="notice" role="status" aria-live="polite"></div>
+        <div class="toolbar">
+          <form id="search-form"><input id="search" aria-label="搜索" placeholder="搜索名称或单号"><button>查询</button></form>
+          <div id="tools"></div>
+        </div>
+        <div id="table-region" class="table-scroll" tabindex="0" aria-label="业务列表"></div>
+        <div id="pagination"></div>
+        <section id="detail" hidden aria-label="选中记录详情"></section>
+      </main>
+    </div>
+  </div>
+  <dialog id="editor" aria-labelledby="editor-title">
+    <form id="editor-form">
+      <header><h2 id="editor-title"></h2><button type="button" id="close-editor" aria-label="关闭">关闭</button></header>
+      <div id="editor-fields"></div>
+      <p id="editor-error" role="alert"></p>
+      <footer><span class="muted">Tab 连续录入 · Ctrl/⌘ + Enter 保存</span><button class="primary" type="submit">保存</button></footer>
+    </form>
+  </dialog>
+  <script type="module" src="/erp/app.js"></script>
+</body>
+</html>

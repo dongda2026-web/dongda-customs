@@ -71,14 +71,18 @@ function readJson(req) {
 }
 
 function serveStatic(req, res) {
-  const pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
-  const requested = pathname === "/" ? "/index.html" : pathname;
+  let pathname;
+  try { pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname); }
+  catch { return sendText(res, 400, "Invalid URL"); }
+  const requested = pathname === "/" ? "/erp.html" : pathname;
   const filePath = path.normalize(path.join(publicDir, requested));
   if (!filePath.startsWith(publicDir + path.sep)) return sendText(res, 403, "Forbidden");
   fs.readFile(filePath, (err, data) => {
     if (err) return sendText(res, 404, "Not found");
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { "content-type": MIME[ext] || "application/octet-stream" });
+    const headers = { "content-type": MIME[ext] || "application/octet-stream", "x-content-type-options": "nosniff", "cache-control": "no-store" };
+    if (requested === "/erp.html") headers["content-security-policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
+    res.writeHead(200, headers);
     res.end(data);
   });
 }
@@ -592,8 +596,31 @@ async function configSave(req, res) {
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
-http.createServer((req, res) => {
+async function start() {
+  const db = require("./src/db");
+  const pool = db.createPool();
+  if (pool) {
+    try {
+      const role = process.env.ERP_RUNTIME_ROLE || (await pool.query("SELECT current_user AS role")).rows[0].role;
+      await db.migrate(pool, role);
+    } catch (error) {
+      // A restricted runtime role cannot apply DDL or grants. Continue only when the owner
+      // already migrated this database to the version this build needs; otherwise fail closed.
+      const found = await pool.query("SELECT max(version) AS version FROM schema_migrations")
+        .then(result => result.rows[0].version).catch(() => null);
+      const required = await db.requiredVersion();
+      if (!found || Number(found) < required) throw error;
+    }
+  }
+  const erp = require("./src/app").createApp({
+    pool,
+    buildId: process.env.BUILD_ID || "development",
+    environment: process.env.NODE_ENV || "development",
+    websiteIntake: process.env.ERP_WEBSITE_INTAKE_CONFIG || [],
+  });
+  http.createServer((req, res) => {
   const { pathname } = new URL(req.url, "http://localhost");
+  if (pathname.startsWith("/api/") || pathname === "/healthz") return erp(req, res);
   if (req.method === "OPTIONS") {
     res.writeHead(204, corsHeaders());
     return res.end();
@@ -615,4 +642,9 @@ http.createServer((req, res) => {
   if (req.method === "POST" && pathname === "/api/config") return configSave(req, res);
   if (req.method === "GET" || req.method === "HEAD") return serveStatic(req, res);
   sendText(res, 405, "Method not allowed");
-}).listen(PORT, HOST, () => console.log("东大制单工作台 · " + HOST + ":" + PORT + " · 识别通道 " + CHANNELS));
+  }).listen(PORT, HOST, () => console.log("东大制单工作台 · " + HOST + ":" + PORT + " · 识别通道 " + CHANNELS));
+}
+start().catch(error => {
+  console.error("启动失败:", error);
+  process.exit(1);
+});

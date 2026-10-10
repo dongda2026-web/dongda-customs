@@ -3,7 +3,7 @@ services:
     name: dongda-customs
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: node server.js
     healthCheckPath: /healthz
     envVars:
@@ -17,6 +17,10 @@ services:
         value: "2"
       - key: AUTO_ARCHIVE_UPLOADS
         value: "1"
+      - key: BUILD_ID
+        value: four-modules-production
+      - key: ERP_WEBSITE_INTAKE_CONFIG
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: dongda-customs-db
